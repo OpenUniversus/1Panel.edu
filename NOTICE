@@ -1,0 +1,4 @@
+﻿This repository is a research study derived from 1Panel (https://github.com/1Panel-dev/1Panel)
+commit 7915230. The skeleton code in `skeleton/` is original work by OpenUniversus, 2026.
+
+Upstream 1Panel is also licensed under GPL v3; this NOTICE records the derivative chain.

@@ -1,0 +1,30 @@
+﻿# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+build/
+dist/
+
+# Go
+go.sum
+vendor/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
