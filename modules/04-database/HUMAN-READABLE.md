@@ -594,3 +594,5 @@ connArgs := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=utf8%s",
 - 想做其他事 → 跟我说
 
 最后**你做的所有决定**都可以跟 1Panel 不一样 —— 1Panel 是参考，不是答案。
+
+## 测试增量同步 (1Panel.edu daily-mgmt test)

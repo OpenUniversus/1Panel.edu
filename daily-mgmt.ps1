@@ -1,4 +1,4 @@
-# 1Panel.edu Daily Management
+﻿# 1Panel.edu Daily Management
 # Runs every 5 min via mavis cron
 # - Detects file changes in local KB
 # - Commits + pushes to GitHub
@@ -79,29 +79,20 @@ try {
 } finally { Pop-Location }
 
 # Update DAILY-STATUS.md
-$status = @"
-# 1Panel.edu Daily Status
-
-**最后更新**: $timestamp
-**变更文件数**: $($changes.Count)
-
-## 本次变更
-
-$($changes | ForEach-Object { "- ``$_``" } | Out-String)
-
-## 累计状态
-
-- 13 个模块人话版 + 可视化图集
-- 1 份总知识书 (00-KNOWLEDGE-BOOK.html, 357 KB)
-- 1 份模块全景 (00-landscape.md)
-- 1 份防火墙深度注解 (firewall-architecture.md)
-
-## GitHub
-
-- 仓库: https://github.com/OpenUniversus/1Panel.edu
-- 分支: main
-- 最后 commit: $commitMsg
-"@
+$changesList = ($changes | ForEach-Object { "  - $_" }) -join "`n"
+$status = "# 1Panel.edu Daily Status`n`n"
+$status += "**最后更新**: $timestamp`n"
+$status += "**变更文件数**: $($changes.Count)`n`n"
+$status += "## 本次变更`n`n$changesList`n`n"
+$status += "## 累计状态`n`n"
+$status += "* 13 个模块人话版 + 可视化图集`n"
+$status += "* 1 份总知识书 (00-KNOWLEDGE-BOOK.html, 357 KB)`n"
+$status += "* 1 份模块全景 (00-landscape.md)`n"
+$status += "* 1 份防火墙深度注解 (firewall-architecture.md)`n`n"
+$status += "## GitHub`n`n"
+$status += "* 仓库: https://github.com/OpenUniversus/1Panel.edu`n"
+$status += "* 分支: main`n"
+$status += "* 最后 commit: $commitMsg`n"
 $status | Set-Content $statusFile -Encoding UTF8
 
 # Report
