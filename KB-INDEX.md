@@ -1,9 +1,10 @@
-﻿# KB 索引
+# KB 索引
 
-生成时间: 2026-08-25T09:15:39.1673989+08:00
+生成时间: 2026-08-25T10:05:19.026861+08:00
 
 | 模块 | HR | VA | 大小 |
-|---|---|---|---|\n| 01-app-store | OK | OK | 23.5 KB |
+|---|---|---|---|
+| 01-app-store | OK | OK | 23.5 KB |
 | 02-container | OK | OK | 22.7 KB |
 | 03-website | OK | OK | 29.3 KB |
 | 04-database | OK | OK | 50.5 KB |
@@ -17,5 +18,4 @@
 | 12-security | OK | OK | 27.2 KB |
 | 13-frontend | OK | OK | 24.4 KB |
 
-**汇总**: 13 HR + 13 VA = 02 MB
-
+**汇总**: 13 HR + 13 VA = 0.34 MB

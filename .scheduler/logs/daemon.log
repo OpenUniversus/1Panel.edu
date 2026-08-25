@@ -1,0 +1,8 @@
+2026-08-25 10:09:32,283 [INFO] === 1Panel.edu scheduler daemon started ===
+2026-08-25 10:09:32,284 [INFO]   pid: 14568
+2026-08-25 10:09:32,284 [INFO]   repo: D:\MiniMax Code\1Panel-edu-research
+2026-08-25 10:09:32,284 [INFO]   schedule: master @ 0/5/10/15/20 :00 + sub @ every :00/:10/:20/:30/:40/:50
+2026-08-25 10:09:32,284 [INFO] next wake at 10:10:00 (28s, sub)
+2026-08-25 10:10:00,000 [INFO] === SUB TICK ===
+2026-08-25 10:10:00,101 [INFO] sub tick done: rc=0
+2026-08-25 10:10:00,102 [INFO] next wake at 10:20:00 (600s)
