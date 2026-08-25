@@ -9,21 +9,20 @@ import (
 	"strings"
 )
 
-// IPTablesBackend is the reference Adapter implementation backed by the
-// iptables / ip6tables binaries.
+// IPTablesBackend 是基于 iptables / ip6tables 二进制的参考 Adapter 实现。
 //
-// Identity strategy:
-//   - Every rule we create carries `-m comment --comment "<UUID>"`.
-//   - The UUID is the marker; it is the primary identity key in Observe / Compile.
-//   - On Observe, marker is extracted and used to recognise our own rules.
+// 身份策略:
+//   - 我们创建的每条规则都带 `-m comment --comment "<UUID>"`。
+//   - UUID 就是 marker, 在 Observe / Compile 中是规则的主键。
+//   - Observe 时, 提取 marker 用于识别"我们自己"的规则。
 //
-// Concurrency:
-//   - This backend does NOT lock. Wrap calls in a process-level sync.Mutex
-//     if you call from multiple goroutines. (1Panel uses one; recommended.)
+// 并发:
+//   - 本后端不自带锁。如果从多个 goroutine 调用, 请在外面套一层进程级 sync.Mutex。
+//     (1Panel 用一把; 推荐你也用一把。)
 type IPTablesBackend struct {
-	IPv4Bin   string         // "iptables" or "iptables-nft"
-	IPv6Bin   string         // "ip6tables" or ""
-	Whitelist *PortWhitelist // optional; checked at Compile time
+	IPv4Bin   string         // "iptables" 或 "iptables-nft"
+	IPv6Bin   string         // "ip6tables" 或 ""
+	Whitelist *PortWhitelist // 可选; 在 Compile 时校验
 }
 
 func NewIPTablesBackend() *IPTablesBackend {
@@ -51,10 +50,10 @@ func (b *IPTablesBackend) run(ctx context.Context, name string, args ...string) 
 	return string(out), nil
 }
 
-// ----- Observe -----
+// ----- 观察 -----
 
-// Observe reads the rule set of `scope.Chain` via `iptables -S` and parses
-// each `-A <chain>` line into an ObservedRule.
+// Observe 通过 `iptables -S` 读取 `scope.Chain` 的规则集, 并把每条
+// `-A <chain>` 行解析成 ObservedRule。
 func (b *IPTablesBackend) Observe(ctx context.Context, scope Scope) (Snapshot, error) {
 	bin := b.binFor(scope.Family)
 	if bin == "" {
@@ -91,8 +90,8 @@ func (b *IPTablesBackend) Observe(ctx context.Context, scope Scope) (Snapshot, e
 var commentRe = regexp.MustCompile(`-m comment --comment "([^"]*)"`)
 var portRe = regexp.MustCompile(`--(s|d)port(?:s)?\s+(\S+)`)
 
-// parseAppendLine pulls out the pieces we care about. Anything we don't
-// understand is silently dropped — the comment marker is still captured.
+// parseAppendLine 把我们关心的字段抽出来。看不懂的字段直接丢弃,
+// 但 comment marker 仍会被保留。
 func parseAppendLine(line string, scope Scope) (Rule, string, bool) {
 	r := Rule{Scope: scope, Action: ActionAccept}
 	marker := ""
@@ -137,12 +136,12 @@ func parseAppendLine(line string, scope Scope) (Rule, string, bool) {
 	return r, marker, true
 }
 
-// ----- Compile -----
+// ----- 编译 -----
 
-// Compile diffs observed against desired, returning the minimal Change set.
-// - In observed but not in desired → Delete (unless protected by caller)
-// - In desired but not in observed → Create
-// - In both but RuleKey differs → Update (delete + insert at same position)
+// Compile 比对 observed 和 desired, 返回最小的 Change 集合。
+// - observed 有但 desired 没有 → Delete (除非调用方另有保护)
+// - desired 有但 observed 没有 → Create
+// - 两者都有但 RuleKey 不同 → Update (同位置 delete + insert)
 func (b *IPTablesBackend) Compile(snap Snapshot, desired []Rule) ([]Change, error) {
 	if err := b.Whitelist.Validate(desired); err != nil {
 		return nil, err
@@ -265,16 +264,16 @@ func renderRuleBody(r Rule) []string {
 	return a
 }
 
-// ----- Apply / Rollback -----
+// ----- 应用 / 回滚 -----
 
-// Apply executes Forward commands. On first failure, all already-applied
-// changes are rolled back (via their Rollback) and the error is returned.
+// Apply 顺序执行 Forward 命令。一旦失败, 已应用的 change 会按其 Rollback
+// 全部回退, 并返回错误。
 func (b *IPTablesBackend) Apply(ctx context.Context, changes []Change) error {
 	return b.runPlan(ctx, changes, true)
 }
 
-// Rollback executes Rollback commands in reverse order. Used after a crash
-// or to undo a completed Apply.
+// Rollback 按逆序执行 Rollback 命令。用于 Apply 中途崩溃后恢复,
+// 也用于主动撤销一次已完成的 Apply。
 func (b *IPTablesBackend) Rollback(ctx context.Context, changes []Change) error {
 	return b.runPlan(ctx, reverseChanges(changes), false)
 }

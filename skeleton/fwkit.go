@@ -1,16 +1,16 @@
-// Package fwkit is a minimal firewall rule toolkit inspired by 1Panel v2's
-// Agent firewall design. It exposes:
+// Package fwkit 是受 1Panel v2 Agent 防火墙设计启发的极简防火墙规则工具包。
 //
-//   - An Adapter interface (Observe / Compile / Apply / Rollback)
-//   - A backend-agnostic Rule / Snapshot / Change model
-//   - A Port Whitelist safety guard
-//   - A reference iptables backend (iptables.go)
+// 它对外暴露:
+//   - Adapter 接口 (Observe / Compile / Apply / Rollback)
+//   - 后端无关的 Rule / Snapshot / Change 模型
+//   - Port Whitelist 端口白名单安全护栏
+//   - 一个参考 iptables 后端 (iptables.go)
 //
-// Design contract:
-//   - Every Rule we manage gets a UUID stored in the comment field.
-//   - The UUID is the marker; it is the primary identity in Observe / Compile.
-//   - A Change always carries a Rollback so Apply failures can be undone.
-//   - Port Whitelist is enforced at Compile time, not runtime.
+// 设计契约:
+//   - 我们管理的每条 Rule 都有一个 UUID, 存储在 iptables 的 comment 字段里。
+//   - UUID 就是 marker, 在 Observe / Compile 里是规则的主键。
+//   - 每个 Change 都自带 Rollback, 便于 Apply 失败时回退。
+//   - Port Whitelist 在 Compile 阶段强制校验, 而非运行时。
 package fwkit
 
 import (
@@ -23,7 +23,7 @@ import (
 	"strings"
 )
 
-// ----- Domain enums -----
+// ----- 域枚举 -----
 
 type Provider string
 
@@ -47,9 +47,9 @@ const (
 	ActionReject Action = "reject"
 )
 
-// ----- Domain types -----
+// ----- 域类型 -----
 
-// Scope describes where a rule lives in the netfilter world.
+// Scope 描述一条规则在 netfilter 世界里的归属。
 type Scope struct {
 	Provider  Provider `json:"provider"`
 	Family    Family   `json:"family"`
@@ -62,8 +62,7 @@ func (s Scope) Key() string {
 	return string(s.Provider) + "|" + string(s.Family) + "|" + s.Table + "|" + s.Chain
 }
 
-// Rule is a backend-agnostic firewall rule. UUID is the marker used for
-// identity and reconciliation; treat it as required for managed rules.
+// Rule 是后端无关的防火墙规则。UUID 是身份与对账的标记, 被管规则视为必填。
 type Rule struct {
 	UUID     string `json:"uuid"`
 	Scope    Scope  `json:"scope"`
@@ -77,22 +76,22 @@ type Rule struct {
 	Comment  string `json:"comment,omitempty"`
 }
 
-// ObservedRule is a rule read from the live system.
+// ObservedRule 是从真实系统读出来的一条规则。
 type ObservedRule struct {
 	Rule       Rule
-	Marker     string // extracted from `-m comment --comment "<marker>"`
-	NativeLine string // raw iptables -S line
-	Position   int    // 0-based order in the chain
+	Marker     string // 从 `-m comment --comment "<marker>"` 提取
+	NativeLine string // 原始 iptables -S 行
+	Position   int    // 在链中的 0-based 顺序
 }
 
-// Snapshot is the result of a single Observe.
+// Snapshot 是单次 Observe 的结果。
 type Snapshot struct {
 	Scope    Scope
 	Rules    []ObservedRule
-	Revision string // hash of the rule set; changes iff rules change
+	Revision string // 规则集哈希; 规则变化时 Revision 才会变
 }
 
-// ----- Change model -----
+// ----- 变更模型 -----
 
 type ChangeKind int
 
@@ -108,10 +107,10 @@ func (k ChangeKind) String() string {
 
 type Change struct {
 	Kind     ChangeKind
-	Desired  Rule          // for create / update
-	Existing *ObservedRule // for update / delete
-	Forward  []string      // shell commands to apply
-	Rollback []string      // inverse commands for failure recovery
+	Desired  Rule          // 用于 create / update
+	Existing *ObservedRule // 用于 update / delete
+	Forward  []string      // 真正执行的 shell 命令
+	Rollback []string      // 失败回退的逆命令
 }
 
 func (c Change) String() string {
@@ -122,12 +121,12 @@ func (c Change) String() string {
 	return fmt.Sprintf("%s[%s] fwd=%d rb=%d", c.Kind, id, len(c.Forward), len(c.Rollback))
 }
 
-// ----- Adapter contract -----
+// ----- Adapter 契约 -----
 
 var ErrUnsupported = errors.New("fwkit: backend does not support this operation")
 
-// Adapter is implemented by every firewall backend. Observe → Compile → Apply
-// is the happy path. Rollback exists to recover from crashes mid-Apply.
+// Adapter 由每个防火墙后端实现。Observe → Compile → Apply 是主流程。
+// Rollback 用于在 Apply 中途崩溃时恢复。
 type Adapter interface {
 	Provider() Provider
 	Observe(ctx context.Context, scope Scope) (Snapshot, error)
@@ -136,10 +135,10 @@ type Adapter interface {
 	Rollback(ctx context.Context, changes []Change) error
 }
 
-// ----- Identity -----
+// ----- 身份 -----
 
-// RuleKey returns a stable hash of a rule's *semantics*. Two rules with the
-// same RuleKey express the same intent; position and comment don't matter.
+// RuleKey 返回一条规则 *语义* 的稳定哈希。两条规则的 RuleKey 相同
+// 就代表同一条意图; 位置和注释不影响 RuleKey。
 func RuleKey(r Rule) (string, error) {
 	if r.Scope.Chain == "" {
 		return "", errors.New("rule: empty chain")
@@ -161,8 +160,8 @@ func RuleKey(r Rule) (string, error) {
 	return "sha256:" + hex.EncodeToString(sum[:]), nil
 }
 
-// Revision hashes a snapshot's full set. Two snapshots with the same Revision
-// are bit-for-bit identical from the backend's point of view.
+// Revision 对整个 Snapshot 做哈希。两个 Snapshot 的 Revision 相同
+// 在后端视角下是逐 bit 一致的。
 func Revision(snap Snapshot) string {
 	keys := make([]string, 0, len(snap.Rules))
 	for _, r := range snap.Rules {
@@ -179,11 +178,10 @@ func Revision(snap Snapshot) string {
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
-// ----- Port Whitelist -----
+// ----- 端口白名单 -----
 
-// PortWhitelist protects critical ports from being blocked by user rules.
-// Required is hard (SSH, agent). UserAdded is operator-configurable but
-// still enforced at compile time.
+// PortWhitelist 保护关键端口不被用户规则误封。
+// Required 是硬性的 (SSH, agent), UserAdded 是运维可配置但同样在 Compile 时强制。
 type PortWhitelist struct {
 	Required  []int
 	UserAdded []int
@@ -203,8 +201,8 @@ func (w *PortWhitelist) Contains(port int) bool {
 	return false
 }
 
-// Validate rejects any DROP/REJECT rule whose destination or source port
-// matches the whitelist. Returns the first violation.
+// Validate 拒绝任何 DROP/REJECT 规则其目的或源端口命中白名单。
+// 返回第一个冲突项。
 func (w *PortWhitelist) Validate(rules []Rule) error {
 	if w == nil {
 		return nil
