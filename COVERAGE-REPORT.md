@@ -1,15 +1,15 @@
 # Module Coverage
 
-Generated: 2026-08-25T18:40:01.681088+08:00
+Generated: 2026-08-25T20:30:02.876554+08:00
 Upstream: `https://github.com/1Panel-dev/1Panel.git` @dev-v2
 
-**Total Go files upstream**: 820
+**Total Go files upstream**: 824
 
 ## By top-level dir
 
 | Top dir | .go files |
 |---|---|
-| agent | 646 |
+| agent | 650 |
 | core | 174 |
 
 ## KB module coverage (heuristic)
