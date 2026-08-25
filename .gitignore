@@ -10,14 +10,16 @@ Thumbs.db
 # Local state
 daily-mgmt-state.json
 
-# Scheduler runtime artifacts
-.scheduler/state.json
-.scheduler/state.json.v1.bak
-.scheduler/lock
-.scheduler/monitor.pid
-.scheduler/scheduler.pid
-.scheduler/.upstream-state.json
-.scheduler/logs/
+# ============================================================
+# Scheduler runtime — all Python / PowerShell / batch scripts
+# are kept locally, never pushed to repo.
+# ============================================================
+.scheduler/
+*.py
+*.ps1
+*.bat
+*.cmd
+*.vbs
 
 # Backups
 .backups/
@@ -34,7 +36,7 @@ __pycache__/
 *.test
 *.out
 
-# Auto-generated scheduler reports (regen by sub-tasks)
+# Auto-generated scheduler reports (regen by sub-tasks, not source)
 DAILY-SUMMARY.md
 WEEKLY-REPORT.md
 UPSTREAM-DIFF.md
@@ -42,3 +44,15 @@ COVERAGE-REPORT.md
 HEALTH-SCORE.md
 BLACKLIST.md
 ALERTS.md
+DAILY-STATUS.md
+
+# ============================================================
+# Repo layout (kept):
+#   skeleton/             Go 源码 (英文代码)
+#   modules/              13 模块知识库 (中文 HUMAN-READABLE.md + 英文 visual-atlas.html)
+#   firewall-architecture.md  防火墙深度研究 (中文)
+#   modules/00-landscape.md   1Panel 全景图 (中文)
+#   modules/00-KNOWLEDGE-BOOK.html  database 知识书 (中文)
+#   KB-INDEX.md           KB 索引 (中文)
+#   README.md / LICENSE / NOTICE  元数据 (英文)
+# ============================================================
