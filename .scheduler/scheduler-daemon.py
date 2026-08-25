@@ -8,13 +8,16 @@ Pure Python. Single long-running process. No LLM, no admin, no schtasks.
 - Sub tick at :00 (non-bucket), :15, :30, :45 of every hour:
     runs run-next-task
 - Lock file anti-overlap (run-next-task.py owns)
+- PID file: .scheduler/scheduler.pid (for monitor-daemon to track)
 - Crash-safe: re-loads state on each tick
 - Graceful shutdown on SIGINT/SIGTERM (best-effort on Windows)
 
 Run: python scheduler-daemon.py
 Stop: Ctrl-C (or kill <pid>)
 """
+import atexit
 import logging
+import os
 import signal
 import subprocess
 import sys
@@ -25,6 +28,7 @@ from pathlib import Path
 SCHEDULER_DIR = Path(__file__).parent
 LOG_DIR = SCHEDULER_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
+SCHEDULER_PID_FILE = SCHEDULER_DIR / "scheduler.pid"
 
 # Configure logging
 logging.basicConfig(
@@ -181,6 +185,16 @@ def _shutdown(signum, frame):
     _running = False
 
 
+def _cleanup_pid():
+    """Remove scheduler.pid on exit."""
+    try:
+        if SCHEDULER_PID_FILE.exists():
+            SCHEDULER_PID_FILE.unlink()
+            log.info("removed scheduler.pid")
+    except OSError:
+        pass
+
+
 def main():
     # Try to register signal handlers (best-effort on Windows)
     try:
@@ -191,9 +205,13 @@ def main():
         pass
 
     log.info("=== 1Panel.edu scheduler daemon v2 started ===")
-    log.info(f"  pid: {__import__('os').getpid()}")
+    log.info(f"  pid: {os.getpid()}")
     log.info(f"  repo: {REPO_ROOT}")
     log.info("  schedule: master @ 0/5/10/15/20 :00, sub @ :00(non-bucket)/:15/:30/:45")
+
+    # Write PID file (for monitor-daemon)
+    SCHEDULER_PID_FILE.write_text(str(os.getpid()), encoding="utf-8")
+    atexit.register(_cleanup_pid)
 
     # Bootstrap
     if not (SCHEDULER_DIR / "state.json").exists():
