@@ -2,280 +2,1003 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>1Panel Website 模块 · 可视化图集</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<title>1Panel Website 模块 v3 — Visual Atlas</title>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-<script>
-mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }, sequence: { useMaxWidth: true, showSequenceNumbers: false }, securityLevel: 'loose' });
-</script>
 <style>
-:root { --bg: #f7f5f0; --card: #ffffff; --line: #e9e3d6; --line-soft: #f0ebde; --text: #14171e; --text-muted: #3a4256; --text-soft: #7c7a72; --primary: #2f6f5e; --primary-soft: rgba(47, 111, 94, 0.08); --accent: #c97b3f; --warn: #b06367; --warn-soft: rgba(176, 99, 103, 0.08); --good: #5b8c5a; --good-soft: rgba(91, 140, 90, 0.08); }
-:root[data-theme="dark"] { --bg: #14171e; --card: #1c2030; --line: #2a2f3e; --line-soft: #232732; --text: #e9e3d6; --text-muted: #b8b8c8; --text-soft: #7c7a92; --primary: #5fb89e; --primary-soft: rgba(95, 184, 158, 0.14); --accent: #e6a173; --warn: #d18488; --good: #8cc28a; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body { font-family: 'Outfit', 'Noto Serif SC', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; background-image: radial-gradient(circle at 0% 0%, rgba(47, 111, 94, 0.04), transparent 35%), radial-gradient(circle at 100% 100%, rgba(201, 123, 63, 0.04), transparent 35%); }
-main { max-width: 1080px; margin: 0 auto; padding: 56px 32px 96px; }
-.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--primary-soft); color: var(--primary); border-radius: 100px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 20px; }
-h1 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 52px; font-weight: 400; line-height: 1.15; letter-spacing: -0.01em; color: var(--text); margin-bottom: 20px; }
-.subtitle { font-size: 18px; color: var(--text-muted); line-height: 1.55; max-width: 720px; margin-bottom: 48px; }
-h2 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 34px; font-weight: 400; line-height: 1.25; margin: 80px 0 24px; color: var(--text); scroll-margin-top: 24px; }
-h2 .num { display: inline-block; font-size: 14px; font-weight: 600; color: var(--primary); letter-spacing: 0.1em; margin-right: 16px; vertical-align: middle; padding: 2px 10px; background: var(--primary-soft); border-radius: 6px; }
-h3 { font-size: 22px; font-weight: 600; margin: 40px 0 16px; color: var(--text); }
-h4 { font-size: 17px; font-weight: 600; margin: 24px 0 10px; color: var(--text); }
-p { margin-bottom: 14px; color: var(--text-muted); }
-code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; padding: 2px 6px; background: var(--line-soft); border-radius: 4px; color: var(--text); }
-pre { margin: 16px 0; padding: 16px; background: #14171e; color: #e9e3d6; border-radius: 6px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.55; }
-pre code { background: none; color: inherit; padding: 0; }
-.diagram { margin: 24px 0; padding: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
-.diagram .mermaid { background: var(--bg); padding: 16px; border-radius: 6px; }
-.diagram .caption { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--text-soft); text-align: center; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 24px 0; }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
-.card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-.card .star { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--primary-soft); color: var(--primary); border-radius: 4px; margin-bottom: 8px; }
-.card h3 { font-size: 17px; margin: 8px 0; }
-.card .tagline { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
-.card .example { font-size: 13px; color: var(--text-soft); padding: 8px 12px; background: var(--bg); border-radius: 4px; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.35s ease, opacity 0.25s, margin 0.25s; margin-top: 0; }
-.card.expanded .example { max-height: 500px; opacity: 1; margin-top: 12px; }
-.card::after { content: '▼ 点击展开'; display: block; text-align: center; margin-top: 10px; font-size: 11px; color: var(--text-soft); }
-.card.expanded::after { content: '▲ 收起'; }
-.warn-card { background: var(--warn-soft); border-color: var(--warn); }
-.warn-card .star { background: var(--warn); color: white; }
-.warn-card::after { content: '⚠️ 必避'; }
-table { width: 100%; border-collapse: collapse; margin: 16px 0; background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
-th { background: var(--bg); font-weight: 600; }
-tr:last-child td { border-bottom: none; }
-.theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 8px 14px; font-size: 16px; font-weight: 500; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 24px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: background 0.2s, transform 0.1s; font-family: inherit; }
-.theme-toggle:hover { background: var(--primary-soft); transform: scale(1.05); }
-footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-soft); text-align: center; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Microsoft YaHei', 'Segoe UI', -apple-system, sans-serif;
+    margin: 0; padding: 0;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: #333;
+  }
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+  header {
+    background: rgba(255,255,255,0.95);
+    border-radius: 12px;
+    padding: 32px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  }
+  h1 {
+    margin: 0 0 8px 0;
+    font-size: 32px;
+    color: #1e3c72;
+  }
+  h1 small {
+    display: block;
+    font-size: 14px;
+    color: #888;
+    font-weight: normal;
+    margin-top: 4px;
+  }
+  .meta {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .meta-item {
+    background: #f0f4ff;
+    border-left: 3px solid #1e3c72;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  section {
+    background: rgba(255,255,255,0.97);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+  h2 {
+    color: #1e3c72;
+    border-bottom: 2px solid #1e3c72;
+    padding-bottom: 8px;
+    margin-top: 0;
+  }
+  h3 {
+    color: #2a5298;
+    margin-top: 24px;
+  }
+  pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .mermaid {
+    background: #fafafa;
+    padding: 16px;
+    border-radius: 8px;
+    margin: 16px 0;
+    border: 1px solid #e0e0e0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: left;
+  }
+  th {
+    background: #1e3c72;
+    color: white;
+  }
+  tr:nth-child(even) { background: #f8f9ff; }
+  .badge {
+    display: inline-block;
+    background: #ff6b6b;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .badge-blue { background: #1e90ff; }
+  .badge-green { background: #28a745; }
+  .badge-purple { background: #9c27b0; }
+  .badge-orange { background: #ff9800; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .card {
+    background: #f8f9ff;
+    border-radius: 8px;
+    padding: 16px;
+    border-left: 4px solid #1e3c72;
+  }
+  .card h4 { margin: 0 0 8px 0; color: #1e3c72; }
+  code {
+    background: #f4f4f4;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+  }
+  .legend {
+    display: flex;
+    gap: 12px;
+    margin: 12px 0;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .swatch {
+    width: 12px; height: 12px; border-radius: 50%;
+  }
 </style>
 </head>
 <body>
-<button class="theme-toggle" id="theme-toggle" title="切换暗黑/明亮模式">🌙</button>
-<main>
-<span class="eyebrow">🌐 1Panel v2 · Website 模块</span>
-<h1>可视化图集</h1>
-<p class="subtitle">~11000 行 Go + Nginx 配置模板引擎 + ACME 协议客户端。搞懂"加网站"是怎么从 3 步表单到 Nginx reload 落地的。</p>
+<div class="container">
 
-<h2><span class="num">01</span>配置生成 + 安全 reload 流程</h2>
+<header>
+  <h1>1Panel Website 模块 v3 — 可视化图谱
+    <small>Module 03-website · P3 · 4072 行核心源 + 周边 ~15000 行 · 2026-08-25</small>
+  </h1>
+  <div class="meta">
+    <div class="meta-item">📁 6 Router 文件</div>
+    <div class="meta-item">🎯 64 Handler 方法</div>
+    <div class="meta-item">⚙️ 41 Service 方法</div>
+    <div class="meta-item">🗄️ 7 GORM 表</div>
+    <div class="meta-item">📜 50,777 字节 HR.md</div>
+    <div class="meta-item">🔌 8+ 外部依赖</div>
+  </div>
+</header>
 
-<p>核心思路：<strong>永不直接 reload</strong>。先把新 conf 写到临时文件，`nginx -t` 测试语法，通过才覆盖正式 conf，再 reload。</p>
+<!-- ============= Section 1: 一句话作用 ============= -->
+<section>
+  <h2>1. 一句话作用 <span class="badge">核心</span></h2>
+  <p style="font-size:18px; background:#fffbe6; padding:16px; border-left:4px solid #ffa000; border-radius:4px;">
+    <strong>1Panel Website = 自带门卫 + 装修队的网店托管系统</strong>: 给一个域名, 它帮你"开"出可访问的网站 (静态/动态/PHP/反代/数据库), 自动写好 OpenResty (Nginx) 配置、自动申请 Let's Encrypt 证书、自动做 HTTPS 跳转、限流、防盗链、跨目录, 还能在 1Panel 面板里让你像用 cPanel 一样点点鼠标维护。
+  </p>
 
-<div class="diagram">
-<pre class="mermaid">
-flowchart LR
-    A[用户填表<br/>type=reverse_proxy<br/>domain=api.example.com] --> B[website.go<br/>Service 层]
-    B --> C[website_utils.go<br/>渲染模板]
-    C --> D[生成 nginx.conf]
-    D --> E[写临时 .tmp]
-    E --> F[nginx_module.go<br/>nginx -t 测语法]
-    F -->|通过| G[覆盖正式 conf]
-    F -->|失败| H[删临时 + 报错]
-    G --> I[nginx -s reload]
-    I --> J[用户访问生效]
-    style B fill:#2f6f5e,color:#fff
-    style F fill:#c97b3f,color:#fff
-    style I fill:#5b8c5a,color:#fff
-</pre>
-<div class="caption">图 1：先测后覆盖。Nginx reload 时 conf 有语法错会<strong>导致整个进程退出</strong>，所有网站都挂 —— 所以必须先 -t</div>
-</div>
+  <h3>生活类比映射</h3>
+  <div class="grid">
+    <div class="card"><h4>🏪 实体店</h4><p>= 创建网站, 一次性配齐所有"开业资料"</p></div>
+    <div class="card"><h4>🪪 营业执照</h4><p>= 主域名 (PrimaryDomain)</p></div>
+    <div class="card"><h4>📑 多块招牌</h4><p>= WebsiteDomain 表多条记录</p></div>
+    <div class="card"><h4>🚪 门口保安</h4><p>= Nginx 反代 / WAF / 防 CC</p></div>
+    <div class="card"><h4>📦 商品类型</h4><p>= Website.Type (Static / Runtime / Deployment / Stream / Subsite)</p></div>
+    <div class="card"><h4>🕐 营业时间</h4><p>= Status + ExpireDate</p></div>
+    <div class="card"><h4>📜 工商执照</h4><p>= WebsiteSSL (HTTPS 证书)</p></div>
+    <div class="card"><h4>🔁 排班表</h4><p>= Nginx upstream + LB 算法</p></div>
+    <div class="card"><h4>📚 后厨账本</h4><p>= website.DbID / DbType (MySQL/PG)</p></div>
+    <div class="card"><h4>🔧 装修队</h4><p>= task.Task 子任务编排</p></div>
+    <div class="card"><h4>📋 物业报修</h4><p>= AccessLog / ErrorLog 开关</p></div>
+    <div class="card"><h4>👥 业主群通知</h4><p>= x-panel-log 审计日志</p></div>
+  </div>
+</section>
 
-<h2><span class="num">02</span>添加反向代理网站 8 步时序</h2>
+<!-- ============= Section 2: 目录结构 ============= -->
+<section>
+  <h2>2. 目录结构 (源文件清单)</h2>
+  <pre>
+agent/
+├── router/                              # Gin 路由注册
+│   ├── ro_website.go              (103 行)  — 60+ endpoint
+│   ├── ro_website_ssl.go          ( 31 行)  — 14 endpoint
+│   ├── ro_website_ca.go           ( 24 行)  — 7 endpoint
+│   ├── ro_website_dns_account.go  ( 21 行)  — 4 endpoint
+│   ├── ro_website_acme_account.go ( 21 行)  — 4 endpoint
+│   └── ro_website_template.go     ( 28 行)  — 11 endpoint
+│
+├── app/api/v2/
+│   ├── website.go                 (1342 行) — 64 handler
+│   ├── website_ssl.go             (~300 行)
+│   ├── website_acme_account.go, website_ca.go,
+│   ├── website_dns_account.go, website_domain.go,
+│   └── website_template.go
+│
+├── app/service/                          # 业务核心
+│   ├── website.go                 (2502 行) — 41 method
+│   ├── website_utils.go           (~1500 行) — Nginx/WAF helpers
+│   ├── website_ssl.go             (~1100 行) — ACME
+│   ├── website_proxy.go                       — 反代
+│   ├── website_lb.go                          — LB
+│   ├── website_op.go                          — 批量
+│   ├── website_rewrite.go                     — 伪静态
+│   ├── website_auth_basic.go                  — BasicAuth
+│   ├── website_domain.go                      — 多域名
+│   ├── website_acme_account.go
+│   ├── website_ca.go
+│   ├── website_dns_account.go
+│   └── website_template.go
+│
+├── app/dto/
+│   ├── nginx.go                              — NginxParam/Upstream
+│   └── request/website*.go                   — 入参
+│
+├── app/repo/                               # 仓储层
+│   └── website*.go                          — 7 files
+│
+├── app/model/                              # GORM 模型 (7 files)
+│   ├── website.go, website_ssl.go,
+│   ├── website_dns_account.go, website_acme_account.go,
+│   ├── website_ca.go, website_template.go,
+│   └── website_domain.go
+│
+├── utils/
+│   ├── nginx/
+│   │   ├── parser/                — AST 解析器
+│   │   └── components/            — Config/Server/Location/Upstream 节点
+│   ├── docker/                    — Docker Client
+│   ├── files/                     — 文件操作
+│   └── cmd/                       — chown / docker exec
+│
+└── cmd/server/nginx_conf/                  — 编译期嵌入的 OpenResty 模板
+  </pre>
+</section>
 
-<p>从用户在 Web UI 点"确定"到 Nginx reload 完成，全流程 8 步。理解了这个，Website 模块就懂了一半。</p>
+<!-- ============= Section 3: 整体架构 ============= -->
+<section>
+  <h2>3. 整体架构</h2>
+  <div class="mermaid">
+graph TB
+    subgraph Frontend["1Panel 前端 (Vue 3)"]
+        UI["Web UI<br/>Element Plus"]
+    end
 
-<div class="diagram">
-<pre class="mermaid">
+    subgraph Backend["1Panel Backend (Go)"]
+        Router["Gin Router<br/>ro_website*.go"]
+        Handler["Handler<br/>api/v2/website*.go"]
+        Service["Service<br/>service/website*.go"]
+        Repo["Repository<br/>repo/website*.go"]
+        Model["GORM Model<br/>model/website*.go"]
+        Util["utils/nginx/*<br/>AST 解析/生成"]
+    end
+
+    subgraph External["外部依赖"]
+        MySQL[("MySQL/SQLite")]
+        OpenResty["OpenResty 容器<br/>1panel/openresty"]
+        Docker["Docker Engine"]
+        LetsEncrypt["Let's Encrypt<br/>ZeroSSL"]
+        DNSAPI["DNS API<br/>Aliyun/Tencent/CF"]
+    end
+
+    UI -->|HTTPS REST| Router
+    Router -->|Gin Context| Handler
+    Handler -->|interface IWebsiteService| Service
+    Service -->|GORM| Repo
+    Repo --> Model
+    Repo --> MySQL
+    Service -->|AST 解析/生成| Util
+    Util -->|配置| OpenResty
+    Service -->|docker exec| Docker
+    Docker -->|容器管理| OpenResty
+    Service -->|Lego ACME| LetsEncrypt
+    Service -->|DNS-01| DNSAPI
+
+    style Service fill:#ffe0b2,stroke:#ff6f00
+    style OpenResty fill:#b2dfdb,stroke:#00695c
+    style LetsEncrypt fill:#ffcdd2,stroke:#c62828
+  </div>
+</section>
+
+<!-- ============= Section 4: 调用链 ============= -->
+<section>
+  <h2>4. 调用链 (Router → Handler → Service → Repository → Model)</h2>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as 用户 (浏览器)
+    participant R as Gin Router
+    participant H as BaseApi<br/>(handler)
+    participant Sv as IWebsiteService<br/>(service)
+    participant R2 as Repo<br/>(GORM)
+    participant M as Model<br/>(MySQL 表)
+    participant N as OpenResty
+    participant L as Lego (ACME)
+    participant D as Docker
+
+    U->>R: POST /websites {type, alias, domains}
+    R->>H: CreateWebsite(c)
+    H->>H: CheckBindAndValidate(&req, c)
+    H->>Sv: CreateWebsite(req)
+    Sv->>Sv: alias 校验 / Punycode
+    Sv->>N: getAppInstallByKey(AppOpenresty)
+    Sv->>Sv: task.NewTaskWithOps + 子任务
+    alt CreateDb
+        Sv->>Sv: MySQL/PG service.Create
+    end
+    alt Deployment
+        Sv->>Sv: NewIAppService().Install
+    end
+    Sv->>N: configDefaultNginx
+    Sv->>N: createWafConfig
+    Sv->>R2: websiteRepo.Create
+    Sv->>R2: websiteDomainRepo.BatchCreate
+    alt EnableSSL
+        Sv->>L: newWebsiteSSLLegoClient
+        L->>D: DNS-01 / HTTP-01
+        L->>LetsEncrypt: Order
+        LetsEncrypt-->>L: Certificate
+        Sv->>N: applySSL (写 ssl_certificate)
+    end
+    Sv->>N: nginx -t + nginx -s reload
+    Sv-->>H: nil / err
+    H-->>R: 200 / 500
+    R-->>U: HTTP 响应
+  </div>
+</section>
+
+<!-- ============= Section 5: 创建网站时序图 (核心) ============= -->
+<section>
+  <h2>5. 创建网站时序图 (核心流程, 详版)</h2>
+  <div class="mermaid">
 sequenceDiagram
     autonumber
     participant U as 用户
-    participant W as Website Service
-    participant DB as SQLite
-    participant AC as ACME Client
-    participant FS as 文件系统
-    participant N as Nginx
-    U->>W: Create(反代, api.example.com, 8080)
-    W->>W: 校验域名/端口/查重
-    W->>DB: Save(metadata, status=creating)
-    W->>AC: 申请 Let's Encrypt 证书
-    AC-->>W: cert.pem + key.pem
-    W->>W: 渲染 nginx.conf 模板
-    W->>FS: 写 .tmp-api.example.com
-    W->>N: nginx -t 测语法
-    N-->>W: 通过
-    W->>FS: rename → 正式 conf
-    W->>N: nginx -s reload
-    W->>DB: Update(status=running)
-    W-->>U: 创建成功
-</pre>
-<div class="caption">图 2：完整 8 步。最耗时是 ACME 证书申请（5-30 秒），其他秒级</div>
-</div>
+    participant R as Router
+    participant H as BaseApi.CreateWebsite
+    participant Sv as WebsiteService
+    participant T as task.Task
+    participant N as OpenResty
+    participant DB as MySQL
+    participant LE as Let's Encrypt
+    participant A as 1Panel App
 
-<h2><span class="num">03</span>3 种网站类型配置对比</h2>
+    U->>R: POST /websites
+    R->>H: CreateWebsite(c)
+    H->>H: CheckBindAndValidate
+    H->>Sv: CreateWebsite(req)
+    Sv->>Sv: alias 校验 (Punycode)
+    Sv->>N: getAppInstallByKey(Openresty)
+    Sv->>Sv: build website + task
+    alt CreateDb = true
+        Sv->>T: AddSubTask(创库)
+        T->>DB: Create MySQL/PG
+    end
+    alt Type = Deployment
+        Sv->>A: NewIAppService().Install
+        A-->>Sv: appInstall
+    else Type = Runtime
+        Sv->>DB: runtimeRepo.Get
+    end
+    Sv->>T: AddSubTask(ConfigOpenresty)
+    T->>N: configDefaultNginx
+    T->>N: createWafConfig
+    T->>DB: websiteRepo.Create
+    T->>DB: websiteDomainRepo.BatchCreate
+    alt EnableSSL
+        Sv->>T: AddSubTask(EnableSSL)
+        T->>N: applySSL
+    end
+    alt FTP
+        Sv->>T: AddSubTask(ConfigFTP)
+    end
+    Sv->>T: task.Execute()
+    Sv-->>H: nil
+    H-->>U: 200
+  </div>
+</section>
 
-<p>同一套模板引擎，根据 type 字段渲染不同配置。<strong>数据驱动，不堆 if-else</strong>。</p>
+<!-- ============= Section 6: SSL 申请时序 ============= -->
+<section>
+  <h2>6. SSL 申请时序图 (Lego + DNS-01)</h2>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant R as Router
+    participant H as ApplyWebsiteSSL
+    participant Sv as WebsiteSSLService
+    participant L as Lego
+    participant LE as Let's Encrypt
+    participant D as DNS API
+    participant N as OpenResty
+    participant DB as MySQL
 
-<div class="diagram">
-<pre class="mermaid">
-flowchart TB
-    Render[渲染模板] --> T{website.Type}
-    T -->|default| D[默认站点<br/>root /var/www]
-    T -->|reverse_proxy| P[反代<br/>proxy_pass]
-    T -->|static| S[静态<br/>try_files]
-    D --> D1[listen 80<br/>root /var/www<br/>try_files $uri /index.html]
-    P --> P1[listen 443 ssl<br/>proxy_pass http://127.0.0.1:8080<br/>proxy_set_header Host $host]
-    S --> S1[listen 80<br/>root /var/www/blog<br/>try_files $uri =404]
-    style T fill:#c97b3f,color:#fff
-</pre>
-<div class="caption">图 3：1 套模板 + 3 种类型，渲染出 3 套 nginx.conf</div>
-</div>
+    U->>R: POST /websites/ssl/obtain
+    R->>H: ApplyWebsiteSSL
+    H->>Sv: ApplyWebsiteSSL(req)
+    Sv->>DB: websiteSSLRepo.GetFirst(id)
+    Sv->>Sv: newWebsiteSSLLogger
+    Sv->>Sv: withLegoLoggerTimeout(20min)
+    Sv->>L: newWebsiteSSLLegoClient
+    L->>LE: Register Account
+    L->>LE: Create Order (域名)
+    LE-->>L: Authorizations
+    L->>D: Add TXT Record (DNS-01)
+    L->>LE: Validate Challenges
+    LE-->>L: All Valid
+    L->>LE: Finalize (CSR)
+    LE-->>L: Certificate
+    Sv->>N: saveCertificateFile
+    Sv->>N: reloadSystemSSL (nginx -s reload)
+    Sv->>DB: websiteSSLRepo.Save
+    Sv-->>H: nil
+    H-->>U: 200
+  </div>
+</section>
 
-<h2><span class="num">04</span>3 必抄 + 1 核心</h2>
+<!-- ============= Section 7: 5 种业态 ============= -->
+<section>
+  <h2>7. 5 种业态 (Website.Type) 统一抽象</h2>
+  <div class="mermaid">
+graph LR
+    Website["Website<br/>(主表)"]
+    Website -->|Type=Static| S["Static<br/>直接 serve 目录"]
+    Website -->|Type=Runtime| R["Runtime<br/>PHP/Node/Java/Go/Python/.NET<br/>反代 127.0.0.1:port"]
+    Website -->|Type=Deployment| D["Deployment<br/>1Panel App<br/>反代 App 容器端口"]
+    Website -->|Type=Stream| St["Stream<br/>TCP/UDP 转发<br/>stream 块"]
+    Website -->|Type=Subsite| Su["Subsite<br/>父站子目录<br/>root 路径调整"]
 
-<div class="cards">
-<div class="card">
-    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
-    <h3>1. 配置安全 reload 策略（核心）</h3>
-    <p class="tagline">写临时 + nginx -t + 覆盖 + reload。10 行代码价值连城。</p>
-    <div class="example"><strong>适用：</strong>所有管配置文件的场景 —— pg_hba.conf / redis.conf / haproxy.cfg。Sirius Cloud 必用。</div>
-</div>
-<div class="card">
-    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
-    <h3>2. 配置模板引擎</h3>
-    <p class="tagline">Go template（Go）/ Jinja2（Python）渲染配置，<strong>数据驱动</strong>。</p>
-    <div class="example"><strong>价值：</strong>新增 1 种网站类型不用改渲染代码，只加 1 个模板文件。状态机清晰，不会乱。</div>
-</div>
-<div class="card">
-    <div class="star">⭐⭐⭐⭐ 必抄</div>
-    <h3>3. Let's Encrypt 自动化</h3>
-    <p class="tagline">HTTP-01 / DNS-01 两种验证，cron 每天检查自动续期。</p>
-    <div class="example"><strong>实现：</strong>用现成 ACME 库（Go: golang.org/x/crypto/acme，Python: certbot），<strong>别自己实现协议</strong>。</div>
-</div>
-<div class="card">
-    <div class="star">⭐⭐⭐⭐ 参考</div>
-    <h3>4. Upstream 负载均衡</h3>
-    <p class="tagline">多 instance + weight + backup 节点，Sirius Cloud 部署时直接抄。</p>
-    <div class="example"><strong>模板：</strong>upstream backend { server x:8080 weight=3; server x:8081 weight=2; server x:8082 backup; }</div>
-</div>
-</div>
+    R --> RP[("proxy = 127.0.0.1:9000<br/>或 unix:/path")]
+    D --> DP[("proxy = 容器端口")]
+    St --> STP[("listen 端口 udp/tcp<br/>upstream 负载")]
 
-<h2><span class="num">05</span>5 个反模式（必避）</h2>
+    style S fill:#e8f5e9
+    style R fill:#e3f2fd
+    style D fill:#fff3e0
+    style St fill:#f3e5f5
+    style Su fill:#fce4ec
+  </div>
 
-<div class="cards">
-<div class="card warn-card">
-    <div class="star">❌ 单文件超 2000 行</div>
-    <h3>website.go 2370 行</h3>
-    <p class="tagline">3 种网站类型 CRUD 全堆一起。</p>
-    <div class="example"><strong>避坑：</strong>拆成 website_default.go / website_proxy.go / website_static.go，每个 500-800 行。</div>
-</div>
-<div class="card warn-card">
-    <div class="star">⚠️ 状态机地狱</div>
-    <h3>81 种配置组合</h3>
-    <p class="tagline">3 类型 × 3 SSL × 3 Auth × 3 LB。代码到处 if-else 拼接。</p>
-    <div class="example"><strong>避坑：</strong>先<strong>画状态机</strong>，用 1 套模板引擎 + 数据驱动，不要堆 if-else。</div>
-</div>
-<div class="card warn-card">
-    <div class="star">⚠️ 强依赖 nginx</div>
-    <h3>Nginx 二进制必须在 PATH</h3>
-    <p class="tagline">整套假设 nginx 命令可用。</p>
-    <div class="example"><strong>避坑：</strong>抽象 NginxManager interface（Reload / TestConfig / GetVersion），方便换 Caddy / Traefik。</div>
-</div>
-<div class="card warn-card">
-    <div class="star">⚠️ 账号管理分散</div>
-    <h3>ACME 账号 + DNS 账号分 2 个表</h3>
-    <p class="tagline">website_acme_account.go 89 行 + website_dns_account.go 81 行。</p>
-    <div class="example"><strong>避坑：</strong>合并成 CertificateProvider 模型，2 个子表（账号 + 证书）。</div>
-</div>
-<div class="card warn-card">
-    <div class="star">⚠️ 操作日志膨胀</div>
-    <h3>website_op.go 跟主表混一起</h3>
-    <p class="tagline">每改一次网站配置写一条 op log，3 个月后 SQLite 几 GB。</p>
-    <div class="example"><strong>避坑：</strong>op log 单独表 + 定期归档（30 天前的移到冷库）。</div>
-</div>
-</div>
+  <table>
+    <tr>
+      <th>Type</th><th>Proxy 形态</th><th>典型场景</th><th>WAF</th>
+    </tr>
+    <tr><td>Static</td><td>无</td><td>纯 HTML / SPA</td><td>✓</td></tr>
+    <tr><td>Runtime</td><td>127.0.0.1:port 或 unix sock</td><td>PHP / Node / Java</td><td>✓</td></tr>
+    <tr><td>Deployment</td><td>App 容器端口</td><td>WordPress / Ghost</td><td>✓</td></tr>
+    <tr><td>Stream</td><td>无 (TCP/UDP 转发)</td><td>数据库 / MQTT</td><td>✗</td></tr>
+    <tr><td>Subsite</td><td>复用父站</td><td>父站下的子目录站点</td><td>✓</td></tr>
+  </table>
+</section>
 
-<h2><span class="num">06</span>Sirius Cloud 对照表</h2>
+<!-- ============= Section 8: 数据库表 ER ============= -->
+<section>
+  <h2>8. 数据库表 ER (7 张表 + 1 输出表)</h2>
+  <div class="mermaid">
+erDiagram
+    websites ||--o{ website_domains : "1:N"
+    websites }o--|| website_ssls : "N:1"
+    websites }o--o| website_groups : "N:1"
+    websites }o--o| runtimes : "N:1"
+    websites }o--o| app_installs : "N:1"
+    websites }o--o| mysql_dbs : "N:1"
+    website_ssls }o--|| website_dns_accounts : "N:1"
+    website_ssls }o--|| website_acme_accounts : "N:1"
+    website_ssls }o--|| website_cas : "N:1"
+    website_templates ||--o{ website_template_outputs : "1:N"
+    website_templates ||--o{ website_template_outputs : "1:N"
 
-<table>
-<thead><tr><th>Sirius Cloud 需求</th><th>1Panel 对应</th><th style="text-align:center">推荐度</th></tr></thead>
-<tbody>
-<tr><td><strong>L2 网站管理</strong></td><td>website.go 整套</td><td style="text-align:center">⭐⭐⭐⭐⭐</td></tr>
-<tr><td><strong>L2 反向代理</strong></td><td>website_proxy.go + utils</td><td style="text-align:center">⭐⭐⭐⭐⭐</td></tr>
-<tr><td><strong>L2 SSL 自动签发</strong></td><td>website_ssl.go + ACME</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
-<tr><td><strong>L2 负载均衡</strong></td><td>website_lb.go + upstream</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
-<tr><td><strong>L3 配置变更审计</strong></td><td>website_op.go</td><td style="text-align:center">⭐⭐⭐</td></tr>
-</tbody>
-</table>
+    websites {
+        uint id PK
+        string primary_domain
+        string type
+        string alias
+        string status
+        string protocol
+        uint website_group_id FK
+        uint website_ssl_id FK
+        uint runtime_id FK
+        uint app_install_id FK
+        uint parent_website_id FK
+        string db_type
+        uint db_id
+        string stream_ports
+    }
+    website_ssls {
+        uint id PK
+        string primary_domain
+        string private_key
+        string pem
+        string type
+        string provider
+        uint dns_account_id FK
+        uint acme_account_id FK
+        uint ca_id FK
+        bool auto_renew
+        datetime expire_date
+    }
+    website_dns_accounts {
+        uint id PK
+        string name
+        string type
+        string authorization
+    }
+    website_acme_accounts {
+        uint id PK
+        string email
+        string url
+        string private_key
+        string type
+        string key_type
+        bool use_proxy
+    }
+    website_cas {
+        uint id PK
+        string csr
+        string name
+        string private_key
+        string key_type
+    }
+    website_domains {
+        uint id PK
+        uint website_id FK
+        string domain
+        bool ssl
+        int port
+    }
+    website_templates {
+        uint id PK
+        string name
+        string type
+        string content
+        string file_path
+        string variables
+    }
+  </div>
+</section>
 
-<h3>必抄清单</h3>
-<ol>
-<li>安全 reload 模式（safeReloadNginx）—— 10 行代码</li>
-<li>配置模板 + 数据驱动（避免 if-else 拼接）</li>
-<li>ACME 自动化 + DNS-01 支持</li>
-</ol>
+<!-- ============= Section 9: 状态机 ============= -->
+<section>
+  <h2>9. 网站状态机</h2>
+  <div class="mermaid">
+stateDiagram-v2
+    [*] --> Creating: CreateWebsite
+    Creating --> Running: task.Execute() OK
+    Creating --> Failed: 子任务失败
+    Failed --> [*]: deleteWebsite 回滚
+    Running --> Stopped: OpWebsite(Stop)
+    Stopped --> Running: OpWebsite(Start)
+    Running --> Expired: 当前时间 > ExpireDate
+    Expired --> Running: UpdateWebsite(续期)
+    Running --> Running: UpdateWebsite / UpdateProxy / OpWebsiteHTTPS
+    Running --> [*]: DeleteWebsite
+    Stopped --> [*]: DeleteWebsite
+  </div>
+</section>
 
-<h3>抄的时候要改</h3>
-<ol>
-<li><strong>不用 Nginx</strong>（你的 Sirius Cloud 部署用 K8s Ingress / Traefik）—— 抄设计模式不抄实现</li>
-<li><strong>配置管理用 GitOps</strong>（conf 文件存 Git，不用数据库）—— 1Panel 为 web UI 方便才存 DB</li>
-<li><strong>多租户隔离</strong> —— 1Panel 假设单机单用户，Sirius Cloud 要按用户隔离</li>
-</ol>
+<!-- ============= Section 10: Nginx AST 解析流程 ============= -->
+<section>
+  <h2>10. Nginx AST 解析 (自研 parser)</h2>
+  <p>1Panel 自己实现 <code>utils/nginx/parser</code> + <code>components</code>, 把 OpenResty conf 解析成 AST, 再序列化回文本。</p>
+  <div class="mermaid">
+graph LR
+    A[".conf 文本"] -->|"parser.NewParser"| B["AST 树<br/>Config → Server → Location<br/>+ Directive (Name + Params + Block)"]
+    B -->|"FindServers[0]<br/>FindDirectives(ssl_protocols)"| C["精确获取节点"]
+    C -->|"UpdateDirective(name, params)<br/>RemoveDirective / AddCorsOption"| D["修改后 AST"]
+    D -->|"WriteConfig + IndentedStyle"| E[".conf 文本 (新)"]
+    E -->|"nginxCheckAndReload"| F["nginx -t<br/>nginx -s reload"]
+    F -->|成功| G["OpenResty 容器已更新"]
+    F -->|失败| H["回滚旧 conf<br/>事务不提交"]
 
-<h2><span class="num">07</span>接下来怎么读</h2>
+    style B fill:#fff9c4
+    style G fill:#c8e6c9
+    style H fill:#ffcdd2
+  </div>
+</section>
 
-<div class="cards">
-<div class="card">
-    <h3>30 分钟通道</h3>
-    <p class="tagline">本文档 + README.md §5 + website_utils.go 渲染函数</p>
-    <div class="example">看 renderTemplate 函数，理解模板怎么填数据。</div>
-</div>
-<div class="card">
-    <h3>2 小时通道</h3>
-    <p class="tagline">+ website.go Create 完整 8 步 + nginx_module.go safeReloadNginx</p>
-    <div class="example">看 ACME 客户端的 HTTP-01 和 DNS-01 两种验证实现。</div>
-</div>
-<div class="card">
-    <h3>1 天写代码</h3>
-    <p class="tagline">Python SafeConfigReloader + Jinja2 模板 + certbot 集成</p>
-    <div class="example">写自己的 SiriusWebsiteService。</div>
-</div>
-</div>
+<!-- ============= Section 11: 任务编排 ============= -->
+<section>
+  <h2>11. 任务编排 (Task Pipeline)</h2>
+  <div class="mermaid">
+graph TB
+    Root["task.NewTaskWithOps<br/>(TaskCreate)"]
+    Root --> S1["AddSubTask<br/>创库 (可选)"]
+    Root --> S2["AddSubTask<br/>ConfigApp / Runtime"]
+    Root --> S3["AddSubTask<br/>ConfigOpenresty<br/>(核心 + WAF)"]
+    S3 -.回滚.-> R3["deleteWebsite"]
+    Root --> S4["AddSubTaskWithIgnoreErr<br/>EnableSSL"]
+    Root --> S5["AddSubTaskWithIgnoreErr<br/>ConfigFTP"]
+    Root --> Ex["task.Execute"]
 
-<footer>
-1Panel Website 模块 · 可视化图集 v1 · 2026-08-24<br>
-详细注解：<code>03-website/README.md</code>（63 行 stub）· 人话版：<code>HUMAN-READABLE.md</code>（14 KB）<br>
-字体：Outfit + DM Serif Display · 图表：Mermaid · 配色：暖米色 / 墨绿 / 砖橙
+    S1 --> Ex
+    S2 --> Ex
+    S3 --> Ex
+    S4 --> Ex
+    S5 --> Ex
+    Ex --> OK["全部成功"]
+    Ex --> Fail["任一失败<br/>→ 触发 rollback"]
+
+    style Root fill:#bbdefb
+    style Ex fill:#fff9c4
+    style OK fill:#c8e6c9
+    style Fail fill:#ffcdd2
+  </div>
+</section>
+
+<!-- ============= Section 12: API 端点地图 ============= -->
+<section>
+  <h2>12. API 端点地图 (10+ 类, 100+ 端点)</h2>
+  <div class="grid">
+    <div class="card"><h4>📋 CRUD</h4>
+      <code>POST /websites/search</code><br/>
+      <code>GET /websites/list</code><br/>
+      <code>POST /websites</code> 创<br/>
+      <code>POST /websites/del</code> 删<br/>
+      <code>POST /websites/update</code><br/>
+      <code>GET /websites/:id</code><br/>
+      <code>POST /websites/operate</code> 启停
+    </div>
+    <div class="card"><h4>🌐 多域名</h4>
+      <code>POST /websites/domains</code><br/>
+      <code>GET /websites/domains/:websiteId</code><br/>
+      <code>POST /websites/domains/del</code><br/>
+      <code>POST /websites/domains/update</code>
+    </div>
+    <div class="card"><h4>🔒 HTTPS</h4>
+      <code>GET /websites/:id/https</code><br/>
+      <code>POST /websites/:id/https</code><br/>
+      <code>POST /websites/ssl/obtain</code><br/>
+      <code>POST /websites/ssl/upload</code><br/>
+      <code>POST /websites/ssl/import</code>
+    </div>
+    <div class="card"><h4>⚙️ Nginx</h4>
+      <code>GET /websites/:id/config/:type</code><br/>
+      <code>POST /websites/config</code><br/>
+      <code>POST /websites/config/update</code><br/>
+      <code>POST /websites/nginx/update</code>
+    </div>
+    <div class="card"><h4>🛡️ 防护</h4>
+      <code>POST /websites/cors/update</code><br/>
+      <code>POST /websites/leech/update</code><br/>
+      <code>POST /websites/auths/update</code><br/>
+      <code>POST /websites/crosssite</code>
+    </div>
+    <div class="card"><h4>🔁 反代 / LB</h4>
+      <code>POST /websites/proxies</code><br/>
+      <code>POST /websites/proxies/update</code><br/>
+      <code>POST /websites/lbs/create</code><br/>
+      <code>POST /websites/proxy/clear</code>
+    </div>
+    <div class="card"><h4>📝 重写 / 重定向</h4>
+      <code>POST /websites/rewrite</code><br/>
+      <code>POST /websites/rewrite/update</code><br/>
+      <code>POST /websites/redirect/update</code>
+    </div>
+    <div class="card"><h4>📊 资源</h4>
+      <code>GET /websites/resource/:id</code><br/>
+      <code>GET /websites/databases</code><br/>
+      <code>POST /websites/databases</code><br/>
+      <code>POST /websites/realip/config</code>
+    </div>
+    <div class="card"><h4>📁 模板 / DNS / ACME</h4>
+      <code>POST /websites/templates/upload</code><br/>
+      <code>POST /websites/dns</code><br/>
+      <code>POST /websites/acme</code><br/>
+      <code>POST /websites/ca/obtain</code>
+    </div>
+    <div class="card"><h4>🐘 PHP / 日志</h4>
+      <code>POST /websites/php/version</code><br/>
+      <code>POST /websites/log/search</code><br/>
+      <code>POST /websites/log/operate</code><br/>
+      <code>POST /websites/exec/composer</code>
+    </div>
+  </div>
+</section>
+
+<!-- ============= Section 13: 数据流 (创建站) ============= -->
+<section>
+  <h2>13. 数据流 (创建站 1 次写入的内容)</h2>
+  <div class="mermaid">
+graph TB
+    A["POST /websites<br/>(JSON)"] --> B["handler.CreateWebsite<br/>绑定 + 校验"]
+    B --> C["service.CreateWebsite<br/>编排 5 子任务"]
+
+    C -->|子任务 1| T1["task: 创库 (MySQL/PG)"]
+    C -->|子任务 2| T2["task: 装 App / Runtime"]
+    C -->|子任务 3| T3["task: configNginx<br/>(含 WAF)"]
+    C -->|子任务 4| T4["task: enableSSL"]
+    C -->|子任务 5| T5["task: createFtpUser"]
+
+    T3 --> W1["写入 OpenResty:<br/>/www/server/openresty/conf/vhost/{alias}.conf"]
+    T3 --> W2["写入 WAF:<br/>/www/server/openresty/conf/waf/{alias}.conf"]
+    T3 --> W3["创建目录:<br/>/www/sites/{alias}/{index,log,ssl}"]
+    T3 --> D1["INSERT websites<br/>+ INSERT website_domains"]
+    T4 --> W4["写入 SSL 文件:<br/>/www/sites/{alias}/ssl/{cert,key}"]
+    T4 --> D2["UPDATE websites<br/>SET protocol=https, ssl_id=?"]
+    T4 --> W5["修改 .conf:<br/>listen 443 ssl, ssl_certificate ..."]
+    T4 --> R["nginx -t + nginx -s reload"]
+
+    style C fill:#ffe0b2
+    style T3 fill:#fff59d
+    style T4 fill:#fff59d
+    style R fill:#c8e6c9
+  </div>
+</section>
+
+<!-- ============= Section 14: 关键函数 4 段讲解 ============= -->
+<section>
+  <h2>14. 关键函数 (8 个, 4 段讲解)</h2>
+
+  <h3>① <code>CreateWebsite</code> (service/website.go:268)</h3>
+  <table>
+    <tr><th>段</th><th>说明</th></tr>
+    <tr><td>Purpose</td><td>创建网站"总入口", 编排 5+ 子任务 (OpenResty + SSL + FTP + DB + 反代)</td></tr>
+    <tr><td>Params</td><td><code>create request.WebsiteCreate</code> { Type, Alias, Domains, GroupID, Proxy, IPV6, CreateDb, EnableSSL, FtpUser/Pwd, TaskID }</td></tr>
+    <tr><td>Flow</td><td>alias 校验 → 拿 OpenResty 端口 → 构 website → 分发 Type → 创 task → 加子任务 (DB/App/Runtime/Nginx/WAF/SSL/FTP) → tx → Execute</td></tr>
+    <tr><td>Callees</td><td>task / website_utils / NewIAppService / NewIMysqlService / NewIFtpService / websiteRepo / appInstallRepo / runtimeRepo</td></tr>
+  </table>
+
+  <h3>② <code>DeleteWebsite</code> (service/website.go:715)</h3>
+  <table>
+    <tr><th>段</th><th>说明</th></tr>
+    <tr><td>Purpose</td><td>删除网站, 含子站保护、DB 联动、App 联动、文件清理, 全部走 DB 事务</td></tr>
+    <tr><td>Params</td><td><code>req request.WebsiteDelete</code> { ID, DeleteDB, DeleteApp, DeleteBackup, ForceDelete }</td></tr>
+    <tr><td>Flow</td><td>查站 → 子站保护 → 联删 DB → delNginxConfig → delWafConfig → 联删 App → tx (删 websites + website_domains + agent 关联) → 异步删备份 → 删 uploads 目录</td></tr>
+    <tr><td>Callees</td><td>delNginxConfig / delWafConfig / deleteMysqlDatabaseForResourceOwner / NewIPostgresqlService.Delete / deleteAppInstall / NewIBackupRecordService</td></tr>
+  </table>
+
+  <h3>③ <code>OpWebsiteHTTPS</code> (service/website.go:976)</h3>
+  <table>
+    <tr><th>段</th><th>说明</th></tr>
+    <tr><td>Purpose</td><td>切换 HTTPS 状态 (开/关/换证书), 写 OpenResty 的 ssl_certificate 等指令</td></tr>
+    <tr><td>Params</td><td><code>ctx, req request.WebsiteHTTPSOp</code> { WebsiteID, Enable, WebsiteSSLID, Type, HttpConfig, SSLProtocol, Algorithm, Hsts, HstsIncludeSubDomains, Http3 }</td></tr>
+    <tr><td>Flow</td><td>查站 → HSTS/HTTP3 切换 → 关闭: 协议改 HTTP + 删 ssl listen + 删 ssl_certificates → 开启: 拿 SSL (existed/manual) → applySSL 写指令 → Save</td></tr>
+    <tr><td>Callees</td><td>ChangeHSTSConfig / removeSSLListen / deleteListenAndServerName / applySSL / getManualWebsiteSSL / websiteSSLRepo</td></tr>
+  </table>
+
+  <h3>④ <code>GetNginxConfigByScope</code> (service/website.go:849)</h3>
+  <table>
+    <tr><th>段</th><th>说明</th></tr>
+    <tr><td>Purpose</td><td>按"作用域" (Scope) 读 OpenResty 配置里的参数列表, 供前端做"开关 + 表格"形式 UI</td></tr>
+    <tr><td>Params</td><td><code>req request.NginxScopeReq</code> { Scope (cors/auth_basic/leech/realip), WebsiteID }</td></tr>
+    <tr><td>Flow</td><td>scope → keys 映射 (dto.ScopeKeyMap) → 查站 → AST 解析 server 块 → 返回该 scope 下所有 directive</td></tr>
+    <tr><td>Callees</td><td>dto.ScopeKeyMap / getNginxParamsByKeys / nginx parser</td></tr>
+  </table>
+
+  <h3>⑤ <code>UpdateAntiLeech</code> (service/website.go:1477)</h3>
+  <table>
+    <tr><th>段</th><th>说明</th></tr>
+    <tr><td>Purpose</td><td>生成"防盗链 + 缓存"组合 location 块, 写到 server 内的 include 之前</td></tr>
+    <tr><td>Params</td><td><code>req request.NginxAntiLeechUpdate</code> { WebsiteID, Enable, Cache, CacheTime/Unit, Extends, ServerNames, NoneRef, Blocked, Return, LogEnable }</td></tr>
+    <tr><td>Flow</td><td>读 conf → 删旧 location ~ .*\\.(...)$ → 构新 block (expires / access_log / valid_referers / if invalid_referer / proxy_pass) → 插到 include 前 → WriteConfig + Reload</td></tr>
+    <tr><td>Callees</td><td>getNginxFull / nginx.WriteConfig / updateNginxConfig / components.Directive / getRootProxyDirectives</td></tr>
+  </table>
+
+  <h3>⑥ <code>PreInstallCheck</code> (service/website.go:1090)</h3>
+  <table>
+    <tr><th>段</th><th>说明</th></tr>
+    <tr><td>Purpose</td><td>创建网站前, 校验依赖 (OpenResty 必须 Running, 其它 Install 列表也都健康)</td></tr>
+    <tr><td>Params</td><td><code>req request.WebsiteInstallCheckReq</code> { InstallIds []uint }</td></tr>
+    <tr><td>Flow</td><td>查 OpenResty App → 拼 checkIds → syncAppInstallStatus → 任一非 Running 则 showErr=true → 返回 res / nil</td></tr>
+    <tr><td>Callees</td><td>appRepo / appInstallRepo / syncAppInstallStatus / buserr</td></tr>
+  </table>
+
+  <h3>⑦ <code>ChangePHPVersion</code> (service/website.go:1303)</h3>
+  <table>
+    <tr><th>段</th><th>说明</th></tr>
+    <tr><td>Purpose</td><td>切换 PHP 网站的 PHP 版本 (Runtime 切换), 写 proxy_pass 和默认首页</td></tr>
+    <tr><td>Params</td><td><code>req request.WebsitePHPVersionReq</code> { WebsiteID, RuntimeID (0 = 回 Static) }</td></tr>
+    <tr><td>Flow</td><td>校验 PHP Runtime (非 Local) → 读 conf → 删 location ~ .php → 写 index 顺序 / proxy_pass → 写 index.php/html 模板 → WriteConfig + Reload → Save</td></tr>
+    <tr><td>Callees</td><td>parser.NewStringParser / nginx.WriteConfig / nginxCheckAndReload / docker.NewDockerClient / nginx_conf.IndexPHP</td></tr>
+  </table>
+
+  <h3>⑧ <code>UpdateStream</code> (service/website.go:2443)</h3>
+  <table>
+    <tr><th>段</th><th>说明</th></tr>
+    <tr><td>Purpose</td><td>Stream 类型网站改 stream ports / UDP 开关 / 负载算法 / upstream 节点, 重写 stream 块</td></tr>
+    <tr><td>Params</td><td><code>req request.StreamUpdate</code> { WebsiteID, StreamConfig.StreamPorts, UDP, Algorithm, Servers }</td></tr>
+    <tr><td>Flow</td><td>校验 StreamPorts → 读 conf → 端口冲突检查 → 重写 listen (UDP/IPv6) → 构 upstream (ip_hash 等) → 替换 → WriteConfig + Reload → Save</td></tr>
+    <tr><td>Callees</td><td>getNginxFull / checkWebsitePort / parseUpstreamServers / nginx.WriteConfig / nginxCheckAndReload</td></tr>
+  </table>
+</section>
+
+<!-- ============= Section 15: Docker / 外部依赖 ============= -->
+<section>
+  <h2>15. Docker / OpenResty / 外部依赖</h2>
+  <div class="mermaid">
+graph TB
+    subgraph Panel["1Panel Backend (Go)"]
+        Web[Website Service]
+    end
+    subgraph Container["OpenResty 容器 (1panel/openresty)"]
+        Conf["/www/server/openresty/conf/<br/>vhost/{alias}.conf + waf/"]
+        Site["/www/sites/{alias}/<br/>index, log, ssl, uploads"]
+    end
+    subgraph External["外部"]
+        Docker["Docker Engine<br/>(容器管理)"]
+        LE["Let's Encrypt<br/>(ACME)"]
+        DNS["DNS API<br/>(DNS-01)"]
+        Lego["Lego<br/>(ACME 客户端)"]
+    end
+
+    Web -->|exec docker| Docker
+    Docker -->|reload| Container
+    Web -->|Lego| Lego
+    Lego --> LE
+    Lego --> DNS
+    Web -->|compose| Docker
+    Docker -->|exec composer| Container
+
+    style Container fill:#b2dfdb
+    style LE fill:#ffcdd2
+  </div>
+
+  <h3>OpenResty 关键路径</h3>
+  <pre>
+容器内路径:
+/www/server/openresty/conf/nginx.conf            # 主配置
+/www/server/openresty/conf/vhost/{alias}.conf     # 站点配置
+/www/server/openresty/conf/waf/{alias}.conf       # WAF 规则
+/www/server/openresty/conf/rewrite/{alias}.conf   # 伪静态 (include)
+/www/server/openresty/conf/vhost/{alias}.include/ # 重定向 (多个 .conf)
+
+数据 (宿主机挂载):
+/www/sites/{alias}/index/                        # 网站根目录
+/www/sites/{alias}/log/{access,error}.log         # 日志
+/www/sites/{alias}/ssl/                          # 证书 (fullchain.pem, privkey.pem)
+/www/sites/{alias}/php-pool/php-fpm.sock         # PHP unix socket
+  </pre>
+</section>
+
+<!-- ============= Section 16: 设计点 ============= -->
+<section>
+  <h2>16. 5 大设计点 (从源码看 1Panel 思路)</h2>
+  <div class="grid">
+    <div class="card">
+      <h4>① 异步任务编排 (Task Pipeline)</h4>
+      <p>创站 5+ 子任务, 串/并行调度, 失败可回滚, 进度通过 task_id 上报</p>
+      <code>task.NewTaskWithOps / AddSubTask(name, fn, rollback)</code>
+    </div>
+    <div class="card">
+      <h4>② OpenResty AST 解析</h4>
+      <p>自研 nginx parser + components, Parse / FindDirectives / UpdateDirective / WriteConfig, 不破坏其他指令</p>
+      <code>utils/nginx/parser + components</code>
+    </div>
+    <div class="card">
+      <h4>③ 5 种业态统一抽象</h4>
+      <p>Static / Runtime / Deployment / Stream / Subsite 通过 Type 字段分发, UI 和 CRUD 统一一套</p>
+      <code>switch website.Type</code>
+    </div>
+    <div class="card">
+      <h4>④ 多节点推送 (主从)</h4>
+      <p>MasterSSLID + PushNode + Nodes 字段, pushSSLToNode HTTP API 推证书/配置到子节点</p>
+      <code>pushSSLToNode(websiteSSL, logger)</code>
+    </div>
+    <div class="card">
+      <h4>⑤ 审计日志 (x-panel-log)</h4>
+      <p>几乎所有改数据的 handler 都有 <code>@x-panel-log</code> 注释, 面板操作日志可追溯</p>
+      <code>bodyKeys + BeforeFunctions + formatZH + formatEN</code>
+    </div>
+  </div>
+</section>
+
+<!-- ============= Section 17: 入口与排错 ============= -->
+<section>
+  <h2>17. 读源码建议顺序 (排错 / 学习)</h2>
+  <ol style="line-height:2;">
+    <li><code>model/website.go</code> (5.1 表结构) — 先看数据</li>
+    <li><code>service/website.go:72-157</code> (IWebsiteService 接口) — 看能力清单</li>
+    <li><code>service/website.go:268-601</code> (CreateWebsite) — 看主流程</li>
+    <li><code>utils/nginx/parser</code> — 看怎么解析 conf</li>
+    <li><code>service/website_utils.go</code> — 看所有 helper (~50 个)</li>
+    <li><code>service/website_ssl.go</code> — 看 ACME / 续签</li>
+    <li><code>service/website_proxy.go / website_lb.go</code> — 看反代 + 负载均衡</li>
+  </ol>
+</section>
+
+<!-- ============= Section 18: 关键 file:line 索引 ============= -->
+<section>
+  <h2>18. 关键 file:line 索引 (40+)</h2>
+  <pre>
+路由:
+  agent/router/ro_website.go:16           POST /websites/search
+  agent/router/ro_website.go:17           GET  /websites/list
+  agent/router/ro_website.go:18           POST /websites
+  agent/router/ro_website.go:25           GET  /websites/:id
+  agent/router/ro_website.go:39           GET  /websites/:id/config/:type
+  agent/router/ro_website.go:45           POST /websites/:id/https
+  agent/router/ro_website.go:71           POST /websites/cors/update
+  agent/router/ro_website.go:89           POST /websites/php/version
+  agent/router/ro_website.go:96           POST /websites/databases
+  agent/router/ro_website_ssl.go:18       POST /websites/ssl
+  agent/router/ro_website_ssl.go:26       POST /websites/ssl/obtain
+  agent/router/ro_website_ca.go:19        POST /websites/ca/obtain
+  agent/router/ro_website_dns_account.go:17 POST /websites/dns
+  agent/router/ro_website_acme_account.go:17 POST /websites/acme
+  agent/router/ro_website_template.go:21  POST /websites/templates/upload
+
+Handler:
+  agent/api/v2/website.go:77              func CreateWebsite
+  agent/api/v2/website.go:121             func DeleteWebsite
+  agent/api/v2/website.go:276             func UpdateHTTPSConfig
+
+Service:
+  agent/app/service/website.go:47          type WebsiteService struct{}
+  agent/app/service/website.go:72          type IWebsiteService interface
+  agent/app/service/website.go:159         func NewIWebsiteService()
+  agent/app/service/website.go:268         func CreateWebsite
+  agent/app/service/website.go:492         configNginx 子任务
+  agent/app/service/website.go:551         enableSSL 子任务
+  agent/app/service/website.go:603         func OpWebsite
+  agent/app/service/website.go:715         func DeleteWebsite
+  agent/app/service/website.go:849         func GetNginxConfigByScope
+  agent/app/service/website.go:917         func GetWebsiteHTTPS
+  agent/app/service/website.go:976         func OpWebsiteHTTPS
+  agent/app/service/website.go:1090        func PreInstallCheck
+  agent/app/service/website.go:1303        func ChangePHPVersion
+  agent/app/service/website.go:1477        func UpdateAntiLeech
+  agent/app/service/website.go:2443        func UpdateStream
+
+Model:
+  agent/app/model/website.go:5             type Website
+  agent/app/model/website.go:46            TableName "websites"
+  agent/app/model/website_ssl.go:11        type WebsiteSSL
+  agent/app/model/website_dns_account.go:3 type WebsiteDnsAccount
+  agent/app/model/website_acme_account.go:3 type WebsiteAcmeAccount
+  agent/app/model/website_ca.go:3          type WebsiteCA
+  agent/app/model/website_template.go:3    type WebsiteTemplate
+  agent/app/model/website_domain.go:3      type WebsiteDomain
+  </pre>
+</section>
+
+<!-- ============= Section 19: 已知陷阱 ============= -->
+<section>
+  <h2>19. 已知陷阱 (源码旁注)</h2>
+  <table>
+    <tr><th>#</th><th>陷阱</th><th>位置</th></tr>
+    <tr><td>1</td><td>alias = "default" 是保留字</td><td>CreateWebsite:270</td></tr>
+    <tr><td>2</td><td>中文 alias 需 Punycode 编码</td><td>CreateWebsite:273</td></tr>
+    <tr><td>3</td><td>PHP Runtime 必须 Appstore 镜像 (不能 Local)</td><td>CreateWebsite:460</td></tr>
+    <tr><td>4</td><td>OpenResty 必须先安装</td><td>PreInstallCheck</td></tr>
+    <tr><td>5</td><td>Stream 类型不创 WAF</td><td>CreateWebsite:511</td></tr>
+    <tr><td>6</td><td>Subsite 有子站时不能删</td><td>DeleteWebsite:720</td></tr>
+    <tr><td>7</td><td>证书为 IP 时 IsIp=true, 影响 valid_referers</td><td>website_ssl.go</td></tr>
+    <tr><td>8</td><td>WAF 写失败不回滚 (仅 log)</td><td>createWafConfig</td></tr>
+    <tr><td>9</td><td>PageWebsite 按 Name 查时 N+1 (先查 domains 表)</td><td>PageWebsite:175</td></tr>
+    <tr><td>10</td><td>Composer 必须有 composer.json</td><td>ExecComposer:2385</td></tr>
+  </table>
+</section>
+
+<!-- ============= Section 20: 总结 ============= -->
+<section>
+  <h2>20. 总结</h2>
+  <p style="font-size:16px; line-height:1.8;">
+    1Panel Website 模块 ≈ <strong>cPanel + OpenResty + Let's Encrypt + 1Panel App + WAF</strong> 的高度自动化合体。
+    <br/>6 个 router 文件 + 1342 行 handler + 2502 行 service + 7 个 GORM 表 + 8 个子文件 (utils / ssl / proxy / lb / op / domain / auth_basic / template)。
+    <br/>核心三招: <span class="badge badge-green">Nginx AST 解析</span> <span class="badge badge-blue">Task Pipeline 编排</span> <span class="badge badge-purple">5 业态统一抽象</span>。
+    <br/>通过任务编排 + 5 种业态统一抽象 + 自研 AST 解析, 实现了"一站式开网店"。
+  </p>
+  <p style="margin-top:16px;">
+    <strong>主入口</strong>: <code>service/website.go::CreateWebsite</code> (line 268), 一次编排 5+ 子任务, 失败自动回滚。
+  </p>
+</section>
+
+<footer style="text-align:center; padding:24px; color:rgba(255,255,255,0.7); font-size:12px;">
+  1Panel 03-website v3 Visual Atlas · 2026-08-25 · Built by Worker sub-agent
 </footer>
-</main>
+
+</div>
 
 <script>
-(function() {
-    const btn = document.getElementById('theme-toggle');
-    const saved = localStorage.getItem('atlas-theme') || 'light';
-    applyTheme(saved);
-    btn.addEventListener('click', function() {
-        const cur = document.documentElement.getAttribute('data-theme') || 'light';
-        const next = cur === 'dark' ? 'light' : 'dark';
-        applyTheme(next);
-        localStorage.setItem('atlas-theme', next);
-    });
-    function applyTheme(t) {
-        document.documentElement.setAttribute('data-theme', t);
-        btn.textContent = t === 'dark' ? '☀️' : '🌙';
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    flowchart: { useMaxWidth: true, htmlLabels: true },
+    sequence: { useMaxWidth: true, showSequenceNumbers: true },
+    themeVariables: {
+      primaryColor: '#1e3c72',
+      primaryTextColor: '#fff',
+      primaryBorderColor: '#7c4dff',
+      lineColor: '#1e3c72',
+      secondaryColor: '#ffe0b2',
+      tertiaryColor: '#f3e5f5'
     }
-})();
-(function() {
-    document.querySelectorAll('.card').forEach(function(card) {
-        card.addEventListener('click', function(e) {
-            if (e.target.closest('a, button')) return;
-            card.classList.toggle('expanded');
-        });
-    });
-})();
+  });
 </script>
 </body>
 </html>
