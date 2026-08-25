@@ -57,6 +57,16 @@
 
 > 之前 sub tick 10 min 太密, 改 15 min 足够覆盖 30 min 间隔的 task。
 
+### 2.1.1 Task-driven 循环 (v2.1)
+
+当 9 task 全部 done 后, 下一次 sub tick 检测 `all_done` → **force regen** 立即开新窗口, 不等 5h 桶结束。
+
+- 之前: 9 task done 后 idle 4.4h 等 5h 桶边界
+- 现在: 9 task done 后立即重置 9 task pending, 跑下一轮
+- 5h 桶退化为"参考周期" (build_plan 仍按 bucket hour 算)
+- 实际节奏: 9 task / ~2.25h, 1 天 ~10.7 轮, 永不 idle
+- 适用场景: 任务全部幂等 (build index / push / 备份), 多跑无害
+
 ### 2.2 5h 窗口内 9 task 分布 (30 min 间隔)
 
 | # | Offset (min) | task id | 名称 | 类别 | 状态 |
