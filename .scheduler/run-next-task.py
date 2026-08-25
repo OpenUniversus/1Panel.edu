@@ -827,6 +827,19 @@ def main():
     # Anti-re-run: only pending/failed (and not excluded)
     next_task = find_next_task(state)
     if next_task is None:
+        # All tasks done (no pending, no failed) → force regen to start next round.
+        # This avoids 4.4h idle gap when 9 tasks complete in ~2.5h.
+        all_done = all(t["status"] == "done" for t in state["current_window"]["sub_tasks"])
+        if all_done:
+            n = len(state["current_window"]["sub_tasks"])
+            print(f"[{now_local().strftime('%H:%M')}] all {n} tasks done; force regen next round")
+            subprocess.run(
+                [sys.executable, str(SCHEDULER_DIR / "gen-plan.py")],
+                check=True, timeout=30,
+            )
+            state = load_state()
+            next_task = find_next_task(state)
+    if next_task is None:
         total = len(state["current_window"]["sub_tasks"])
         print(f"<mavis-progress>silent: window {state['current_window']['window_id']} all done ({total}/{total})</mavis-progress>")
         return 0
