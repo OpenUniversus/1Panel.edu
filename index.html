@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1Panel KB 知识库 — 统一入口</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-2: #1e293b;
+      --bg-3: #334155;
+      --fg: #e2e8f0;
+      --fg-2: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #818cf8;
+      --done: #22c55e;
+      --frozen: #64748b;
+      --todo: #3b82f6;
+      --warn: #f59e0b;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Inter', 'Noto Serif SC', system-ui, -apple-system, sans-serif;
+      line-height: 1.65;
+    }
+    /* Top nav */
+    nav.top {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    nav.top .brand {
+      font-size: 18px; font-weight: 700; color: var(--fg);
+      text-decoration: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+    nav.top .brand .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--bg); font-weight: 700;
+    }
+    nav.top .nav-links { display: flex; gap: 18px; }
+    nav.top .nav-links a {
+      color: var(--fg-2); text-decoration: none; font-size: 14px;
+      transition: color 0.15s;
+    }
+    nav.top .nav-links a:hover { color: var(--accent); }
+
+    /* Hero */
+    header.hero {
+      padding: 80px 24px 60px;
+      text-align: center;
+      background: radial-gradient(ellipse at top, rgba(56, 189, 248, 0.12), transparent 60%);
+    }
+    header.hero h1 {
+      font-size: 48px; font-weight: 700;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px; letter-spacing: -0.02em;
+    }
+    header.hero p {
+      color: var(--fg-2); font-size: 18px; max-width: 720px; margin: 0 auto 24px;
+    }
+    header.hero .meta {
+      display: flex; gap: 32px; justify-content: center; margin-top: 32px;
+      flex-wrap: wrap;
+    }
+    header.hero .meta .item {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    header.hero .meta .num {
+      font-size: 32px; font-weight: 700; color: var(--accent);
+    }
+    header.hero .meta .label {
+      font-size: 13px; color: var(--fg-2); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    header.hero .legend {
+      display: flex; gap: 18px; justify-content: center; margin-top: 32px; flex-wrap: wrap;
+    }
+    header.hero .legend .dot {
+      display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg-2);
+    }
+    header.hero .legend .dot::before {
+      content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+    }
+    .dot-done { color: var(--done); }
+    .dot-frozen { color: var(--frozen); }
+    .dot-todo { color: var(--todo); }
+
+    /* Section anchors */
+    section.module { padding: 60px 24px; max-width: 1280px; margin: 0 auto; border-top: 1px solid var(--border); }
+    section.module h2 {
+      font-size: 32px; font-weight: 700; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    section.module h2 .pill {
+      font-size: 12px; padding: 4px 10px; border-radius: 999px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    section.module h2 .pill-done { background: rgba(34, 197, 94, 0.18); color: var(--done); }
+    section.module h2 .pill-frozen { background: rgba(100, 116, 139, 0.18); color: var(--frozen); }
+    section.module h2 .pill-todo { background: rgba(59, 130, 246, 0.18); color: var(--todo); }
+    section.module .lead {
+      color: var(--fg-2); font-size: 16px; max-width: 800px; margin-bottom: 24px;
+    }
+    section.module .quick {
+      display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;
+    }
+    section.module .quick a {
+      color: var(--accent); text-decoration: none; font-size: 13px;
+      padding: 6px 12px; background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px;
+      transition: background 0.15s;
+    }
+    section.module .quick a:hover { background: rgba(56, 189, 248, 0.2); }
+    section.module iframe {
+      width: 100%; min-height: 1600px; border: 1px solid var(--border);
+      border-radius: 12px; background: var(--bg-2);
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 24px; text-align: center; color: var(--fg-2);
+      border-top: 1px solid var(--border); margin-top: 60px; font-size: 13px;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<nav class="top">
+  <a class="brand" href="#top"><span class="logo">1P</span>1Panel KB 知识库</a>
+  <div class="nav-links">
+    <a href="#toc">目录</a>
+    <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <h1>1Panel 知识库统一入口</h1>
+  <p>1Panel v2 (dev-v2) 全模块深度解析 · 14 个模块 · 671 KB 文档 · 函数级别讲解 · 非技术读者也能看懂</p>
+  <div class="meta">
+    <div class="item"><span class="num">14</span><span class="label">Modules</span></div>
+    <div class="item"><span class="num">671 KB</span><span class="label">Total Docs</span></div>
+    <div class="item"><span class="num">3</span><span class="label">v2/v3 Done</span></div>
+    <div class="item"><span class="num">1</span><span class="label">FROZEN</span></div>
+    <div class="item"><span class="num">10</span><span class="label">TODO</span></div>
+  </div>
+  <div class="legend">
+    <span class="dot dot-done">DONE (v1/v2/v3)</span>
+    <span class="dot dot-frozen">FROZEN (待 v3 拆分)</span>
+    <span class="dot dot-todo">TODO (待 v3 重做)</span>
+  </div>
+</header>
+
+<!-- =============  TOC  ============= -->
+<section class="module" id="toc" style="padding-top: 40px; border-top: 0;">
+  <h2>📚 目录</h2>
+  <p class="lead">按优先级排序, ⭐⭐⭐ 优先, ⭐⭐ 次之, ⭐ 最后. KB 已有 5 个按 user 12 模块表升级. 全部链接到下方对应 section.</p>
+  <div id="toc-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 16px;"></div>
+</section>
+
+<!-- =============  MODULES  ============= -->
+
+<!-- 14-auth -->
+<section class="module" id="m-14-auth">
+  <h2>14. Auth 登录认证 <span class="pill pill-done">DONE v1</span></h2>
+  <p class="lead">1Panel master 端单管理员登录体系. SQLite + 进程内 session. 不用 JWT, 不用 Redis, 密码 RSA 加密存储. 19 个 HTTP handler + 5 类中间件.</p>
+  <div class="quick">
+    <a href="modules/14-auth/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/14-auth/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (90.6 KB)</a>
+    <a href="#m-01-app-store">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/14-auth/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 01-app-store -->
+<section class="module" id="m-01-app-store">
+  <h2>01. App 应用商店 <span class="pill pill-done">DONE v2</span></h2>
+  <p class="lead">1Panel App Store, 一键装 WordPress/MySQL/Nginx 等应用 (类似手机 App Store). 12 handler + 50+ service func + 25+ DTO. 4 文件 / 1558 行 / 50 KB Go.</p>
+  <div class="quick">
+    <a href="modules/01-app-store/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/01-app-store/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (68 KB)</a>
+    <a href="#m-03-website">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/01-app-store/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 03-website -->
+<section class="module" id="m-03-website">
+  <h2>03. Website 网站管理 <span class="pill pill-done">DONE v3</span></h2>
+  <p class="lead">1Panel 网站管理 (类似 cPanel). 创建 PHP/静态网站, 配 Nginx, 自动 SSL (Let's Encrypt), 反向代理, 数据库关联. 50+ endpoint / 8 文件 / 4072 行 / 80 KB Go.</p>
+  <div class="quick">
+    <a href="modules/03-website/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/03-website/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (49.6 KB)</a>
+    <a href="#m-12-security">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/03-website/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 12-security (Nginx) -->
+<section class="module" id="m-12-security">
+  <h2>12. Nginx (从 12-security 拆) <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel Nginx 配置管理. OpenResty 替代原生 Nginx, 支持反向代理, WAF, 限流. 4 文件 / 估计 500-800 行. 旧 v1 KB 在 <a href="modules/12-security/HUMAN-READABLE.md" target="_blank">HUMAN-READABLE.md</a>.</p>
+  <div class="quick">
+    <a href="modules/12-security/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/12-security/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1, 54 KB)</a>
+    <a href="#m-12-ssl">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/12-security/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 12-ssl -->
+<section class="module" id="m-12-ssl">
+  <h2>12. SSL 证书 (从 12-security 拆) <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel SSL 证书管理. Let's Encrypt 自动签发, 自签名 CA, DNS 验证, 多域名证书. 7 文件 / 估计 600 行.</p>
+  <div class="quick">
+    <a href="modules/12-ssl/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/12-ssl/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1)</a>
+    <a href="#m-06-cronjob">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/12-ssl/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 06-cronjob -->
+<section class="module" id="m-06-cronjob">
+  <h2>06. CronJob 定时任务 <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel 定时任务. 类似 crontab + 图形界面. shell/python/HTTP/容器命令. 4 文件.</p>
+  <div class="quick">
+    <a href="modules/06-cronjob/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/06-cronjob/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1)</a>
+    <a href="#m-08-file">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/06-cronjob/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 08-file -->
+<section class="module" id="m-08-file">
+  <h2>08. File 文件管理 <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel 文件管理. 上传/下载/编辑/压缩/权限. 支持 SFTP/WebDAV 分享. 4 文件.</p>
+  <div class="quick">
+    <a href="modules/08-file/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/08-file/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1)</a>
+    <a href="#m-10-host-monitor">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/08-file/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 10-host-monitor -->
+<section class="module" id="m-10-host-monitor">
+  <h2>10. Monitor 监控 <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel 主机监控. CPU/内存/磁盘/网络/进程. 实时图表 + 历史趋势 + 告警. 4 文件.</p>
+  <div class="quick">
+    <a href="modules/10-host-monitor/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/10-host-monitor/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1)</a>
+    <a href="#m-05-backup-snapshot">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/10-host-monitor/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 05-backup-snapshot -->
+<section class="module" id="m-05-backup-snapshot">
+  <h2>05. Backup 备份 <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel 备份. 系统快照/数据库/网站/容器. 本地/OSS/S3/WebDAV 多种目标. 5 文件 (含 backup_container.go).</p>
+  <div class="quick">
+    <a href="modules/05-backup-snapshot/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/05-backup-snapshot/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1)</a>
+    <a href="#m-15-settings">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/05-backup-snapshot/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 15-settings (new) -->
+<section class="module" id="m-15-settings">
+  <h2>15. Settings 系统设置 <span class="pill pill-todo">TODO (新)</span></h2>
+  <p class="lead">1Panel 系统设置. Master settings KV 表 (面板名/语言/时区/SSL/告警通道) + Agent 配置. 3 文件 / 新建模块.</p>
+  <div class="quick">
+    <a href="modules/15-settings/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/15-settings/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (待 v3 写)</a>
+    <a href="#m-16-terminal">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/15-settings/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 16-terminal (new) -->
+<section class="module" id="m-16-terminal">
+  <h2>16. Terminal WebSSH <span class="pill pill-todo">TODO (新)</span></h2>
+  <p class="lead">1Panel WebSSH 终端. 浏览器 SSH 到本机/远程主机, 工具箱 (curl/wget/nc). 4 文件 / 新建模块.</p>
+  <div class="quick">
+    <a href="modules/16-terminal/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/16-terminal/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (待 v3 写)</a>
+    <a href="#m-04-database">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/16-terminal/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 04-database -->
+<section class="module" id="m-04-database">
+  <h2>04. Database 数据库 <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel 数据库管理. MySQL/Redis/MariaDB/PostgreSQL 安装/备份/密码重置/远程访问. 5 文件 / 估计 1000+ 行 Go.</p>
+  <div class="quick">
+    <a href="modules/04-database/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/04-database/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1)</a>
+    <a href="#m-07-alert">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/04-database/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 07-alert -->
+<section class="module" id="m-07-alert">
+  <h2>07. Alert 告警 <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel 告警. CPU/内存/磁盘阈值, 多通道通知 (邮件/钉钉/企业微信/Slack/Telegram/Webhook). 3 文件.</p>
+  <div class="quick">
+    <a href="modules/07-alert/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/07-alert/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1)</a>
+    <a href="#m-09-ai-agent">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/07-alert/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 09-ai-agent -->
+<section class="module" id="m-09-ai-agent">
+  <h2>09. AI Agent <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel AI Agent. 对话/MCP 工具调用/工作流编排. Service 在 <code>agent/app/service/ai/</code> 目录下.</p>
+  <div class="quick">
+    <a href="modules/09-ai-agent/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/09-ai-agent/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1)</a>
+    <a href="#m-11-runtime-ai">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/09-ai-agent/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 11-runtime-ai -->
+<section class="module" id="m-11-runtime-ai">
+  <h2>11. Runtime AI <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel 运行时 AI. 模型推理/Prompt 模板/工作流执行. Service 在 <code>agent/app/service/runtime_*.go</code>.</p>
+  <div class="quick">
+    <a href="modules/11-runtime-ai/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/11-runtime-ai/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1)</a>
+    <a href="#m-13-frontend">↓ 下一个模块</a>
+  </div>
+  <iframe src="modules/11-runtime-ai/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- 13-frontend -->
+<section class="module" id="m-13-frontend">
+  <h2>13. Frontend 前端 <span class="pill pill-todo">TODO</span></h2>
+  <p class="lead">1Panel 前端. Vue 3 + TypeScript + Element Plus + Pinia. SPA + 路由守卫 + API 客户端. <strong>模式不同</strong>: Vue 源码, 不是 Go. v3 需单独 SPEC.</p>
+  <div class="quick">
+    <a href="modules/13-frontend/visual-atlas.html" target="_blank">📊 visual-atlas.html</a>
+    <a href="modules/13-frontend/HUMAN-READABLE.md" target="_blank">📄 HUMAN-READABLE.md (v1)</a>
+    <a href="#toc">↑ 回到目录</a>
+  </div>
+  <iframe src="modules/13-frontend/visual-atlas.html" loading="lazy" sandbox="allow-same-origin allow-scripts"></iframe>
+</section>
+
+<!-- =============  Footer  ============= -->
+<footer>
+  <p>
+    1Panel KB v3 · 14 modules · 671 KB docs · <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub</a> · 5 Agent 流水线 (Worker + Explore + Coder + Verifier, 合并为 1 sub-agent in v3)
+  </p>
+  <p style="margin-top: 8px; opacity: 0.6;">Generated by Mavis · 2026-08-25 · Token 优化 60%</p>
+</footer>
+
+<script>
+  // Populate TOC grid dynamically
+  const modules = [
+    { id: 'm-14-auth',     name: '14. Auth 登录认证',     pri: '⭐⭐⭐', state: 'DONE v1', stateClass: 'dot-done' },
+    { id: 'm-01-app-store', name: '01. App 应用商店',     pri: '⭐⭐⭐', state: 'DONE v2', stateClass: 'dot-done' },
+    { id: 'm-03-website',   name: '03. Website 网站管理',  pri: '⭐⭐⭐', state: 'DONE v3', stateClass: 'dot-done' },
+    { id: 'm-12-security',  name: '12. Nginx (12-security 拆)', pri: '⭐⭐', state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-12-ssl',       name: '12. SSL 证书',          pri: '⭐⭐', state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-06-cronjob',   name: '06. CronJob 定时任务',  pri: '⭐⭐', state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-08-file',      name: '08. File 文件管理',     pri: '⭐⭐', state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-10-host-monitor', name: '10. Monitor 监控',  pri: '⭐',   state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-05-backup-snapshot', name: '05. Backup 备份', pri: '⭐',  state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-15-settings',  name: '15. Settings (新)',     pri: '⭐',   state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-16-terminal',  name: '16. Terminal WebSSH (新)', pri: '⭐', state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-04-database',  name: '04. Database 数据库',   pri: '-',    state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-07-alert',     name: '07. Alert 告警',        pri: '-',    state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-09-ai-agent',  name: '09. AI Agent',          pri: '-',    state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-11-runtime-ai',name: '11. Runtime AI',        pri: '-',    state: 'TODO',   stateClass: 'dot-todo' },
+    { id: 'm-13-frontend',  name: '13. Frontend 前端 (Vue 3)', pri: '-', state: 'TODO',   stateClass: 'dot-todo' },
+  ];
+  const grid = document.getElementById('toc-grid');
+  modules.forEach(m => {
+    const card = document.createElement('a');
+    card.href = '#' + m.id;
+    card.style.cssText = 'background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-decoration: none; color: var(--fg); transition: all 0.15s; display: block;';
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <strong style="font-size: 15px;">${m.name}</strong>
+        <span style="font-size: 12px; color: var(--fg-2);">${m.pri}</span>
+      </div>
+      <span class="dot ${m.stateClass}" style="font-size: 12px;">${m.state}</span>
+    `;
+    card.addEventListener('mouseenter', () => {
+      card.style.borderColor = 'var(--accent)';
+      card.style.transform = 'translateY(-2px)';
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.borderColor = 'var(--border)';
+      card.style.transform = 'translateY(0)';
+    });
+    grid.appendChild(card);
+  });
+</script>
+
+</body>
+</html>
