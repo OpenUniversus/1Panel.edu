@@ -1,6 +1,6 @@
 # Module Coverage
 
-Generated: 2026-08-25T10:23:47.277005+08:00
+Generated: 2026-08-25T10:37:09.527298+08:00
 Upstream: `https://github.com/1Panel-dev/1Panel.git` @dev-v2
 
 **Total Go files upstream**: 820
