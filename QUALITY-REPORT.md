@@ -1,5 +1,5 @@
 # Quality Check
 
-2026-08-25T20:10:01.902448+08:00
+2026-08-25T21:40:03.938778+08:00
 
-- OK: all modules complete, no placeholders/broken links found
+- README.md: dead external link 'https://github.com/1Panel-dev/1Panel'
