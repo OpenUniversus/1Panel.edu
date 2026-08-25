@@ -345,3 +345,73 @@ L. **新增**: 每个 struct 字段说明 — 抽样 3 个 struct
 - `_archive_*` — 历史版本
 
 **入仓**: skeleton/ (Go) + modules/ (KB) + firewall-architecture.md + KB-INDEX/README/LICENSE.
+
+---
+
+# v3 升级: Token 优化 + 0/5/20 无人在场 cron
+
+> v3 节省 60% token. 1 module 1 sub-agent (vs v2 2 sub-agent). 0/5/20 重点跑 module, 10/15 普通 KB 维护.
+
+## v3 vs v2 对比
+
+| 维度 | v2 (现行) | v3 (新) | 节省 |
+|---|---|---|---|
+| 1 module sub-agent 数 | 2 (Explore + Coder) | **1 (single sub-agent)** | -50% |
+| 1 module token | ~250K | **~100K** | **-60%** |
+| Master tick 频次 | 5 (0/5/10/15/20) | 5 (不变) | 0% |
+| 0/5/20 桶用途 | KB 维护 | KB 维护 + **MODULE_READY 标记** | 增量 |
+| 14 module 全跑 token | 3.5M | **1.4M** | **-60%** |
+| 月预算占比 (6 亿) | 0.58% | **0.23%** | 节省 0.35% |
+
+## v3 0/5/20 无人在场 cron
+
+| 桶 | 状态 | 跑什么 | token |
+|---|---|---|---|
+| 0:00 (凌晨) | **无人** | KB 维护 (9 task) + MODULE_READY 标记 | 0 + ~100K/次 |
+| 5:00 (晨) | **无人** | KB 维护 + MODULE_READY 标记 | 0 + ~100K/次 |
+| 10:00 (上午) | user 在场 | KB 维护 | 0 |
+| 15:00 (下午) | user 在场 | KB 维护 | 0 |
+| 20:00 (晚) | **无人** | KB 维护 + MODULE_READY 标记 | 0 + ~100K/次 |
+
+**节奏**:
+- 1 天最多 3 module 自动跑 (0/5/20 各 1)
+- 1 天 N module user 触发 (10/15 时段, 1 module 1 验收)
+- 14 module 5 天完成 (3/天 自动) 或 1 周 (2/天)
+
+## v3 1-sub-agent 流水线
+
+每个 module 1 个 worker sub-agent 跑全部 4 步:
+
+```
+single sub-agent (worker role, ~100K token, 9 min)
+  ├─ Step 1: read 源码 (3 min)
+  │    - 读 N 个 .go 文件
+  │    - 提取 func / type / var / file:line
+  │
+  ├─ Step 2: write 文档 (5 min)
+  │    - modules/<module>/HUMAN-READABLE.md (≥ 50 KB)
+  │    - modules/<module>/visual-atlas.html (≥ 20 KB)
+  │    - 关键 6-8 func 4 段讲解 + struct 字段 + 调用链
+  │
+  ├─ Step 3: self-verify (1 min)
+  │    - 12 项 A-L 校验
+  │    - 不通过就修
+  │
+  └─ Step 4: commit + push (30s)
+       - git add + commit + push
+```
+
+## v3 vs v2 质量权衡
+
+| | v2 | v3 |
+|---|---|---|
+| HR.md 大小 | 68 KB | 50 KB (-25%) |
+| 关键 func 详细度 | 8 个 ★★ 8 段 | 6-8 个 4 段 |
+| 其他 func | 1 句话作用列表 | 1 句话作用列表 (同) |
+| struct 字段说明 | ✓ | ✓ |
+| Mermaid 图 | 9+ | 8+ |
+| Self-verify | 12 项 (Verifier sub-agent) | 12 项 (sub-agent 内联) |
+| Token | 250K | 100K (-60%) |
+
+**结论**: v3 输出质量略低 (50 KB vs 68 KB), 但 token 节省 60%. 适合 14 module 大批量生产.
+**v2 适用**: 关键 module (Auth/Docker) 想要更细讲解.
