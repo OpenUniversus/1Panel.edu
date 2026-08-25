@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-"""1Panel.edu scheduler daemon.
+"""1Panel.edu scheduler daemon (v2).
+
 Pure Python. Single long-running process. No LLM, no admin, no schtasks.
-- Master tick at :00 of every 5-hour bucket (0, 5, 10, 15, 20): runs gen-plan + run-next-task
-- Sub tick every 10 minutes: runs run-next-task
-- Anti-re-run: state.json tracks per-task status
-- Anti-miss: state.json detects window expiry
+- Master tick at :00 of every 5-hour bucket (0, 5, 10, 15, 20):
+    runs gen-plan + run-next-task
+    Also resets daily ALERTS.md at 00:00
+- Sub tick at :00 (non-bucket), :15, :30, :45 of every hour:
+    runs run-next-task
+- Lock file anti-overlap (run-next-task.py owns)
 - Crash-safe: re-loads state on each tick
+- Graceful shutdown on SIGINT/SIGTERM (best-effort on Windows)
 
 Run: python scheduler-daemon.py
-Stop: Ctrl-C
+Stop: Ctrl-C (or kill <pid>)
 """
 import logging
+import signal
 import subprocess
 import sys
 import time
@@ -18,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 SCHEDULER_DIR = Path(__file__).parent
-LOG_DIR       = SCHEDULER_DIR / "logs"
+LOG_DIR = SCHEDULER_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
 # Configure logging
@@ -33,6 +38,8 @@ logging.basicConfig(
 log = logging.getLogger("scheduler")
 
 TZ = timezone(timedelta(hours=8))
+REPO_ROOT = SCHEDULER_DIR.parent
+_running = True  # for graceful shutdown
 
 
 def now_local():
@@ -42,6 +49,18 @@ def now_local():
 def current_bucket(now):
     """5-hour bucket: 0-4 / 5-9 / 10-14 / 15-19 / 20-23."""
     return (now.hour // 5) * 5
+
+
+def is_master_tick(now):
+    """Master = :00 of bucket hour (0, 5, 10, 15, 20)."""
+    return now.minute == 0 and current_bucket(now) == now.hour
+
+
+def is_sub_tick(now):
+    """Sub = :15, :30, :45, plus :00 of non-bucket hours."""
+    if now.minute == 0:
+        return not is_master_tick(now)
+    return now.minute in (15, 30, 45)
 
 
 def seconds_until(target: datetime) -> float:
@@ -69,9 +88,32 @@ def run_script(name, args=None):
         return 1
 
 
+def reset_daily_alerts():
+    """At master tick 00:00, clear ALERTS.md (new day)."""
+    alerts = REPO_ROOT / "ALERTS.md"
+    if not alerts.exists():
+        return
+    try:
+        # Just truncate; keep header
+        content = alerts.read_text(encoding="utf-8", errors="ignore")
+        lines = content.splitlines()
+        # Keep only header (first 3 lines)
+        if lines and lines[0].startswith("# KB Alerts"):
+            new_content = "\n".join(lines[:3]) + "\n\n"
+        else:
+            new_content = "# KB Alerts\n\nCumulative task failures. Resets daily at 00:00 Asia/Shanghai.\n\n"
+        alerts.write_text(new_content, encoding="utf-8")
+        log.info("daily ALERTS.md reset")
+    except OSError as e:
+        log.warning(f"could not reset ALERTS.md: {e}")
+
+
 def master_tick():
     """Runs at :00 of every 5-hour bucket."""
     log.info("=== MASTER TICK ===")
+    # Daily reset at 00:00 master tick
+    if now_local().hour == 0:
+        reset_daily_alerts()
     rc1 = run_script("gen-plan.py")
     if rc1 != 0:
         log.error(f"gen-plan exited {rc1}, skipping run-next-task")
@@ -81,91 +123,112 @@ def master_tick():
 
 
 def sub_tick():
-    """Runs every 10 minutes."""
+    """Runs at :15, :30, :45 and :00 of non-bucket hours."""
     log.info("=== SUB TICK ===")
     rc = run_script("run-next-task.py")
     log.info(f"sub tick done: rc={rc}")
 
 
-def compute_next_wakeup(now):
-    """Pick the next wakeup time (master or sub tick)."""
-    bucket = current_bucket(now)
-    # Master ticks: :00 of bucket hours (0, 5, 10, 15, 20)
-    for offset in (0, 5, 10, 15, 20):
-        master_at = now.replace(hour=offset, minute=0, second=0, microsecond=0)
-        if master_at > now:
-            return master_at, "master"
-    # All master times today have passed → tomorrow's 00:00
-    tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    return tomorrow, "master"
+def next_wakeup(now):
+    """Compute the next wakeup time and kind."""
+    # Build list of candidates: next master and next sub
+    candidates = []
+    # Master tick: next bucket-hour :00
+    next_master_hour = current_bucket(now) + 5
+    if next_master_hour > 20:
+        next_master_hour = 0
+        next_master_day = now + timedelta(days=1)
+    else:
+        next_master_day = now
+    master_at = next_master_day.replace(hour=next_master_hour, minute=0, second=0, microsecond=0)
+    if master_at > now:
+        candidates.append((master_at, "master"))
+    # Sub tick: next :15, :30, :45, or :00 (non-master)
+    for m in (15, 30, 45):
+        if m > now.minute:
+            w = now.replace(minute=m, second=0, microsecond=0)
+            candidates.append((w, "sub"))
+            break
+    else:
+        # No more :15/:30/:45 this hour → next hour :00 (or master)
+        if (now + timedelta(hours=1)).hour == next_master_hour and now.minute >= 45:
+            # Next hour is master; already added
+            pass
+        else:
+            next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+            candidates.append((next_hour, "sub"))
+    # If minute is in (0..14), next sub candidate is :15 within current hour
+    # If minute in (15..29), next is :30
+    # If minute in (30..44), next is :45
+    # If minute in (45..59), next is next-hour :00 (or master)
+    if now.minute < 15:
+        w = now.replace(minute=15, second=0, microsecond=0)
+        if w > now:
+            candidates.append((w, "sub"))
+    elif now.minute < 30:
+        w = now.replace(minute=30, second=0, microsecond=0)
+        candidates.append((w, "sub"))
+    elif now.minute < 45:
+        w = now.replace(minute=45, second=0, microsecond=0)
+        candidates.append((w, "sub"))
+    next_wake, kind = min(candidates, key=lambda x: x[0])
+    return next_wake, kind
+
+
+def _shutdown(signum, frame):
+    global _running
+    log.info(f"received signal {signum}, shutting down gracefully")
+    _running = False
 
 
 def main():
-    log.info(f"=== 1Panel.edu scheduler daemon started ===")
-    log.info(f"  pid: {__import__('os').getpid()}")
-    log.info(f"  repo: {SCHEDULER_DIR.parent}")
-    log.info(f"  schedule: master @ 0/5/10/15/20 :00 + sub @ every :00/:10/:20/:30/:40/:50")
+    # Try to register signal handlers (best-effort on Windows)
+    try:
+        signal.signal(signal.SIGINT, _shutdown)
+        if hasattr(signal, "SIGTERM"):
+            signal.signal(signal.SIGTERM, _shutdown)
+    except (ValueError, OSError):
+        pass
 
-    # Bootstrap: generate initial plan if state empty
+    log.info("=== 1Panel.edu scheduler daemon v2 started ===")
+    log.info(f"  pid: {__import__('os').getpid()}")
+    log.info(f"  repo: {REPO_ROOT}")
+    log.info("  schedule: master @ 0/5/10/15/20 :00, sub @ :00(non-bucket)/:15/:30/:45")
+
+    # Bootstrap
     if not (SCHEDULER_DIR / "state.json").exists():
         log.info("no state.json, bootstrapping with gen-plan")
         run_script("gen-plan.py")
-        # Run first task immediately
         run_script("run-next-task.py")
 
-    while True:
+    while _running:
         now = now_local()
-        minute = now.minute
-        hour = now.hour
 
-        # Master tick at :00 of bucket hours
-        if minute == 0 and hour % 5 == 0:
+        if is_master_tick(now):
             master_tick()
-            # Sleep to next :10
-            next_wake = (now.replace(minute=10, second=0, microsecond=0)
-                         if minute < 50
-                         else (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0))
-            sleep_sec = seconds_until(next_wake)
-            log.info(f"next wake at {next_wake.strftime('%H:%M:%S')} ({sleep_sec:.0f}s)")
-            time.sleep(sleep_sec)
-            continue
-
-        # Sub tick at :00, :10, :20, :30, :40, :50
-        if minute % 10 == 0:
+        elif is_sub_tick(now):
             sub_tick()
-            # Sleep to next :10
-            next_minute = ((minute // 10) + 1) * 10
-            if next_minute >= 60:
-                next_wake = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-            else:
-                next_wake = now.replace(minute=next_minute, second=0, microsecond=0)
-            sleep_sec = seconds_until(next_wake)
-            log.info(f"next wake at {next_wake.strftime('%H:%M:%S')} ({sleep_sec:.0f}s)")
-            time.sleep(sleep_sec)
-            continue
 
-        # Not on a tick — sleep to next :00 or :10/:20/:30/:40/:50
-        next_minute_options = []
-        # next hour :00
-        next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-        next_minute_options.append((next_hour, "next-hour-master-or-sub"))
-        # next :10/:20/:30/:40/:50 within current hour
-        for m in (10, 20, 30, 40, 50):
-            if m > minute:
-                w = now.replace(minute=m, second=0, microsecond=0)
-                next_minute_options.append((w, "sub"))
-                break
-        next_wake, kind = min(next_minute_options, key=lambda x: x[0])
+        # Sleep until next wakeup
+        now = now_local()
+        next_wake, kind = next_wakeup(now)
         sleep_sec = seconds_until(next_wake)
         log.info(f"next wake at {next_wake.strftime('%H:%M:%S')} ({sleep_sec:.0f}s, {kind})")
-        time.sleep(sleep_sec)
+        # Sleep in small chunks so signal can interrupt
+        slept = 0.0
+        chunk = 5.0
+        while slept < sleep_sec and _running:
+            time.sleep(min(chunk, sleep_sec - slept))
+            slept += chunk
+
+    log.info("scheduler daemon stopped")
 
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        log.info("scheduler daemon stopped by user")
+        log.info("scheduler daemon stopped by user (KeyboardInterrupt)")
         sys.exit(0)
     except Exception as exc:
         log.exception(f"scheduler daemon crashed: {exc}")
