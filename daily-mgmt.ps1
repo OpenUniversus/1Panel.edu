@@ -59,7 +59,26 @@ foreach ($p in $scanPaths) {
     }
 }
 
-# Update state
+# Git commit + push (via .bat to avoid PowerShell quote escaping hell)
+$timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm'
+$commitMsg = "chore(daily-mgmt): sync $($changes.Count) files at $timestamp"
+Push-Location $repoRoot
+$pushOk = $false
+try {
+    $batPath = Join-Path $repoRoot 'run-add-commit.bat'
+    $commitOutput = cmd.exe /c "`"$batPath`" `"$commitMsg`"" 2>&1
+    # If local is ahead of remote, push succeeded
+    $localHead = (cmd.exe /c "git rev-parse HEAD" 2>&1 | Select-Object -Last 1).Trim()
+    $remoteHead = (cmd.exe /c "git rev-parse origin/main" 2>&1 | Select-Object -Last 1).Trim()
+    if ($localHead -eq $remoteHead) { $pushOk = $true }
+} finally { Pop-Location }
+
+if (-not $pushOk) {
+    Write-Host "<mavis-progress>tick: changes detected but push failed — will retry next tick</mavis-progress>"
+    exit 1
+}
+
+# Update state (only after successful push)
 $newState = @{ last_run = (Get-Date -Format 'o'); files = @{} }
 foreach ($p in $scanPaths) {
     if (Test-Path $p.src) {
@@ -68,15 +87,6 @@ foreach ($p in $scanPaths) {
     }
 }
 $newState | ConvertTo-Json -Depth 5 | Set-Content $stateFile -Encoding UTF8
-
-# Git commit + push (via .bat to avoid PowerShell quote escaping hell)
-$timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm'
-$commitMsg = "chore(daily-mgmt): sync $($changes.Count) files at $timestamp"
-Push-Location $repoRoot
-try {
-    $batPath = Join-Path $repoRoot 'run-add-commit.bat'
-    $commitOutput = cmd.exe /c "`"$batPath`" `"$commitMsg`"" 2>&1
-} finally { Pop-Location }
 
 # Update DAILY-STATUS.md
 $changesList = ($changes | ForEach-Object { "  - $_" }) -join "`n"
