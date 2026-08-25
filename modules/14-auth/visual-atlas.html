@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1Panel Auth 模块 · 可视化图集</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+      sequence: { useMaxWidth: true, showSequenceNumbers: true, actorMargin: 60 },
+      securityLevel: 'loose'
+    });
+  </script>
+  <style>
+    :root {
+      --bg: #f7f5f0;
+      --card: #ffffff;
+      --line: #e9e3d6;
+      --line-soft: #f0ebde;
+      --text: #14171e;
+      --text-muted: #3a4256;
+      --text-soft: #7c7a72;
+      --primary: #2f6f5e;
+      --primary-soft: rgba(47, 111, 94, 0.08);
+      --accent: #c97b3f;
+      --accent-soft: rgba(201, 123, 63, 0.08);
+      --warn: #c0392b;
+      --warn-soft: rgba(192, 57, 43, 0.06);
+      --good: #2f6f5e;
+      --good-soft: rgba(47, 111, 94, 0.08);
+      --code-bg: #14171e;
+      --code-text: #f0ebde;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    body { padding: 40px 24px 80px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    /* ====== Header ====== */
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+      padding: 36px 20px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+    header .eyebrow {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 4px 12px;
+      border-radius: 100px;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+    header h1 {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+    header .sub {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    header .meta {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--text-soft);
+    }
+    header .meta span::before { content: "·"; margin-right: 8px; }
+    header .meta span:first-child::before { content: ""; margin: 0; }
+
+    /* ====== Nav ====== */
+    nav {
+      position: sticky;
+      top: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 18px;
+      margin-bottom: 48px;
+      z-index: 50;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    nav .toc-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    nav ol {
+      list-style: none;
+      counter-reset: navc;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+    }
+    nav li {
+      counter-increment: navc;
+      font-size: 13px;
+    }
+    nav li::before {
+      content: counter(navc, decimal-leading-zero);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-soft);
+      margin-right: 4px;
+    }
+    nav a {
+      color: var(--text);
+      text-decoration: none;
+      border-bottom: 1px dashed transparent;
+      padding-bottom: 1px;
+      transition: all 0.15s;
+    }
+    nav a:hover { border-bottom-color: var(--primary); color: var(--primary); }
+
+    /* ====== Section ====== */
+    section {
+      margin-bottom: 72px;
+      scroll-margin-top: 100px;
+    }
+    h2 {
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h2 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: white;
+      background: var(--primary);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 28px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 20px 0 8px;
+      color: var(--text);
+    }
+    p {
+      margin-bottom: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    p.lede {
+      font-size: 16px;
+      color: var(--text);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--primary);
+      border-radius: 4px 14px 14px 4px;
+      padding: 18px 22px;
+      margin-bottom: 24px;
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: var(--line-soft);
+      padding: 1px 6px;
+      border-radius: 3px;
+      color: var(--accent);
+    }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 16px 20px;
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+    }
+
+    /* ====== Diagram block ====== */
+    .diagram {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 28px 20px;
+      margin: 24px 0;
+      text-align: center;
+      overflow-x: auto;
+    }
+    .diagram .mermaid { font-family: 'Outfit', sans-serif !important; }
+    .diagram .caption {
+      margin-top: 14px;
+      font-size: 13px;
+      color: var(--text-soft);
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* ====== Tables ====== */
+    .matrix-table {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 16px 0 24px;
+      border-collapse: collapse;
+    }
+    .matrix-table th {
+      background: var(--line-soft);
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--line);
+    }
+    .matrix-table td {
+      padding: 12px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--line-soft);
+      color: var(--text-muted);
+      vertical-align: top;
+    }
+    .matrix-table tr:last-child td { border-bottom: none; }
+    .matrix-table td strong { color: var(--text); font-weight: 600; }
+    .matrix-table code { font-size: 12px; }
+
+    /* ====== Cards ====== */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px 22px;
+    }
+    .card h4 {
+      margin: 0 0 6px;
+      color: var(--text);
+      font-size: 15px;
+    }
+    .card .tagline {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    .card .meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-soft);
+      border-top: 1px dashed var(--line);
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+    .card .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 100px;
+      background: var(--good-soft);
+      color: var(--good);
+      margin-bottom: 8px;
+      letter-spacing: 0.04em;
+    }
+    .card .badge.warn { background: var(--warn-soft); color: var(--warn); }
+    .card .badge.accent { background: var(--accent-soft); color: var(--accent); }
+
+    /* ====== ASCII flow ====== */
+    .ascii-flow {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 18px 20px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-x: auto;
+      margin: 16px 0;
+      white-space: pre;
+    }
+
+    /* ====== Stats grid ====== */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px 18px;
+      text-align: center;
+    }
+    .stat .v {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stat .l {
+      font-size: 12px;
+      color: var(--text-soft);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ====== Two-col flow ====== */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    @media (max-width: 720px) {
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    /* ====== Footer ====== */
+    footer {
+      text-align: center;
+      margin-top: 64px;
+      padding-top: 32px;
+      border-top: 1px solid var(--line);
+      color: var(--text-soft);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <span class="eyebrow">1Panel v2 · dev-v2 @ 2dea44a</span>
+    <h1>Auth 模块 · 可视化图集</h1>
+    <p class="sub">基于 SQLite + 进程内 session 的单管理员登录体系。19 个 Handler, 5 类中间件, 4 种认证方式 (密码 / MFA / Passkey / API Key), 1 套 AuthProvider 扩展点。</p>
+    <div class="meta">
+      <span>核心源码 4 个文件</span>
+      <span>541 行 handler</span>
+      <span>395+563+203 行 service</span>
+      <span>9 张 Mermaid 图</span>
+    </div>
+  </header>
+
+  <nav>
+    <div class="toc-title">目录</div>
+    <ol>
+      <li><a href="#overview">1. 架构总览</a></li>
+      <li><a href="#router">2. 路由分组</a></li>
+      <li><a href="#login-flow">3. Login 时序</a></li>
+      <li><a href="#mfa-flow">4. MFA 时序</a></li>
+      <li><a href="#passkey-flow">5. Passkey 时序</a></li>
+      <li><a href="#apikey-flow">6. API Key 签名</a></li>
+      <li><a href="#middleware">7. 中间件链</a></li>
+      <li><a href="#iptracker">8. 失败限流</a></li>
+      <li><a href="#design">9. 关键设计</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============ 1. 架构总览 ============ -->
+  <section id="overview">
+    <h2><span class="num">1</span>架构总览</h2>
+
+    <p class="lede">1Panel Auth 模块是 5 层架构 (Router → Middleware → Handler → xpack.AuthProvider → app/auth 业务 → SettingRepo → SQLite), 通过 AuthProvider interface 留给 enterprise 替换为 OIDC/SAML2。</p>
+
+    <div class="stats">
+      <div class="stat"><div class="v">19</div><div class="l">Handler 方法</div></div>
+      <div class="stat"><div class="v">5</div><div class="l">类中间件</div></div>
+      <div class="stat"><div class="v">10</div><div class="l">次失败锁 5min</div></div>
+      <div class="stat"><div class="v">1024</div><div class="l">进程内 session 上限</div></div>
+    </div>
+
+    <div class="diagram">
+      <div class="mermaid">
+flowchart TB
+    HTTP[/HTTP POST/] --> MW[Middleware Chain]
+    MW --> H[BaseApi.Login]
+    H --> X[xpack.AuthProvider.Login]
+    X --> A[app/auth.Login]
+    A --> R[SettingRepo]
+    A --> S[PSession]
+    A --> I[IPTracker]
+    R --> C[(go-cache<br/>5min TTL)]
+    R --> DB[(SQLite settings)]
+    S --> Sess[(Memory Map<br/>map sessionID=&gt;item)]
+    I --> Rec[(Memory Map<br/>map ip=&gt;record)]
+    style MW fill:#2f6f5e,color:#fff
+    style H fill:#c97b3f,color:#fff
+    style A fill:#2f6f5e,color:#fff
+    style DB fill:#14171e,color:#fff
+    style Sess fill:#14171e,color:#fff
+    style Rec fill:#14171e,color:#fff
+      </div>
+      <div class="caption">图 1.1: 5 层架构总览。Router 解析路径 → Middleware 鉴权 → Handler 解析 DTO → AuthProvider interface 委托 → app/auth 业务 → Repository → SQLite</div>
+    </div>
+
+    <h3>核心文件清单</h3>
+    <div class="cards">
+      <div class="card">
+        <span class="badge">core/app/api/v2/auth.go</span>
+        <h4>19 个 Handler 方法</h4>
+        <p class="tagline">主登录、MFA、Passkey、Logout、API 密钥、当前用户、密码过期重置。共 541 行,每个方法都遵循三段式: 校验 DTO → 业务处理 → 响应。</p>
+        <div class="meta">file: core/app/api/v2/auth.go:32-527</div>
+      </div>
+      <div class="card">
+        <span class="badge accent">core/app/auth/auth.go</span>
+        <h4>核心业务 (纯函数)</h4>
+        <p class="tagline">Login / MFALogin / GenerateSession / CheckPassword / GenerateApiKey / UpdateCurrentUserInfo / HandlePasswordExpired。共 395 行,不依赖 HTTP 框架,纯业务逻辑。</p>
+        <div class="meta">file: core/app/auth/auth.go:24-421</div>
+      </div>
+      <div class="card">
+        <span class="badge">core/app/auth/passkey.go</span>
+        <h4>WebAuthn 完整实现</h4>
+        <p class="tagline">Begin/Finish Login + Begin/Finish Register,WebAuthn 凭据 AES 加密后存 settings。强制 HTTPS + 强制 BindDomain 校验。</p>
+        <div class="meta">file: core/app/auth/passkey.go:45-450</div>
+      </div>
+      <div class="card">
+        <span class="badge warn">core/app/auth/api_auth.go</span>
+        <h4>API 签名校验</h4>
+        <p class="tagline">MD5 + HMAC-SHA256 双算法签名,带 timestamp 防重放 + IP 白名单。生成 32 字符随机密钥,拒绝递归生成。</p>
+        <div class="meta">file: core/app/auth/api_auth.go:34-225</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. 路由分组 ============ -->
+  <section id="router">
+    <h2><span class="num">2</span>路由分组</h2>
+
+    <p>19 个路由分成 2 组。公开路由 8 条 (无需 session) + 受保护路由 11 条 (需 session + 密码未过期)。两者都注册在 <code>ro_base.go</code> 里,只是前者不挂中间件,后者挂 <code>SessionAuth + PasswordExpired</code>。</p>
+
+    <div class="diagram">
+      <div class="mermaid">
+flowchart TB
+    Prefix["/api/v2/core/auth"] --> BR[baseRouter<br/>no middleware]
+    Prefix --> AR[authRouter<br/>+ SessionAuth<br/>+ PasswordExpired]
+
+    BR --> R1["GET /captcha"]
+    BR --> R2["POST /login"]
+    BR --> R3["POST /mfalogin"]
+    BR --> R4["POST /passkey/begin"]
+    BR --> R5["POST /passkey/finish"]
+    BR --> R6["POST /logout"]
+    BR --> R7["GET /setting"]
+    BR --> R8["GET /welcome"]
+
+    AR --> R9["POST /mfa + /bind + /close"]
+    AR --> R10["POST /passkey/register/*"]
+    AR --> R11["GET /passkey/list + /del"]
+    AR --> R12["POST /api/generate + /update"]
+    AR --> R13["GET /current + /update"]
+    AR --> R14["POST /expired/reset"]
+
+    style BR fill:#2f6f5e,color:#fff
+    style AR fill:#c97b3f,color:#fff
+      </div>
+      <div class="caption">图 2.1: 路由分组。baseRouter 公开,authRouter 受保护。</div>
+    </div>
+
+    <h3>公开路由 (8 条) - 无需 session</h3>
+    <table class="matrix-table">
+      <thead>
+        <tr><th>HTTP</th><th>路径</th><th>Handler</th><th>行号</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/auth/captcha</code></td><td><code>Captcha</code></td><td>218</td><td>图形验证码</td></tr>
+        <tr><td>POST</td><td><code>/auth/login</code></td><td><code>Login</code></td><td>32</td><td>主登录</td></tr>
+        <tr><td>POST</td><td><code>/auth/mfalogin</code></td><td><code>MFALogin</code></td><td>94</td><td>MFA 第二步</td></tr>
+        <tr><td>POST</td><td><code>/auth/passkey/begin</code></td><td><code>PasskeyBeginLogin</code></td><td>141</td><td>WebAuthn 登录 challenge</td></tr>
+        <tr><td>POST</td><td><code>/auth/passkey/finish</code></td><td><code>PasskeyFinishLogin</code></td><td>167</td><td>WebAuthn 登录 verify</td></tr>
+        <tr><td>POST</td><td><code>/auth/logout</code></td><td><code>LogOut</code></td><td>198</td><td>登出</td></tr>
+        <tr><td>GET</td><td><code>/auth/setting</code></td><td><code>GetLoginSetting</code></td><td>251</td><td>登录页元数据</td></tr>
+        <tr><td>GET</td><td><code>/auth/welcome</code></td><td><code>GetWelcomePage</code></td><td>233</td><td>首次欢迎页</td></tr>
+      </tbody>
+    </table>
+
+    <h3>受保护路由 (11 条) - 需 session + 密码未过期</h3>
+    <table class="matrix-table">
+      <thead>
+        <tr><th>HTTP</th><th>路径</th><th>Handler</th><th>行号</th><th>作用</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>POST</td><td><code>/auth/mfa</code></td><td><code>LoadMFA</code></td><td>363</td><td>生成 MFA 二维码</td></tr>
+        <tr><td>POST</td><td><code>/auth/mfa/bind</code></td><td><code>MFABind</code></td><td>386</td><td>绑定 MFA</td></tr>
+        <tr><td>POST</td><td><code>/auth/mfa/close</code></td><td><code>MFAClose</code></td><td>408</td><td>关闭 MFA</td></tr>
+        <tr><td>POST</td><td><code>/auth/passkey/register/begin</code></td><td><code>PasskeyRegisterBegin</code></td><td>284</td><td>注册 Passkey challenge</td></tr>
+        <tr><td>POST</td><td><code>/auth/passkey/register/finish</code></td><td><code>PasskeyRegisterFinish</code></td><td>308</td><td>注册 Passkey verify</td></tr>
+        <tr><td>GET</td><td><code>/auth/passkey/list</code></td><td><code>PasskeyList</code></td><td>328</td><td>列出 Passkey</td></tr>
+        <tr><td>POST</td><td><code>/auth/passkey/del</code></td><td><code>PasskeyDelete</code></td><td>343</td><td>删除 Passkey</td></tr>
+        <tr><td>POST</td><td><code>/auth/api/generate</code></td><td><code>GenerateApiKey</code></td><td>425</td><td>生成 API 密钥</td></tr>
+        <tr><td>POST</td><td><code>/auth/api/update</code></td><td><code>UpdateApiConfig</code></td><td>448</td><td>更新 API 配置</td></tr>
+        <tr><td>GET</td><td><code>/auth/current</code></td><td><code>GetCurrentUser</code></td><td>478</td><td>当前用户信息</td></tr>
+        <tr><td>POST</td><td><code>/auth/current/update</code></td><td><code>UpdateCurrentUser</code></td><td>495</td><td>更新当前用户</td></tr>
+        <tr><td>POST</td><td><code>/auth/expired/reset</code></td><td><code>ResetPassword</code></td><td>516</td><td>密码过期重置</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ 3. Login 时序 ============ -->
+  <section id="login-flow">
+    <h2><span class="num">3</span>Login 完整调用链 (Mermaid 时序)</h2>
+
+    <p>主登录走 <code>BaseApi.Login</code> (auth.go:32), 流程 13 步。关键点: <strong>RSA 私钥解密前端公钥加密的密码 → 跟 DB AES 加密存的明文做 hmac.Equal 时间安全比对</strong>。</p>
+
+    <div class="diagram">
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Browser
+    participant Gin
+    participant MW as Middleware
+    participant H as BaseApi.Login
+    participant Tracker as IPTracker
+    participant X as xpack.AuthProvider
+    participant Auth as app/auth.Login
+    participant Repo as SettingRepo
+    participant Cache as go-cache
+    participant DB as SQLite
+    participant Sess as PSession
+
+    Browser->>Gin: GET /api/v2/core/auth/captcha
+    Gin->>MW: 中间件链
+    MW-->>Browser: captchaID + image
+
+    Browser->>Gin: POST /api/v2/core/auth/login
+    Note over Browser,Gin: Header: EntranceCode (base64)<br/>Body: dto.Login{Name, Password(RSA 加密), Captcha, Language}
+
+    Gin->>MW: CSRF skip (公开路由) + SessionAuth skip
+    MW->>H: 路由命中
+
+    H->>Tracker: IsLocked(ip)?
+    alt IP locked
+        Tracker-->>H: true
+        H-->>Browser: 401 ErrLoginLocked
+    end
+
+    H->>Tracker: NeedCaptcha(ip)?
+    alt Need Captcha
+        Tracker-->>H: true
+        H->>H: captcha.VerifyCode(req.CaptchaID, req.Captcha)
+    end
+
+    H->>H: 解 base64 EntranceCode
+    H->>X: Login(c, req, entrance)
+
+    X->>Auth: Login(c, info, entrance)
+
+    Auth->>Repo: Get(UserName)
+    Repo->>Cache: hit?
+    alt miss
+        Repo->>DB: SELECT * FROM settings WHERE key=?
+        DB-->>Repo: row
+        Repo->>Cache: Set(UserName, value, 5min)
+    end
+    Repo-->>Auth: setting
+
+    Auth->>Auth: info.Name == setting.Value?
+    alt 不匹配
+        Auth-->>H: nil, "ErrAuth", err
+    end
+
+    Auth->>Repo: Get(PASSWORD_PRIVATE_KEY) + Get(Password)
+    Repo-->>Auth: priKey, encryptedPassword
+
+    Auth->>Auth: DecryptLoginPassword(priKey, info.Password)
+    Note over Auth: RSA 私钥解密前端公钥加密的密码
+    Auth->>Auth: encrypt.StringDecrypt(encryptedPassword)
+    Note over Auth: AES 解密存库的密码
+    Auth->>Auth: hmac.Equal(decrypted, loginPassword)
+    Note over Auth: 时间安全比对 (防时序攻击)
+
+    Auth->>Repo: Get(SecurityEntrance)
+    Auth->>Auth: entrance 一致性
+    Auth->>Repo: Get(MFAStatus)
+    Auth->>Repo: Update(Language, info.Language)
+
+    alt MFA enabled
+        Auth->>Auth: BeginMFALogin
+        Auth-->>H: UserLoginInfo{MfaSession, MfaStatus: Enable}
+        H-->>Browser: 200 + MfaSession (未登录)
+    else MFA disabled
+        Auth->>Auth: 组装 SessionUser{ID: __super_admin__, Role: ADMIN}
+        Auth->>Sess: SetFresh(c, user, SSL, ttl)
+        Sess->>Sess: 生成新 sessionID + CSRF token
+        Sess-->>Browser: Set-Cookie psession + pcsrftoken
+        Auth-->>H: UserLoginInfo{Name, Role}
+    end
+
+    H->>H: 失败 → IPTracker.RecordFailure + SetNeedCaptcha
+    H->>H: 成功 → IPTracker.Clear(ip)
+    H->>H: go saveLoginLogs(...)
+    H-->>Browser: 200 OK
+      </div>
+      <div class="caption">图 3.1: 完整 Login 时序。从浏览器请求到 SQLite 落盘 + session 创建。共 13 步,失败有 4 个分支。</div>
+    </div>
+
+    <h3>关键代码片段</h3>
+<pre><code>// core/app/auth/auth.go:206-219
+func CheckPassword(priKey, password, passwordFromDB string) error {
+    loginPassword, err := DecryptLoginPassword(priKey, password)
+    if err != nil {
+        return err
+    }
+    existPassword, err := encrypt.StringDecrypt(passwordFromDB)
+    if err != nil {
+        return err
+    }
+    if !hmac.Equal([]byte(loginPassword), []byte(existPassword)) {
+        return buserr.New("ErrAuth")
+    }
+    return nil
+}</code></pre>
+  </section>
+
+  <!-- ============ 4. MFA 时序 ============ -->
+  <section id="mfa-flow">
+    <h2><span class="num">4</span>MFA 登录流程</h2>
+
+    <p>MFA 是登录的第二步,中间态存 <code>MFASessionStore</code> (TTL 5 分钟)。失败 5 次后强制要求图形验证码。</p>
+
+    <div class="diagram">
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Browser
+    participant H as BaseApi.MFALogin
+    participant Tracker as IPTracker
+    participant MFAS as MFASessionStore
+    participant X as AuthProvider
+    participant Auth as app/auth.MFALogin
+    participant Repo as SettingRepo
+    participant DB as SQLite
+    participant Sess as PSession
+
+    Note over Browser: 已经通过主登录,拿到 MfaSession
+    Browser->>H: POST /api/v2/core/auth/mfalogin
+    Note over Browser,H: Body: dto.MFALogin{SessionID, Code}
+    H->>Tracker: IsLocked(ip)?
+    H->>H: 解 base64 EntranceCode
+    H->>X: MFALogin(c, req, entrance)
+    X->>Auth: MFALogin(c, info, entrance)
+    Auth->>MFAS: Get(sessionID)
+    alt session 不存在 / IP 不匹配
+        MFAS-->>Auth: not found
+        Auth-->>H: nil, "ErrMFA"
+    end
+    Auth->>Repo: Get(MFASecret) + Get(MFAInterval)
+    Repo-->>Auth: secret, interval
+    Auth->>Auth: mfa.ValidCode(interval, code, secret)
+    Note over Auth: TOTP 校验 (RFC 6238)
+    alt code invalid
+        Auth-->>H: nil, "ErrMFA"
+        H->>Tracker: RecordFailure(ip)
+        H->>MFAS: RecordFailure(sessionID)
+        alt failures >= 5
+            H->>Tracker: SetNeedCaptcha(ip)
+            H-->>Browser: 401 ErrCaptchaCode
+        else
+            H-->>Browser: 401 ErrMFA
+        end
+    else code valid
+        Auth->>MFAS: Delete(sessionID)
+        Auth->>Auth: 组装 SessionUser
+        Auth->>Sess: SetFresh(c, user, SSL, ttl)
+        Sess-->>Browser: Set-Cookie psession + pcsrftoken
+        Auth-->>H: UserLoginInfo
+        H->>Tracker: Clear(ip)
+        H-->>Browser: 200 OK
+    end
+    H->>H: go saveLoginLogs(...)
+      </div>
+      <div class="caption">图 4.1: MFA 登录时序。MFASession 5min TTL,5 次失败后强制图形验证码。</div>
+    </div>
+
+    <h3>MFA 中间态存储 (TTLStore)</h3>
+<pre><code>// core/init/auth/mfa_session.go:11-15
+const (
+    MFASessionTTL             = 5 * time.Minute  // 临时 session 5 分钟
+    MFASessionStoreMaxEntries = 1024             // 最多 1024 个
+    MFASessionMaxFailures     = 5                // 5 次失败
+)</code></pre>
+
+    <h3>Bind MFA 流程</h3>
+    <div class="diagram">
+      <div class="mermaid">
+flowchart LR
+    A[User 进入设置] --> B[POST /auth/mfa<br/>生成二维码]
+    B --> C[mfa.GetOtp username, title, interval]
+    C --> D[返回 Otp secret + QR URL]
+    D --> E[用户扫码+输 code]
+    E --> F[POST /auth/mfa/bind<br/>dto.MfaCredential]
+    F --> G["mfa.ValidCode 校验 code"]
+    G --> H[Update settings: MFAInterval, MFAStatus=Enable, MFASecret]
+    H --> I[绑定成功]
+    style A fill:#2f6f5e,color:#fff
+    style F fill:#c97b3f,color:#fff
+    style I fill:#2f6f5e,color:#fff
+      </div>
+      <div class="caption">图 4.2: 绑定 MFA 流程。生成 secret → 写 settings → 二次校验。</div>
+    </div>
+  </section>
+
+  <!-- ============ 5. Passkey 时序 ============ -->
+  <section id="passkey-flow">
+    <h2><span class="num">5</span>Passkey (WebAuthn) 流程</h2>
+
+    <p>Passkey 是无密码登录,基于 <code>go-webauthn/webauthn</code>。强制 UserVerification (指纹/PIN) + 强制 HTTPS + 强制 BindDomain 校验。凭据 AES 加密后存 <code>settings.PasskeyCredentials</code>。</p>
+
+    <div class="diagram">
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Browser
+    participant Auth as Authenticator
+    participant H as BaseApi.PasskeyBegin/Finish
+    participant X as xpack.AuthProvider
+    participant Pkg as app/auth.passkey
+    participant WA as go-webauthn
+    participant DB as SQLite
+
+    Note over Browser: 1. 用户点击 "Passkey 登录" 按钮
+    Browser->>H: POST /api/v2/core/auth/passkey/begin
+    Note over Browser,H: Header: EntranceCode (可选)
+    H->>X: PasskeyBeginLogin(c, entrance)
+    X->>Pkg: PasskeyBeginLogin(c, entrance)
+    Pkg->>Pkg: CheckEntrance(entrance)
+    Pkg->>DB: Get(BindDomain) + Get(PanelName)
+    Pkg->>Pkg: 构造 webauthn.Config
+    Note over Pkg: PasskeyEnabled 要求 TLS != nil
+    Note over Pkg: BindDomain 必须跟 Host header 匹配
+    Pkg->>DB: Get(PasskeyCredentials)
+    Pkg->>Pkg: LoadPasskeyCredentialRecords (AES 解密)
+    Pkg->>Pkg: 凭据列表为空? 返回 ErrPasskeyNotConfigured
+    Pkg->>Pkg: communityPasskeyUser(records)
+    Pkg->>WA: webauthn.New(config)
+    Pkg->>WA: BeginLogin(user)
+    WA-->>Pkg: assertion + sessionData
+    Pkg->>Pkg: passkeySessionStore.Set(Login, "", sessionData)
+    Pkg-->>H: PasskeyBeginResponse{SessionID, PublicKey}
+    H-->>Browser: 200 + {sessionId, publicKey}
+
+    Browser->>Auth: navigator.credentials.get({publicKey})
+    Note over Browser,Auth: 用户指纹/PIN 验证
+    Auth-->>Browser: signature (signed challenge)
+
+    Browser->>H: POST /api/v2/core/auth/passkey/finish
+    Note over Browser,H: Header: Passkey-Session: sessionID
+    H->>X: PasskeyFinishLogin(c, sessionID, entrance)
+    X->>Pkg: PasskeyFinishLogin(c, sessionID, entrance)
+    Pkg->>Pkg: CheckEntrance(entrance)
+    Pkg->>Pkg: passkeySessionStore.Get(sessionID)
+    Pkg->>Pkg: passkeySessionStore.Delete(sessionID)
+    Pkg->>WA: FinishLogin(user, sessionData, request)
+    WA-->>Pkg: credential (验证通过)
+    Pkg->>Pkg: UpdatePasskeyCredentialRecord (更新 LastUsedAt)
+    Pkg->>DB: Update(PasskeyCredentials, encrypted)
+    Pkg->>DB: Get(UserName)
+    Pkg->>Pkg: GenerateSession(c, SuperAdmin)
+    Pkg-->>H: UserLoginInfo
+    H-->>Browser: 200 + Set-Cookie psession
+      </div>
+      <div class="caption">图 5.1: Passkey 完整时序。Begin 生成 challenge → 浏览器用 authenticator 签名 → Finish 验签 + 创建 session。</div>
+    </div>
+
+    <h3>Passkey 状态机</h3>
+    <div class="diagram">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> NoKey
+    NoKey --> RegisterBegin: POST /passkey/register/begin
+    RegisterBegin --> Browser: 返回 challenge
+    Browser --> Auth: navigator.credentials.create
+    Auth --> Browser: attestation
+    Browser --> RegisterFinish: POST /passkey/register/finish
+    RegisterFinish --> HasKey: 存到 settings.PasskeyCredentials
+
+    HasKey --> LoginBegin: POST /passkey/begin
+    LoginBegin --> Browser: 返回 challenge
+    Browser --> Auth: navigator.credentials.get
+    Auth --> Browser: assertion
+    Browser --> LoginFinish: POST /passkey/finish
+    LoginFinish --> Authenticated: GenerateSession
+
+    HasKey --> DeleteKey: POST /passkey/del
+    DeleteKey --> NoKey: 从 records 删除
+
+    Authenticated --> [*]
+      </div>
+      <div class="caption">图 5.2: Passkey 状态机。从未注册 → 已注册 → 登录 → 删除。</div>
+    </div>
+  </section>
+
+  <!-- ============ 6. API Key ============ -->
+  <section id="apikey-flow">
+    <h2><span class="num">6</span>API 接口密钥 (1Panel-Token) 签名</h2>
+
+    <p>1Panel-Token 是 master 端给外部系统调用的 API 凭据。双算法支持 (MD5 / HMAC-SHA256) + 时间戳防重放 + IP 白名单。<strong>关键守卫: 用 API token 调用时,不能再生成新 token (防止递归)</strong>。</p>
+
+    <div class="diagram">
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant User
+    participant Browser
+    participant Master as Master API
+    participant Auth as APIAuthMiddleware
+    participant Repo as SettingRepo
+
+    Note over User: 1. 用户在面板生成 API Key
+    User->>Browser: POST /auth/api/generate
+    Browser->>Master: 调 GenerateApiKey
+    Note over Master: 检查 1Panel-Token header<br/>若已用 API 模式,返回 ErrApiConfigDisable
+    Master->>Repo: Update("ApiKey", RandStr(32))
+    Master-->>User: 返回 32 字符 key
+
+    Note over User: 2. 外部系统用 API Key 调接口
+    User->>User: ts = unix() now
+    User->>User: token = md5("1panel" + apiKey + ts)
+    User->>Master: GET /api/v2/xxx<br/>1Panel-Token: token<br/>1Panel-Timestamp: ts
+    Master->>Auth: APIAuthMiddleware
+    Auth->>Repo: Get(ApiInterfaceStatus, ApiKey, IpWhiteList, ApiKeyValidityTime)
+    Auth->>Auth: isValid1PanelTimestamp (ts, ttl)
+    Note over Auth: 默认 60s 容忍<br/>+ ttl 分钟 (ApiKeyValidityTime)
+    Auth->>Auth: isValid1PanelToken (md5 / hmac-sha256)
+    Auth->>Auth: isIPInWhiteList (clientIP, whiteList)
+    alt 校验失败
+        Auth-->>User: 401 ErrApiConfig*Invalid
+    else 校验成功
+        Auth->>Auth: c.Set("API_AUTH", true)
+        Auth->>Master: c.Next()
+        Note over Master: 后续 SessionAuth 见 API_AUTH=true 直接放行
+        Master-->>User: 200 OK
+    end
+      </div>
+      <div class="caption">图 6.1: API Key 签名 + 验证时序。客户端用 MD5/HMAC-SHA256 签名,服务端校验时间戳 + IP 白名单。</div>
+    </div>
+
+    <h3>签名算法对比</h3>
+    <div class="two-col">
+      <div class="card">
+        <span class="badge">V1 (默认)</span>
+        <h4>MD5 算法</h4>
+        <p class="tagline">简单哈希,兼容性最好。所有语言都能算。</p>
+<pre><code>token = md5("1panel" + apiKey + timestamp)
+// 例: md5("1panel" + "abc123..." + "1692931200")</code></pre>
+      </div>
+      <div class="card">
+        <span class="badge accent">HMAC-SHA256</span>
+        <h4>更安全</h4>
+        <p class="tagline">带密钥的 HMAC,防止 length-extension 攻击。</p>
+<pre><code>token = hmac_sha256(apiKey, "1panel:" + timestamp)
+// key = apiKey, message = "1panel:1692931200"</code></pre>
+      </div>
+    </div>
+
+    <h3>校验 5 步 (auth/api_auth.go:34-81)</h3>
+    <div class="ascii-flow">
+      1. 跳过条件: URL 以 /api/v2/core/auth 开头     → c.Next()
+      2. 没带 1Panel-Token + 1Panel-Timestamp header  → c.Next() (普通登录用户)
+      3. 读 settings: ApiInterfaceStatus / ApiKey / IpWhiteList / ApiTrustedProxies / ApiKeyValidityTime
+      4. ApiInterfaceStatus != Enable                  → 401 ErrApiConfigStatusInvalid
+      5. isValid1PanelTimestamp(ts, ttl)               → 401 ErrApiConfigKeyTimeInvalid
+      6. isValid1PanelToken(token, ts, key)            → 401 ErrApiConfigKeyInvalid
+      7. isIPInWhiteList(clientIP, whiteList)          → 401 ErrApiConfigIPInvalid
+      8. c.Set("API_AUTH", true)                       → 放行
+    </div>
+  </section>
+
+  <!-- ============ 7. 中间件链 ============ -->
+  <section id="middleware">
+    <h2><span class="num">7</span>中间件链</h2>
+
+    <p>1Panel 全局挂 11 个中间件。Auth 模块重点关注 5 个: <code>SessionAuth</code>、<code>PasswordExpired</code>、<code>CSRFTokenGuard</code>、<code>SetPasswordPublicKey</code>、<code>WhiteAllow</code>。</p>
+
+    <div class="diagram">
+      <div class="mermaid">
+flowchart TB
+    Req[HTTP Request] --> M1[i18n.UseI18n]
+    M1 --> M2[WhiteAllow<br/>IP 白名单]
+    M2 --> M3[BindDomain]
+    M3 --> M4[FrontendFallback]
+    M4 --> M5[OperationLog]
+    M5 --> M6[GlobalLoading]
+    M6 --> M7[CoreAPIAuthMiddleware<br/>1Panel-Token 验签]
+    M7 --> M8[PasswordExpired]
+    M8 --> M9[CSRFTokenGuard]
+    M9 --> M10[CoreRBACMiddlewares]
+    M10 --> M11[Proxy]
+
+    M11 --> P1{URL 路径分支}
+    P1 -->|/api/v2/core/auth/login<br/>等 8 个公开路由| P2[baseRouter<br/>不挂中间件]
+    P1 -->|/api/v2/core/auth/mfa<br/>等 11 个受保护路由| P3[authRouter<br/>+ SessionAuth + PasswordExpired]
+    P1 -->|其他业务| P4[对应 Router]
+
+    P2 --> H1[Handler 业务]
+    P3 --> H1
+    P4 --> H1
+
+    style M7 fill:#2f6f5e,color:#fff
+    style M8 fill:#c97b3f,color:#fff
+    style M9 fill:#2f6f5e,color:#fff
+    style P3 fill:#c97b3f,color:#fff
+      </div>
+      <div class="caption">图 7.1: 中间件链。请求依次通过 11 个中间件,然后按 URL 路由到不同 Router Group。</div>
+    </div>
+
+    <h3>5 类关键中间件</h3>
+    <div class="cards">
+      <div class="card">
+        <span class="badge">SessionAuth</span>
+        <h4>会话验证</h4>
+        <p class="tagline">验证 <code>psession</code> cookie,提取 <code>SessionUser</code> 到 gin context。8 个公开路径白名单,跳过 API_AUTH 和 LOCAL_REQUEST 标记。</p>
+        <div class="meta">file: core/middleware/session.go:15-59</div>
+      </div>
+      <div class="card">
+        <span class="badge accent">PasswordExpired</span>
+        <h4>密码过期</h4>
+        <p class="tagline">全局 + 路由组双重挂载。检查 <code>settings.ExpirationTime</code>,过期返回 HTTP 313。整组 <code>/api/v2/core/auth</code> 被显式跳过 (防止死锁)。</p>
+        <div class="meta">file: core/middleware/password_expired.go:20-106</div>
+      </div>
+      <div class="card">
+        <span class="badge">CSRFTokenGuard</span>
+        <h4>CSRF 防护</h4>
+        <p class="tagline">非 GET/HEAD/OPTIONS/TRACE 请求必须带 <code>X-CSRF-Token</code> header。10 个 auth 路径白名单,API_AUTH 跳过。</p>
+        <div class="meta">file: core/middleware/csrf_protect.go:14-33</div>
+      </div>
+      <div class="card">
+        <span class="badge warn">SetPasswordPublicKey</span>
+        <h4>RSA 公钥下发</h4>
+        <p class="tagline">从 <code>settings.PASSWORD_PUBLIC_KEY</code> 读公钥,base64 编码后写 <code>panel_public_key</code> cookie (7 天)。前端用它 RSA 加密密码。</p>
+        <div class="meta">file: core/middleware/password_rsa.go:9-22</div>
+      </div>
+      <div class="card">
+        <span class="badge">WhiteAllow</span>
+        <h4>IP 白名单</h4>
+        <p class="tagline">读 <code>settings.AllowIPs</code> 决定是否限制访问。同时识别 <code>X-Panel-Local-Token</code> header,标记 LOCAL_REQUEST 用于本地同步。</p>
+        <div class="meta">file: core/middleware/ip_limit.go:14-54</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8. 失败限流 ============ -->
+  <section id="iptracker">
+    <h2><span class="num">8</span>失败限流 (IPTracker)</h2>
+
+    <p>每个 IP 独立计数,内存常驻最多 100 个 IP,LRU 淘汰。10 次失败锁 5 分钟,失败后强制图形验证码。</p>
+
+    <div class="ascii-flow">
+      常量 (ip_tracker.go:8-13):
+        MaxIPCount        = 100          // 内存中最多 100 个 IP 记录
+        ExpireDuration    = 30 * time.Minute   // 30 分钟无活动过期
+        MaxFailedAttempts = 10           // 10 次失败锁 IP
+        LockDuration      = 5 * time.Minute    // 锁 5 分钟
+
+      数据结构:
+        type IPRecord struct {
+            NeedCaptcha bool       // 是否需要图形验证码
+            FailedCount int        // 累计失败次数
+            LockedUntil time.Time  // 锁到期时间
+            LastUpdate  time.Time  // 最后活动时间
+        }
+        type IPTracker struct {
+            records map[string]*IPRecord  // IP → 记录
+            ipOrder []string              // LRU 队列
+            mu      sync.RWMutex
+        }
+    </div>
+
+    <h3>失败限流状态机</h3>
+    <div class="diagram">
+      <div class="mermaid">
+stateDiagram-v2
+    [*] --> Clean: 新 IP
+    Clean --> Failed: 登录失败 1 次
+    Failed --> Failed: 失败计数 +1
+    Failed --> NeedCaptcha: ErrAuth / ErrMFA 触发<br/>SetNeedCaptcha
+    NeedCaptcha --> Failed: 继续失败计数
+    Failed --> Locked: FailedCount >= 10<br/>LockedUntil = now + 5min
+    Locked --> Clean: 5 分钟后自动解锁
+    Clean --> Clean: 登录成功 IPTracker.Clear
+    NeedCaptcha --> Clean: 登录成功 (同时清 captcha 标记)
+    Locked --> Clean: 登录成功
+    Clean --> [*]
+    Locked --> [*]
+      </div>
+      <div class="caption">图 8.1: IP 状态机。10 次失败自动锁,登录成功立即清。</div>
+    </div>
+
+    <h3>登录失败处理 (auth.go:63-83)</h3>
+<pre><code>// core/app/api/v2/auth.go:63-83
+user, msgKey, err := xpack.AuthProvider.Login(c, req, string(entrance))
+if user == nil || user.MfaStatus != constant.StatusEnable {
+    go saveLoginLogs(c, req.Name, wrapLoginErr(msgKey, err))
+}
+if msgKey == "ErrAuth" || msgKey == "ErrEntrance" || msgKey == "ErrNoneNode" {
+    if msgKey == "ErrAuth" {
+        global.IPTracker.RecordFailure(ip)        // +1 失败
+        global.IPTracker.SetNeedCaptcha(ip)       // 标记需验证码
+    }
+    helper.BadAuth(c, msgKey, err)
+    return
+}
+if err != nil {
+    global.IPTracker.RecordFailure(ip)
+    global.IPTracker.SetNeedCaptcha(ip)
+    helper.InternalServer(c, err)
+    return
+}
+if user == nil || user.MfaStatus != constant.StatusEnable {
+    global.IPTracker.Clear(ip)                     // 成功清记录
+}
+helper.SuccessWithData(c, user)
+</code></pre>
+  </section>
+
+  <!-- ============ 9. 关键设计 ============ -->
+  <section id="design">
+    <h2><span class="num">9</span>关键设计点</h2>
+
+    <p>10 个值得抄的设计 + 5 个反模式 (单管理员场景的妥协)。</p>
+
+    <h3>10 个必抄的设计</h3>
+    <div class="cards">
+      <div class="card">
+        <span class="badge">⭐⭐⭐⭐⭐</span>
+        <h4>AuthProvider 扩展点</h4>
+        <p class="tagline">19 个方法全部走 interface, community 实现硬编码调本地, enterprise 实现替换为 OIDC/SAML2/LDAP。Build tag 控制。</p>
+        <div class="meta">core/utils/xpack/providers/auth.go:9-41</div>
+      </div>
+      <div class="card">
+        <span class="badge">⭐⭐⭐⭐⭐</span>
+        <h4>RSA 双层密码保护</h4>
+        <p class="tagline">HTTPS 被降级场景下,密码也不会明文传输。私钥存服务端,公钥 cookie 7 天有效。</p>
+        <div class="meta">core/app/auth/auth.go:206-231 + core/middleware/password_rsa.go</div>
+      </div>
+      <div class="card">
+        <span class="badge">⭐⭐⭐⭐⭐</span>
+        <h4>hmac.Equal 时间安全比对</h4>
+        <p class="tagline">密码比对用 <code>hmac.Equal</code> 而非 <code>==</code>, 防止时序攻击。即使攻击者精确测量响应时间也无法逐字节推断。</p>
+        <div class="meta">core/app/auth/auth.go:215</div>
+      </div>
+      <div class="card">
+        <span class="badge">⭐⭐⭐⭐⭐</span>
+        <h4>SettingRepo 5min go-cache</h4>
+        <p class="tagline">高频读、低频写的 settings 表走进程内缓存。读 miss 走 SQLite,回写 cache。写路径同步更新 cache。Patrickmn/go-cache 5min TTL。</p>
+        <div class="meta">core/app/repo/setting.go:16-19, 72-83</div>
+      </div>
+      <div class="card">
+        <span class="badge">⭐⭐⭐⭐</span>
+        <h4>SetFresh 强制新 session</h4>
+        <p class="tagline">登录成功用 <code>SetFresh</code> 强制生成新 sessionID 和 CSRF token, 防止 session fixation 攻击。</p>
+        <div class="meta">core/app/auth/auth.go:177 + core/init/session/psession/psession.go:76-78</div>
+      </div>
+      <div class="card">
+        <span class="badge">⭐⭐⭐⭐</span>
+        <h4>WebAuthn 强制 UV</h4>
+        <p class="tagline">Passkey 强制 <code>UserVerification: Required</code> (passkey.go:334-336),必须指纹/PIN 验证。强制 HTTPS,强制 BindDomain 匹配。</p>
+        <div class="meta">core/app/auth/passkey.go:314-338</div>
+      </div>
+      <div class="card">
+        <span class="badge">⭐⭐⭐⭐</span>
+        <h4>Async saveLoginLogs</h4>
+        <p class="tagline">登录日志用 <code>go saveLoginLogs(...)</code> 异步写,不阻塞响应。错误吞掉,不影响登录结果。</p>
+        <div class="meta">core/app/api/v2/auth.go:529-541</div>
+      </div>
+      <div class="card">
+        <span class="badge">⭐⭐⭐⭐</span>
+        <h4>IPTracker LRU 100</h4>
+        <p class="tagline">内存常驻 100 IP 失败记录,LRU 淘汰。10/5min 锁 + 强制图形验证码。比 Redis 简单,单机够用。</p>
+        <div class="meta">core/init/auth/ip_tracker.go:140-148</div>
+      </div>
+      <div class="card">
+        <span class="badge">⭐⭐⭐</span>
+        <h4>API Key 双算法</h4>
+        <p class="tagline">MD5 / HMAC-SHA256 双算法签名,客户端任选。timestamp 60s + ttl 分钟容忍。IP 白名单强制。拒绝递归生成。</p>
+        <div class="meta">core/app/auth/api_auth.go:139-162, 117-137</div>
+      </div>
+      <div class="card">
+        <span class="badge">⭐⭐⭐</span>
+        <h4>SQLite + 纯 Go 驱动</h4>
+        <p class="tagline"><code>github.com/glebarez/sqlite</code> 无 CGO,跨平台编译方便,单二进制部署。4 个分库 (core/task/agent/alert) 故障隔离。</p>
+        <div class="meta">core/global/global.go:14-19</div>
+      </div>
+    </div>
+
+    <h3>5 个反模式 (单管理员场景的妥协)</h3>
+    <div class="cards">
+      <div class="card">
+        <span class="badge warn">❌ 单管理员</span>
+        <h4>硬编码 <code>__super_admin__</code></h4>
+        <p class="tagline">整个面板只有 1 个用户, ID 写死。多用户/团队/角色需 xpack enterprise。</p>
+        <div class="meta">core/init/session/psession/psession.go:23</div>
+      </div>
+      <div class="card">
+        <span class="badge warn">❌ 进程内 session</span>
+        <h4>多副本部署会丢 session</h4>
+        <p class="tagline"><code>PSession</code> 是 map, 跨进程不共享。多副本 master HA 部署,用户会被随机踢出。1 master + N agent 单实例是唯一正确部署。</p>
+        <div class="meta">core/init/session/psession/psession.go:34-39</div>
+      </div>
+      <div class="card">
+        <span class="badge warn">❌ IPTracker 进程内</span>
+        <h4>多副本计数失效</h4>
+        <p class="tagline"><code>IPTracker</code> 重启 = 清零, 多副本独立计数。攻击者分散失败反而绕开。Enterprise 可能用 Redis。</p>
+        <div class="meta">core/init/auth/ip_tracker.go:22-26</div>
+      </div>
+      <div class="card">
+        <span class="badge warn">❌ Service 层重复</span>
+        <h4>app/auth vs service/auth 大量重复</h4>
+        <p class="tagline"><code>app/auth/auth.go</code> (395行) 和 <code>service/auth.go</code> (630行) 实现几乎完全相同,只是后者用 struct 包装。明显的历史遗留。</p>
+        <div class="meta">core/app/auth/auth.go + core/app/service/auth.go</div>
+      </div>
+      <div class="card">
+        <span class="badge warn">❌ 无 unit test</span>
+        <h4>0 个 _test.go</h4>
+        <p class="tagline">整个 Auth 模块 1700+ 行 Go 代码, 没有任何 <code>*_test.go</code>。集成测试依赖手动 E2E。</p>
+        <div class="meta">core/app/auth/* (无 _test.go)</div>
+      </div>
+    </div>
+
+    <h3>完整调用链总结 (ASCII 流程图)</h3>
+    <div class="ascii-flow">
+                                    ┌─────────────────┐
+                                    │  浏览器 POST     │
+                                    │  /auth/login     │
+                                    └────────┬────────┘
+                                             │
+                  ┌──────────────────────────▼──────────────────────────┐
+                  │  11 个中间件 (i18n/WhiteAllow/OperationLog/...)      │
+                  │  CSRFTokenGuard skip (公开路由)                      │
+                  └──────────────────────────┬──────────────────────────┘
+                                             │
+                                             ▼
+                              ┌──────────────────────────────┐
+                              │  BaseApi.Login (auth.go:32)  │
+                              │  1. CheckBindAndValidate     │
+                              │  2. IsLocked / NeedCaptcha   │
+                              │  3. 解 base64 EntranceCode   │
+                              └────────────┬─────────────────┘
+                                           │
+                                           ▼
+                              ┌──────────────────────────────┐
+                              │ xpack.AuthProvider.Login     │
+                              │  → app/auth.Login (auth.go:24)│
+                              └────────────┬─────────────────┘
+                                           │
+                          ┌────────────────┼────────────────┐
+                          │                │                │
+                          ▼                ▼                ▼
+              ┌──────────────┐  ┌──────────────────┐  ┌────────────┐
+              │ SettingRepo  │  │ CheckPassword    │  │ PSession   │
+              │ 读 UserName  │  │ RSA decrypt      │  │ SetFresh   │
+              │ 读 Password  │  │ AES decrypt      │  │ 生成 session│
+              │ 读 Entrance  │  │ hmac.Equal       │  │ 生成 CSRF  │
+              │ 读 MFAStatus │  │                  │  │ Set-Cookie │
+              └──────────────┘  └──────────────────┘  └────────────┘
+                          │                │                │
+                          └────────────────┼────────────────┘
+                                           │
+                                           ▼
+                              ┌──────────────────────────────┐
+                              │  响应                          │
+                              │  helper.SuccessWithData       │
+                              │  + Set-Cookie psession        │
+                              │  + Set-Cookie pcsrftoken      │
+                              └──────────────────────────────┘
+    </div>
+  </section>
+
+  <footer>
+    1Panel Auth 模块 · 可视化图集 · 9 张 Mermaid 真实图 · 1 套完整调用链
+    <br/>
+    创建于 2026-08-25 · 源码来自 dev-v2 @ 2dea44a · 本图集仅供学习参考
+  </footer>
+
+</div>
+</body>
+</html>
