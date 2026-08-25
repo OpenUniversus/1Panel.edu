@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1Panel Database 模块 · 可视化图集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    sequence: { useMaxWidth: true, showSequenceNumbers: false },
+    securityLevel: 'loose'
+});
+</script>
+<script>
+// 1) 暗黑/明亮模式切换
+(function() {
+    const btn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('atlas-theme') || 'light';
+    applyTheme(saved);
+    btn.addEventListener('click', function() {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = cur === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem('atlas-theme', next);
+    });
+    function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        btn.textContent = t === 'dark' ? '☀️' : '🌙';
+        btn.title = t === 'dark' ? '切换到明亮模式' : '切换到暗黑模式';
+    }
+})();
+
+// 2) 代码/Mermaid 块一键复制按钮
+(function() {
+    document.querySelectorAll('pre').forEach(function(pre) {
+        const btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.type = 'button';
+        btn.textContent = '📋 复制';
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const txt = pre.innerText || pre.textContent;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).then(function() {
+                    btn.textContent = '✓ 已复制';
+                    btn.classList.add('copied');
+                    setTimeout(function() { btn.textContent = '📋 复制'; btn.classList.remove('copied'); }, 1500);
+                }).catch(function() { fallback(); });
+            } else { fallback(); }
+            function fallback() {
+                const ta = document.createElement('textarea');
+                ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.select();
+                try { document.execCommand('copy'); btn.textContent = '✓ 已复制'; btn.classList.add('copied'); } catch(_) {}
+                document.body.removeChild(ta);
+                setTimeout(function() { btn.textContent = '📋 复制'; btn.classList.remove('copied'); }, 1500);
+            }
+        });
+        // mermaid 块 wrap 在 .diagram 里，button 加到 .diagram 而不是 pre
+        const wrap = pre.closest('.diagram') || pre;
+        wrap.appendChild(btn);
+    });
+})();
+
+// 3) 卡片点击展开/收起
+(function() {
+    document.querySelectorAll('.card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            // 防止代码复制按钮误触
+            if (e.target.closest('.copy-btn')) return;
+            card.classList.toggle('expanded');
+        });
+    });
+})();
+
+// 4) TOC 当前章节高亮（滚动时）
+(function() {
+    const tocLinks = document.querySelectorAll('.toc a[href^="#"]');
+    if (!tocLinks.length) return;
+    const sections = [];
+    tocLinks.forEach(function(a) {
+        const id = a.getAttribute('href').slice(1);
+        const el = document.getElementById(id);
+        if (el) sections.push({ id: id, el: el, link: a.closest('li') });
+    });
+    function update() {
+        const top = window.scrollY + 120;
+        let active = null;
+        for (let i = 0; i < sections.length; i++) {
+            if (sections[i].el.offsetTop <= top) active = sections[i];
+            else break;
+        }
+        sections.forEach(function(s) { s.link.classList.toggle('active', s === active); });
+    }
+    let raf = null;
+    window.addEventListener('scroll', function() {
+        if (raf) return;
+        raf = requestAnimationFrame(function() { update(); raf = null; });
+    }, { passive: true });
+    update();
+})();
+</script>
+<style>
+:root {
+    --bg: #f7f5f0;
+    --card: #ffffff;
+    --line: #e9e3d6;
+    --line-soft: #f0ebde;
+    --text: #14171e;
+    --text-muted: #3a4256;
+    --text-soft: #7c7a72;
+    --primary: #2f6f5e;
+    --primary-soft: rgba(47, 111, 94, 0.08);
+    --accent: #c97b3f;
+    --warn: #b06367;
+    --warn-soft: rgba(176, 99, 103, 0.08);
+    --good: #5b8c5a;
+    --good-soft: rgba(91, 140, 90, 0.08);
+}
+
+:root[data-theme="dark"] {
+    --bg: #14171e;
+    --card: #1c2030;
+    --line: #2a2f3e;
+    --line-soft: #232732;
+    --text: #e9e3d6;
+    --text-muted: #b8b8c8;
+    --text-soft: #7c7a92;
+    --primary: #5fb89e;
+    --primary-soft: rgba(95, 184, 158, 0.14);
+    --accent: #e6a173;
+    --warn: #d18488;
+    --warn-soft: rgba(209, 132, 136, 0.12);
+    --good: #8cc28a;
+    --good-soft: rgba(140, 194, 138, 0.12);
+}
+
+html { scroll-behavior: smooth; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Outfit', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+    background-image:
+        radial-gradient(circle at 0% 0%, rgba(47, 111, 94, 0.04), transparent 35%),
+        radial-gradient(circle at 100% 100%, rgba(201, 123, 63, 0.04), transparent 35%);
+}
+
+main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 56px 32px 96px;
+}
+
+.eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 52px;
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin-bottom: 20px;
+}
+
+h1 em {
+    font-style: italic;
+    color: var(--primary);
+}
+
+.subtitle {
+    font-size: 18px;
+    color: var(--text-muted);
+    line-height: 1.55;
+    max-width: 720px;
+    margin-bottom: 48px;
+}
+
+h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 34px;
+    font-weight: 400;
+    line-height: 1.25;
+    margin: 80px 0 24px;
+    color: var(--text);
+    scroll-margin-top: 24px;
+}
+
+h2 .num {
+    display: inline-block;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary);
+    letter-spacing: 0.1em;
+    margin-right: 16px;
+    vertical-align: middle;
+    padding: 2px 10px;
+    background: var(--primary-soft);
+    border-radius: 6px;
+}
+
+h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text);
+    margin: 40px 0 16px;
+}
+
+h4 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 24px 0 10px;
+}
+
+p {
+    margin-bottom: 14px;
+    color: var(--text-muted);
+}
+
+p.lead {
+    font-size: 17px;
+    color: var(--text);
+    line-height: 1.65;
+}
+
+p strong { color: var(--text); font-weight: 600; }
+em { font-style: italic; color: var(--primary); }
+code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+    padding: 2px 6px;
+    background: var(--line-soft);
+    border-radius: 4px;
+    color: var(--text);
+}
+
+.lead-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin: 36px 0;
+}
+
+.lead-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 18px;
+    position: relative;
+}
+
+.lead-card .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-soft);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.lead-card .value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 30px;
+    color: var(--text);
+    line-height: 1;
+}
+
+.lead-card .desc {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+.section-quote {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--primary);
+    border-radius: 4px 14px 14px 4px;
+    padding: 22px 28px;
+    margin: 32px 0;
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--text);
+    font-style: italic;
+}
+
+.toc {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin: 0 0 64px;
+}
+
+.toc h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-soft);
+    margin: 0 0 12px;
+    font-weight: 600;
+}
+
+.toc ol {
+    list-style: none;
+    counter-reset: toc;
+    padding: 0;
+}
+
+.toc li {
+    counter-increment: toc;
+    display: flex;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 14px;
+}
+
+.toc li::before {
+    content: counter(toc, decimal-leading-zero);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-soft);
+    min-width: 22px;
+}
+
+.toc a {
+    color: var(--text);
+    text-decoration: none;
+    border-bottom: 1px dashed transparent;
+    transition: border-color 0.15s;
+}
+
+.toc a:hover { border-bottom-color: var(--primary); }
+.toc li.active a { color: var(--primary); font-weight: 600; border-bottom-color: var(--primary); }
+
+/* 暗黑/明亮切换按钮 */
+.theme-toggle {
+    position: fixed; top: 20px; right: 20px; z-index: 1000;
+    padding: 8px 14px; font-size: 16px; font-weight: 500;
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--line); border-radius: 24px;
+    cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: background 0.2s, transform 0.1s;
+    font-family: inherit;
+}
+.theme-toggle:hover { background: var(--primary-soft); transform: scale(1.05); }
+.theme-toggle:active { transform: scale(0.97); }
+
+/* 代码块一键复制按钮 */
+.diagram, pre { position: relative; }
+.copy-btn {
+    position: absolute; top: 8px; right: 8px; z-index: 10;
+    padding: 4px 10px; font-size: 11px; font-weight: 500;
+    font-family: inherit;
+    background: var(--card); color: var(--text-muted);
+    border: 1px solid var(--line); border-radius: 4px;
+    cursor: pointer; opacity: 0; transition: opacity 0.2s, background 0.15s;
+}
+.diagram:hover .copy-btn, pre:hover .copy-btn { opacity: 1; }
+.copy-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+.copy-btn.copied { background: var(--good); color: white; border-color: var(--good); opacity: 1; }
+
+/* 卡片点击展开 */
+.card { 
+    cursor: pointer; 
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.card .example { 
+    max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height 0.35s ease, opacity 0.25s, margin 0.25s;
+    margin-top: 0;
+}
+.card.expanded .example { 
+    max-height: 500px; opacity: 1; margin-top: 12px; 
+}
+.card .toggle-hint {
+    display: block; text-align: center; margin-top: 10px;
+    font-size: 11px; color: var(--text-soft);
+    font-weight: 500;
+}
+.card.expanded .toggle-hint::before { content: '▲ '; }
+.card:not(.expanded) .toggle-hint::before { content: '▼ 点击展开 '; }
+.card::after {
+    content: '▼ 点击展开';
+    display: block; text-align: center; margin-top: 10px;
+    font-size: 11px; color: var(--text-soft);
+    font-weight: 500;
+}
+.card.expanded::after { content: '▲ 收起'; }
+
+.diagram {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px 24px;
+    margin: 28px 0;
+    text-align: center;
+    overflow-x: auto;
+}
+
+.diagram .mermaid {
+    font-family: 'Outfit', sans-serif !important;
+}
+
+.diagram .caption {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-soft);
+    text-align: center;
+    font-style: italic;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    margin: 32px 0;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 26px 24px;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px -8px rgba(0,0,0,0.08);
+}
+
+.card .star {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--good);
+    background: var(--good-soft);
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-bottom: 12px;
+    letter-spacing: 0.04em;
+}
+
+.card h3 {
+    margin: 0 0 6px;
+    font-size: 19px;
+    color: var(--text);
+}
+
+.card .tagline {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+}
+
+.card .example {
+    border-top: 1px dashed var(--line);
+    padding-top: 14px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.card .example strong {
+    color: var(--text);
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.warn-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--warn);
+    border-radius: 4px 14px 14px 4px;
+    padding: 22px 24px;
+    margin: 12px 0;
+}
+
+.warn-card h4 {
+    color: var(--warn);
+    margin: 0 0 6px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.warn-card p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.55;
+}
+
+.kv {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    row-gap: 12px;
+    column-gap: 20px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin: 24px 0;
+}
+
+.kv dt {
+    color: var(--text-soft);
+    font-weight: 500;
+    font-size: 13px;
+    border-bottom: 1px dashed var(--line);
+    padding-bottom: 12px;
+}
+
+.kv dd {
+    margin: 0;
+    color: var(--text);
+    font-size: 14px;
+    border-bottom: 1px dashed var(--line);
+    padding-bottom: 12px;
+}
+
+.kv dt:last-of-type, .kv dd:last-of-type {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.matrix-table {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    margin: 24px 0;
+    border-collapse: collapse;
+}
+
+.matrix-table th {
+    background: var(--line-soft);
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--line);
+}
+
+.matrix-table td {
+    padding: 14px 16px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--text-muted);
+    vertical-align: top;
+}
+
+.matrix-table tr:last-child td { border-bottom: none; }
+
+.matrix-table td strong { color: var(--text); }
+
+.stars {
+    color: var(--good);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: -1px;
+}
+
+.cross {
+    color: var(--warn);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: -1px;
+}
+
+footer {
+    margin-top: 96px;
+    padding-top: 32px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    color: var(--text-soft);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+    main { padding: 32px 20px 64px; }
+    h1 { font-size: 36px; }
+    h2 { font-size: 26px; }
+    .lead-grid { grid-template-columns: repeat(2, 1fr); }
+    .cards { grid-template-columns: 1fr; }
+    .kv { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="theme-toggle" title="切换暗黑/明亮模式">🌙</button>
+<main>
+
+<div class="eyebrow">
+    <span>📖</span>
+    <span>1Panel Database 模块</span>
+    <span>·</span>
+    <span>可视化图集 v1</span>
+</div>
+
+<h1>管 4 种数据库的<em>4800 行 Go</em><br>到底写了什么？</h1>
+<p class="subtitle">30 分钟图解 1Panel Database 模块。配套详细代码注解在同目录 <code>README.md</code>（99 KB / 2192 行），人话版在 <code>HUMAN-READABLE.md</code>（22 KB / 591 行）。</p>
+
+<div class="lead-grid">
+    <div class="lead-card">
+        <div class="label">代码总量</div>
+        <div class="value">~4800</div>
+        <div class="desc">行 Go（service + client + api）</div>
+    </div>
+    <div class="lead-card">
+        <div class="label">抽象</div>
+        <div class="value">4 + 1</div>
+        <div class="desc">4 张表 + 1 个 Adapter interface</div>
+    </div>
+    <div class="lead-card">
+        <div class="label">支持 DB</div>
+        <div class="value">5</div>
+        <div class="desc">MySQL / MariaDB / PG / Redis / MongoDB</div>
+    </div>
+    <div class="lead-card">
+        <div class="label">场景</div>
+        <div class="value">2</div>
+        <div class="desc">local 容器 + remote 远端</div>
+    </div>
+</div>
+
+<nav class="toc">
+    <h4>目录</h4>
+    <ol>
+        <li><a href="#s1">凭什么能管 4 种数据库</a></li>
+        <li><a href="#s2">一个真实场景走查：9 步</a></li>
+        <li><a href="#s3">7 个值得抄的设计模式</a></li>
+        <li><a href="#s4">5 个反模式（要避开）</a></li>
+        <li><a href="#s5">Sirius Cloud 对照表</a></li>
+        <li><a href="#s6">3 个未解问题（你来定）</a></li>
+    </ol>
+</nav>
+
+<h2 id="s1"><span class="num">01</span>凭什么能管 4 种数据库</h2>
+
+<p>1Panel 在 <code>Database</code> 表里加了 <strong>一个字段</strong>，就把"管 4 种 DB"这个看起来要写 16 套代码的难题变成了一行 switch。</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    A[service.MysqlService.Create] --> B[LoadMysqlClientByFrom]
+    B --> C{From = ?}
+    C -->|local| D[Local Client<br/>docker exec<br/>mysql -e 'SQL']
+    C -->|remote| E[Remote Client<br/>database/sql<br/>TCP 直连]
+    D --> F[真实 MySQL]
+    E --> F
+    style B fill:#2f6f5e,color:#fff
+    style C fill:#c97b3f,color:#fff
+    style F fill:#14171e,color:#fff
+</pre>
+<div class="caption">图 1：MysqlService.Create 不关心是 local 还是 remote，全靠 LoadMysqlClientByFrom 工厂分流</div>
+</div>
+
+<p class="lead-grid" style="display:none"></p>
+
+<h3>类比：万能钥匙</h3>
+
+<div class="section-quote">
+普通钥匙匠：每个品牌的锁要配不同的钥匙 &nbsp; <strong>❌</strong><br>
+万能钥匙匠：只看"齿形规格"，不挑品牌 &nbsp; <strong>✅</strong><br><br>
+1Panel 普通：每个 DB 类型写一套 service &nbsp; <strong>❌</strong><br>
+1Panel 万能：用 <code>MysqlClient</code> interface + 2 套实现 &nbsp; <strong>✅</strong>
+</div>
+
+<h2 id="s2"><span class="num">02</span>一个真实场景走查：9 步</h2>
+
+<p>用户在 1Panel Core Web UI 点"添加 MySQL 数据库"，填表，点确定。1Panel 内部跑了 9 步：</p>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as 浏览器
+    participant C as Core (主控)
+    participant A as Agent (被管机器)
+    participant D as 真实 MySQL
+
+    U->>C: POST /databases/db (password base64)
+    C->>C: 1. base64 解码密码
+    C->>A: POST /databases
+    A->>A: 2. CheckIllegal 防 SQL 注入
+    A->>A: 3. parseMysqlHosts 拆 host 列表
+    A->>A: 4. 查重名 (SQLite)
+    A->>A: 5. 准备写入数据 (清空敏感字段)
+    A->>A: 6. LoadMysqlClientByFrom 工厂
+    A->>D: 7a. CREATE DATABASE
+    A->>D: 7b. CREATE USER
+    A->>D: 7c. GRANT (失败 → 回滚 DROP DATABASE)
+    A->>A: 8. 镜像 user 到 1Panel SQLite
+    A->>A: 9. mysqlRepo.Create 写主表
+    A-->>C: 200 OK
+    C-->>U: 200 OK
+</pre>
+<div class="caption">图 2：从浏览器点击到真实 MySQL 创建的完整 9 步时序</div>
+</div>
+
+<div class="section-quote">
+<span style="font-style:normal"><strong>关键</strong>：第 7 步"失败 → 回滚 DROP DATABASE"是 1Panel 最值得抄的设计 —— 没有分布式事务，但业务逻辑兜住了"半成功"状态。</span>
+</div>
+
+<h2 id="s3"><span class="num">03</span>7 个值得抄的设计模式</h2>
+
+<p>每个模式用 1 张图讲清楚。详细代码在 <code>README.md</code> 对应章节。</p>
+
+<div class="cards">
+
+<div class="card">
+    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
+    <h3>1. From 字段二分法</h3>
+    <p class="tagline">一个 enum 字段（<code>local</code>/<code>remote</code>）把两套实现统一到一个 interface 后。</p>
+    <div class="example">
+        <strong>类比：</strong>快递柜有"大件柜"和"小件柜"，用户只看尺寸选，不关心几号柜子。
+    </div>
+</div>
+
+<div class="card">
+    <div class="star">⭐⭐⭐⭐ 必抄</div>
+    <h3>2. UUID marker 标识自己的规则</h3>
+    <p class="tagline">在 <code>iptables -m comment --comment "&lt;UUID&gt;"</code> 里塞 UUID 当 ID，避免误删别人的规则。</p>
+    <div class="example">
+        <strong>类比：</strong>共享会议室里贴便签"今天 3 点张三用"，别人不会动你的东西。
+    </div>
+</div>
+
+<div class="card">
+    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
+    <h3>3. 三向合并同步</h3>
+    <p class="tagline">把"真实 DB 状态"同步到"控制台 SQLite"时，不删了重建，用 diff + 软删恢复。</p>
+    <div class="example">
+        <strong>类比：</strong>跟 git pull 一样 —— 不冲突的留下，冲突的合并，远端删了的本地打"已删除"标记但不真删。
+    </div>
+</div>
+
+<div class="card">
+    <div class="star">⭐⭐⭐⭐ 抄一半</div>
+    <h3>4. 配置所有权 marker 改写</h3>
+    <p class="tagline">改配置文件时用 comment 标记"自己的领地"，领地内的 key 才动，领地外不碰。</p>
+    <div class="example">
+        <strong>类比：</strong>合租公寓 —— 你的房间你随便改，公共区域（客厅、厨房）不动。
+    </div>
+</div>
+
+<div class="card">
+    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
+    <h3>5. 多步操作 + 3 层 rollback 闭包</h3>
+    <p class="tagline">复杂多步操作（建 user + 镜像 + 授权），每步定义一个"回滚闭包"，失败时按 LIFO 顺序撤销。</p>
+    <div class="example">
+        <strong>类比：</strong>魔术表演 —— 每个动作准备一个"撤销道具"，表演失败时按反序收场。
+    </div>
+</div>
+
+<div class="card">
+    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
+    <h3>6. 改密自动同步到 app</h3>
+    <p class="tagline">改 MySQL user 密码后，所有用此 user 的 app（WordPress 等）的环境变量 <code>DB_PASSWORD</code> 自动更新。删 user 前先查谁在用。</p>
+    <div class="example">
+        <strong>类比：</strong>公司换门锁 —— 同步更新所有员工的门禁卡（不能只换锁不更新卡），查谁拿了旧钥匙再决定能不能换。
+    </div>
+</div>
+
+<div class="card">
+    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
+    <h3>7. sidecar 容器跑 mysqldump</h3>
+    <p class="tagline">备份时拉个 <code>mysql:8.0</code> 临时容器跑 <code>mysqldump</code>，跑完即删（<code>--rm</code>）。</p>
+    <div class="example">
+        <strong>类比：</strong>装修时雇临时工 —— 不给正式工编制，用完走人。
+    </div>
+</div>
+
+</div>
+
+<h3>模式 1 + 3 实战：From 字段 + 三向合并怎么配合</h3>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    subgraph 用户操作
+        U1[点'同步 DB 列表']
+    end
+    U1 --> S1[service.LoadFromRemote]
+    S1 --> Q1{From 字段}
+    Q1 -->|local| L1[Local.SyncDB<br/>docker exec + tab 解析]
+    Q1 -->|remote| R1[Remote.SyncDB<br/>SQL query]
+    L1 --> D1[datas: 真实 DB 列表]
+    R1 --> D1
+    D1 --> S2[与 1Panel SQLite diff]
+    S2 --> A[新增 → 插入 + 清空敏感字段]
+    S2 --> B[已存在 → 保留 / 软删恢复]
+    S2 --> C[真实已删 → 软删除 is_delete=true]
+    style S1 fill:#2f6f5e,color:#fff
+    style S2 fill:#c97b3f,color:#fff
+    style A fill:#5b8c5a,color:#fff
+    style B fill:#5b8c5a,color:#fff
+    style C fill:#b06367,color:#fff
+</pre>
+<div class="caption">图 3：模式 1（From 分流）+ 模式 3（三向合并）的组合实操流程</div>
+</div>
+
+<h2 id="s4"><span class="num">04</span>5 个反模式（要避开）</h2>
+
+<div class="warn-card">
+    <h4>反模式 1：Local 路径走 <code>docker exec</code></h4>
+    <p>1Panel 的 Local 客户端用 <code>docker exec mysql -uroot -p... -e "SQL"</code> 进容器跑 MySQL CLI。密码明文出现在进程列表。你的环境没有 Docker，<strong>改用 systemd / 裸 socket</strong>。</p>
+</div>
+
+<div class="warn-card">
+    <h4>反模式 2：机器本地 key 加密</h4>
+    <p>1Panel 的 <code>encrypt.StringEncrypt</code> 用机器特征当 key，<strong>重启或重装系统后解密失败</strong>。SQLite 备份跨机器不可移植。改用 KMS / Vault。</p>
+</div>
+
+<div class="warn-card">
+    <h4>反模式 3：MySQL DSN 含明文密码</h4>
+    <p><code>connArgs := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=utf8", conn.Username, conn.Password, ...)</code> 密码明文进 struct 和 log。<strong>从环境变量读密码</strong>，不进 struct，不进日志。</p>
+</div>
+
+<div class="warn-card">
+    <h4>反模式 4：自己补丁 PostgreSQL 18 路径</h4>
+    <p>1Panel 在 <code>UpdateConfByFile:97-99</code> 自己打补丁处理 PG 18 目录变化。每次 PG 升级都要跟。用 <code>find</code> 找 postgresql.conf，不硬编码路径。</p>
+</div>
+
+<div class="warn-card">
+    <h4>反模式 5：MongoDB <code>directConnection=true</code> 强制单节点</h4>
+    <p>1Panel 的 <code>buildRemoteMongodbURI</code> 写死 <code>directConnection=true</code>，<strong>不支持 MongoDB Cluster</strong>。用 <code>replicaSet=rs0&readPreference=secondaryPreferred</code> 替代。</p>
+</div>
+
+<h2 id="s5"><span class="num">05</span>Sirius Cloud 对照表</h2>
+
+<table class="matrix-table">
+<thead>
+<tr>
+    <th>你的需求</th>
+    <th>1Panel 对位</th>
+    <th>借鉴度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td><strong>L2 部署：远端 MySQL 接入</strong></td>
+    <td><code>Database.From="remote"</code></td>
+    <td><span class="stars">⭐⭐⭐⭐⭐</span></td>
+</tr>
+<tr>
+    <td><strong>L2 部署：改密自动同步到 app</strong></td>
+    <td><code>updateMysqlPasswordAppTargets</code></td>
+    <td><span class="stars">⭐⭐⭐⭐⭐</span></td>
+</tr>
+<tr>
+    <td><strong>L2 部署：删 user 前查占用</strong></td>
+    <td><code>checkMysqlUserAppUsage</code></td>
+    <td><span class="stars">⭐⭐⭐⭐⭐</span></td>
+</tr>
+<tr>
+    <td><strong>L2 部署：多步操作 rollback</strong></td>
+    <td><code>CreateUser</code> 3 层闭包</td>
+    <td><span class="stars">⭐⭐⭐⭐⭐</span></td>
+</tr>
+<tr>
+    <td><strong>L2 部署：sidecar 备份</strong></td>
+    <td><code>Remote.Backup</code> 跑临时容器</td>
+    <td><span class="stars">⭐⭐⭐⭐⭐</span></td>
+</tr>
+<tr>
+    <td><strong>L3 监控：MySQL 状态</strong></td>
+    <td><code>LoadStatus</code>（<code>SHOW GLOBAL STATUS</code>）</td>
+    <td><span class="stars">⭐⭐⭐⭐</span></td>
+</tr>
+<tr>
+    <td><strong>L3 备份：完整性校验</strong></td>
+    <td>PG <code>PGDMP</code> magic header</td>
+    <td><span class="stars">⭐⭐⭐⭐⭐</span></td>
+</tr>
+<tr>
+    <td><strong>L1 鉴权：密码 base64 包装</strong></td>
+    <td>全部 API 走 base64</td>
+    <td><span class="stars">⭐⭐⭐⭐</span></td>
+</tr>
+<tr>
+    <td><strong>核心抽象：多类型统一接口</strong></td>
+    <td><code>IDatabaseService</code> interface</td>
+    <td><span class="stars">⭐⭐⭐⭐⭐</span></td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="s6"><span class="num">06</span>3 个未解问题（你来定）</h2>
+
+<p>1Panel 把"DB 接入"做成了标准模式，但有 3 个关键决策<strong>它替你做了</strong>，你需要自己定：</p>
+
+<dl class="kv">
+    <dt>Q1：Local 路径用什么？</dt>
+    <dd>1Panel 选了 <code>docker exec</code>。你的选项：<strong>A</strong> systemd 单元（生产推荐）/<strong>B</strong> 裸进程 socket /<strong>C</strong> 完全不要 Local 路径。</dd>
+
+    <dt>Q2：怎么跟 Remote 区分？</dt>
+    <dd>1Panel 用 <code>From</code> enum。你的选项：<strong>A</strong> 跟 1Panel 一样 /<strong>B</strong> 不要 Local，所有 DB 一律远端（<strong>推荐</strong>，简化架构）。</dd>
+
+    <dt>Q3：镜像 user 凭据到本地 SQLite 吗？</dt>
+    <dd>1Panel 镜像到 <code>database_user</code> 表（<strong>坏处</strong>：双写不一致风险）。你的选项：<strong>A</strong> 镜像 /<strong>B</strong> 不镜像，直接查真实 DB，<strong>单一数据源</strong>（<strong>推荐</strong>）。</dd>
+</dl>
+
+<div class="section-quote">
+<span style="font-style:normal"><strong>我的建议</strong>（仅供参考）：Q1 → A 或 B · Q2 → B · Q3 → B。你做的所有决定都可以跟 1Panel 不一样 —— 1Panel 是参考，不是答案。</span>
+</div>
+
+<footer>
+    1Panel Database 模块 · 可视化图集 v1 · 2026-08-24<br>
+    详细代码注解：<code>README.md</code>（99 KB / 2192 行）· 人话版：<code>HUMAN-READABLE.md</code>（22 KB / 591 行）<br>
+    字体：Outfit + DM Serif Display · 图表：Mermaid · 配色：暖米色 / 墨绿 / 砖橙
+</footer>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1Panel Website 模块 · 可视化图集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }, sequence: { useMaxWidth: true, showSequenceNumbers: false }, securityLevel: 'loose' });
+</script>
+<style>
+:root { --bg: #f7f5f0; --card: #ffffff; --line: #e9e3d6; --line-soft: #f0ebde; --text: #14171e; --text-muted: #3a4256; --text-soft: #7c7a72; --primary: #2f6f5e; --primary-soft: rgba(47, 111, 94, 0.08); --accent: #c97b3f; --warn: #b06367; --warn-soft: rgba(176, 99, 103, 0.08); --good: #5b8c5a; --good-soft: rgba(91, 140, 90, 0.08); }
+:root[data-theme="dark"] { --bg: #14171e; --card: #1c2030; --line: #2a2f3e; --line-soft: #232732; --text: #e9e3d6; --text-muted: #b8b8c8; --text-soft: #7c7a92; --primary: #5fb89e; --primary-soft: rgba(95, 184, 158, 0.14); --accent: #e6a173; --warn: #d18488; --good: #8cc28a; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Outfit', 'Noto Serif SC', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; background-image: radial-gradient(circle at 0% 0%, rgba(47, 111, 94, 0.04), transparent 35%), radial-gradient(circle at 100% 100%, rgba(201, 123, 63, 0.04), transparent 35%); }
+main { max-width: 1080px; margin: 0 auto; padding: 56px 32px 96px; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--primary-soft); color: var(--primary); border-radius: 100px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 20px; }
+h1 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 52px; font-weight: 400; line-height: 1.15; letter-spacing: -0.01em; color: var(--text); margin-bottom: 20px; }
+.subtitle { font-size: 18px; color: var(--text-muted); line-height: 1.55; max-width: 720px; margin-bottom: 48px; }
+h2 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 34px; font-weight: 400; line-height: 1.25; margin: 80px 0 24px; color: var(--text); scroll-margin-top: 24px; }
+h2 .num { display: inline-block; font-size: 14px; font-weight: 600; color: var(--primary); letter-spacing: 0.1em; margin-right: 16px; vertical-align: middle; padding: 2px 10px; background: var(--primary-soft); border-radius: 6px; }
+h3 { font-size: 22px; font-weight: 600; margin: 40px 0 16px; color: var(--text); }
+h4 { font-size: 17px; font-weight: 600; margin: 24px 0 10px; color: var(--text); }
+p { margin-bottom: 14px; color: var(--text-muted); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; padding: 2px 6px; background: var(--line-soft); border-radius: 4px; color: var(--text); }
+pre { margin: 16px 0; padding: 16px; background: #14171e; color: #e9e3d6; border-radius: 6px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.55; }
+pre code { background: none; color: inherit; padding: 0; }
+.diagram { margin: 24px 0; padding: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+.diagram .mermaid { background: var(--bg); padding: 16px; border-radius: 6px; }
+.diagram .caption { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--text-soft); text-align: center; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 24px 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.card .star { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--primary-soft); color: var(--primary); border-radius: 4px; margin-bottom: 8px; }
+.card h3 { font-size: 17px; margin: 8px 0; }
+.card .tagline { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.card .example { font-size: 13px; color: var(--text-soft); padding: 8px 12px; background: var(--bg); border-radius: 4px; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.35s ease, opacity 0.25s, margin 0.25s; margin-top: 0; }
+.card.expanded .example { max-height: 500px; opacity: 1; margin-top: 12px; }
+.card::after { content: '▼ 点击展开'; display: block; text-align: center; margin-top: 10px; font-size: 11px; color: var(--text-soft); }
+.card.expanded::after { content: '▲ 收起'; }
+.warn-card { background: var(--warn-soft); border-color: var(--warn); }
+.warn-card .star { background: var(--warn); color: white; }
+.warn-card::after { content: '⚠️ 必避'; }
+table { width: 100%; border-collapse: collapse; margin: 16px 0; background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+th { background: var(--bg); font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+.theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 8px 14px; font-size: 16px; font-weight: 500; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 24px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: background 0.2s, transform 0.1s; font-family: inherit; }
+.theme-toggle:hover { background: var(--primary-soft); transform: scale(1.05); }
+footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-soft); text-align: center; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="theme-toggle" title="切换暗黑/明亮模式">🌙</button>
+<main>
+<span class="eyebrow">🌐 1Panel v2 · Website 模块</span>
+<h1>可视化图集</h1>
+<p class="subtitle">~11000 行 Go + Nginx 配置模板引擎 + ACME 协议客户端。搞懂"加网站"是怎么从 3 步表单到 Nginx reload 落地的。</p>
+
+<h2><span class="num">01</span>配置生成 + 安全 reload 流程</h2>
+
+<p>核心思路：<strong>永不直接 reload</strong>。先把新 conf 写到临时文件，`nginx -t` 测试语法，通过才覆盖正式 conf，再 reload。</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    A[用户填表<br/>type=reverse_proxy<br/>domain=api.example.com] --> B[website.go<br/>Service 层]
+    B --> C[website_utils.go<br/>渲染模板]
+    C --> D[生成 nginx.conf]
+    D --> E[写临时 .tmp]
+    E --> F[nginx_module.go<br/>nginx -t 测语法]
+    F -->|通过| G[覆盖正式 conf]
+    F -->|失败| H[删临时 + 报错]
+    G --> I[nginx -s reload]
+    I --> J[用户访问生效]
+    style B fill:#2f6f5e,color:#fff
+    style F fill:#c97b3f,color:#fff
+    style I fill:#5b8c5a,color:#fff
+</pre>
+<div class="caption">图 1：先测后覆盖。Nginx reload 时 conf 有语法错会<strong>导致整个进程退出</strong>，所有网站都挂 —— 所以必须先 -t</div>
+</div>
+
+<h2><span class="num">02</span>添加反向代理网站 8 步时序</h2>
+
+<p>从用户在 Web UI 点"确定"到 Nginx reload 完成，全流程 8 步。理解了这个，Website 模块就懂了一半。</p>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant W as Website Service
+    participant DB as SQLite
+    participant AC as ACME Client
+    participant FS as 文件系统
+    participant N as Nginx
+    U->>W: Create(反代, api.example.com, 8080)
+    W->>W: 校验域名/端口/查重
+    W->>DB: Save(metadata, status=creating)
+    W->>AC: 申请 Let's Encrypt 证书
+    AC-->>W: cert.pem + key.pem
+    W->>W: 渲染 nginx.conf 模板
+    W->>FS: 写 .tmp-api.example.com
+    W->>N: nginx -t 测语法
+    N-->>W: 通过
+    W->>FS: rename → 正式 conf
+    W->>N: nginx -s reload
+    W->>DB: Update(status=running)
+    W-->>U: 创建成功
+</pre>
+<div class="caption">图 2：完整 8 步。最耗时是 ACME 证书申请（5-30 秒），其他秒级</div>
+</div>
+
+<h2><span class="num">03</span>3 种网站类型配置对比</h2>
+
+<p>同一套模板引擎，根据 type 字段渲染不同配置。<strong>数据驱动，不堆 if-else</strong>。</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    Render[渲染模板] --> T{website.Type}
+    T -->|default| D[默认站点<br/>root /var/www]
+    T -->|reverse_proxy| P[反代<br/>proxy_pass]
+    T -->|static| S[静态<br/>try_files]
+    D --> D1[listen 80<br/>root /var/www<br/>try_files $uri /index.html]
+    P --> P1[listen 443 ssl<br/>proxy_pass http://127.0.0.1:8080<br/>proxy_set_header Host $host]
+    S --> S1[listen 80<br/>root /var/www/blog<br/>try_files $uri =404]
+    style T fill:#c97b3f,color:#fff
+</pre>
+<div class="caption">图 3：1 套模板 + 3 种类型，渲染出 3 套 nginx.conf</div>
+</div>
+
+<h2><span class="num">04</span>3 必抄 + 1 核心</h2>
+
+<div class="cards">
+<div class="card">
+    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
+    <h3>1. 配置安全 reload 策略（核心）</h3>
+    <p class="tagline">写临时 + nginx -t + 覆盖 + reload。10 行代码价值连城。</p>
+    <div class="example"><strong>适用：</strong>所有管配置文件的场景 —— pg_hba.conf / redis.conf / haproxy.cfg。Sirius Cloud 必用。</div>
+</div>
+<div class="card">
+    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
+    <h3>2. 配置模板引擎</h3>
+    <p class="tagline">Go template（Go）/ Jinja2（Python）渲染配置，<strong>数据驱动</strong>。</p>
+    <div class="example"><strong>价值：</strong>新增 1 种网站类型不用改渲染代码，只加 1 个模板文件。状态机清晰，不会乱。</div>
+</div>
+<div class="card">
+    <div class="star">⭐⭐⭐⭐ 必抄</div>
+    <h3>3. Let's Encrypt 自动化</h3>
+    <p class="tagline">HTTP-01 / DNS-01 两种验证，cron 每天检查自动续期。</p>
+    <div class="example"><strong>实现：</strong>用现成 ACME 库（Go: golang.org/x/crypto/acme，Python: certbot），<strong>别自己实现协议</strong>。</div>
+</div>
+<div class="card">
+    <div class="star">⭐⭐⭐⭐ 参考</div>
+    <h3>4. Upstream 负载均衡</h3>
+    <p class="tagline">多 instance + weight + backup 节点，Sirius Cloud 部署时直接抄。</p>
+    <div class="example"><strong>模板：</strong>upstream backend { server x:8080 weight=3; server x:8081 weight=2; server x:8082 backup; }</div>
+</div>
+</div>
+
+<h2><span class="num">05</span>5 个反模式（必避）</h2>
+
+<div class="cards">
+<div class="card warn-card">
+    <div class="star">❌ 单文件超 2000 行</div>
+    <h3>website.go 2370 行</h3>
+    <p class="tagline">3 种网站类型 CRUD 全堆一起。</p>
+    <div class="example"><strong>避坑：</strong>拆成 website_default.go / website_proxy.go / website_static.go，每个 500-800 行。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">⚠️ 状态机地狱</div>
+    <h3>81 种配置组合</h3>
+    <p class="tagline">3 类型 × 3 SSL × 3 Auth × 3 LB。代码到处 if-else 拼接。</p>
+    <div class="example"><strong>避坑：</strong>先<strong>画状态机</strong>，用 1 套模板引擎 + 数据驱动，不要堆 if-else。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">⚠️ 强依赖 nginx</div>
+    <h3>Nginx 二进制必须在 PATH</h3>
+    <p class="tagline">整套假设 nginx 命令可用。</p>
+    <div class="example"><strong>避坑：</strong>抽象 NginxManager interface（Reload / TestConfig / GetVersion），方便换 Caddy / Traefik。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">⚠️ 账号管理分散</div>
+    <h3>ACME 账号 + DNS 账号分 2 个表</h3>
+    <p class="tagline">website_acme_account.go 89 行 + website_dns_account.go 81 行。</p>
+    <div class="example"><strong>避坑：</strong>合并成 CertificateProvider 模型，2 个子表（账号 + 证书）。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">⚠️ 操作日志膨胀</div>
+    <h3>website_op.go 跟主表混一起</h3>
+    <p class="tagline">每改一次网站配置写一条 op log，3 个月后 SQLite 几 GB。</p>
+    <div class="example"><strong>避坑：</strong>op log 单独表 + 定期归档（30 天前的移到冷库）。</div>
+</div>
+</div>
+
+<h2><span class="num">06</span>Sirius Cloud 对照表</h2>
+
+<table>
+<thead><tr><th>Sirius Cloud 需求</th><th>1Panel 对应</th><th style="text-align:center">推荐度</th></tr></thead>
+<tbody>
+<tr><td><strong>L2 网站管理</strong></td><td>website.go 整套</td><td style="text-align:center">⭐⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L2 反向代理</strong></td><td>website_proxy.go + utils</td><td style="text-align:center">⭐⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L2 SSL 自动签发</strong></td><td>website_ssl.go + ACME</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L2 负载均衡</strong></td><td>website_lb.go + upstream</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L3 配置变更审计</strong></td><td>website_op.go</td><td style="text-align:center">⭐⭐⭐</td></tr>
+</tbody>
+</table>
+
+<h3>必抄清单</h3>
+<ol>
+<li>安全 reload 模式（safeReloadNginx）—— 10 行代码</li>
+<li>配置模板 + 数据驱动（避免 if-else 拼接）</li>
+<li>ACME 自动化 + DNS-01 支持</li>
+</ol>
+
+<h3>抄的时候要改</h3>
+<ol>
+<li><strong>不用 Nginx</strong>（你的 Sirius Cloud 部署用 K8s Ingress / Traefik）—— 抄设计模式不抄实现</li>
+<li><strong>配置管理用 GitOps</strong>（conf 文件存 Git，不用数据库）—— 1Panel 为 web UI 方便才存 DB</li>
+<li><strong>多租户隔离</strong> —— 1Panel 假设单机单用户，Sirius Cloud 要按用户隔离</li>
+</ol>
+
+<h2><span class="num">07</span>接下来怎么读</h2>
+
+<div class="cards">
+<div class="card">
+    <h3>30 分钟通道</h3>
+    <p class="tagline">本文档 + README.md §5 + website_utils.go 渲染函数</p>
+    <div class="example">看 renderTemplate 函数，理解模板怎么填数据。</div>
+</div>
+<div class="card">
+    <h3>2 小时通道</h3>
+    <p class="tagline">+ website.go Create 完整 8 步 + nginx_module.go safeReloadNginx</p>
+    <div class="example">看 ACME 客户端的 HTTP-01 和 DNS-01 两种验证实现。</div>
+</div>
+<div class="card">
+    <h3>1 天写代码</h3>
+    <p class="tagline">Python SafeConfigReloader + Jinja2 模板 + certbot 集成</p>
+    <div class="example">写自己的 SiriusWebsiteService。</div>
+</div>
+</div>
+
+<footer>
+1Panel Website 模块 · 可视化图集 v1 · 2026-08-24<br>
+详细注解：<code>03-website/README.md</code>（63 行 stub）· 人话版：<code>HUMAN-READABLE.md</code>（14 KB）<br>
+字体：Outfit + DM Serif Display · 图表：Mermaid · 配色：暖米色 / 墨绿 / 砖橙
+</footer>
+</main>
+
+<script>
+(function() {
+    const btn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('atlas-theme') || 'light';
+    applyTheme(saved);
+    btn.addEventListener('click', function() {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = cur === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem('atlas-theme', next);
+    });
+    function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        btn.textContent = t === 'dark' ? '☀️' : '🌙';
+    }
+})();
+(function() {
+    document.querySelectorAll('.card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            if (e.target.closest('a, button')) return;
+            card.classList.toggle('expanded');
+        });
+    });
+})();
+</script>
+</body>
+</html>

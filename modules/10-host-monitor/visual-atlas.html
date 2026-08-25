@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1Panel Host & Monitor 模块 · 可视化图集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }, sequence: { useMaxWidth: true, showSequenceNumbers: false }, securityLevel: 'loose' });</script>
+<style>
+:root { --bg: #f7f5f0; --card: #ffffff; --line: #e9e3d6; --line-soft: #f0ebde; --text: #14171e; --text-muted: #3a4256; --text-soft: #7c7a72; --primary: #2f6f5e; --primary-soft: rgba(47, 111, 94, 0.08); --accent: #c97b3f; --warn: #b06367; --warn-soft: rgba(176, 99, 103, 0.08); --good: #5b8c5a; --good-soft: rgba(91, 140, 90, 0.08); }
+:root[data-theme="dark"] { --bg: #14171e; --card: #1c2030; --line: #2a2f3e; --line-soft: #232732; --text: #e9e3d6; --text-muted: #b8b8c8; --text-soft: #7c7a92; --primary: #5fb89e; --primary-soft: rgba(95, 184, 158, 0.14); --accent: #e6a173; --warn: #d18488; --good: #8cc28a; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Outfit', 'Noto Serif SC', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; background-image: radial-gradient(circle at 0% 0%, rgba(47, 111, 94, 0.04), transparent 35%), radial-gradient(circle at 100% 100%, rgba(201, 123, 63, 0.04), transparent 35%); }
+main { max-width: 1080px; margin: 0 auto; padding: 56px 32px 96px; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--primary-soft); color: var(--primary); border-radius: 100px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 20px; }
+h1 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 52px; font-weight: 400; line-height: 1.15; letter-spacing: -0.01em; color: var(--text); margin-bottom: 20px; }
+.subtitle { font-size: 18px; color: var(--text-muted); line-height: 1.55; max-width: 720px; margin-bottom: 48px; }
+h2 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 34px; font-weight: 400; line-height: 1.25; margin: 80px 0 24px; color: var(--text); scroll-margin-top: 24px; }
+h2 .num { display: inline-block; font-size: 14px; font-weight: 600; color: var(--primary); letter-spacing: 0.1em; margin-right: 16px; vertical-align: middle; padding: 2px 10px; background: var(--primary-soft); border-radius: 6px; }
+h3 { font-size: 22px; font-weight: 600; margin: 40px 0 16px; color: var(--text); }
+p { margin-bottom: 14px; color: var(--text-muted); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; padding: 2px 6px; background: var(--line-soft); border-radius: 4px; color: var(--text); }
+pre { margin: 16px 0; padding: 16px; background: #14171e; color: #e9e3d6; border-radius: 6px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.55; }
+pre code { background: none; color: inherit; padding: 0; }
+.diagram { margin: 24px 0; padding: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+.diagram .mermaid { background: var(--bg); padding: 16px; border-radius: 6px; }
+.diagram .caption { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--text-soft); text-align: center; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 24px 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.card .star { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--primary-soft); color: var(--primary); border-radius: 4px; margin-bottom: 8px; }
+.card h3 { font-size: 17px; margin: 8px 0; }
+.card .tagline { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.card .example { font-size: 13px; color: var(--text-soft); padding: 8px 12px; background: var(--bg); border-radius: 4px; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.35s ease, opacity 0.25s, margin 0.25s; margin-top: 0; }
+.card.expanded .example { max-height: 500px; opacity: 1; margin-top: 12px; }
+.card::after { content: '▼ 点击展开'; display: block; text-align: center; margin-top: 10px; font-size: 11px; color: var(--text-soft); }
+.card.expanded::after { content: '▲ 收起'; }
+.warn-card { background: var(--warn-soft); border-color: var(--warn); }
+.warn-card .star { background: var(--warn); color: white; }
+.warn-card::after { content: '⚠️ 必避'; }
+table { width: 100%; border-collapse: collapse; margin: 16px 0; background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+th { background: var(--bg); font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+.theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 8px 14px; font-size: 16px; font-weight: 500; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 24px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: background 0.2s, transform 0.1s; font-family: inherit; }
+.theme-toggle:hover { background: var(--primary-soft); transform: scale(1.05); }
+footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-soft); text-align: center; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="theme-toggle" title="切换暗黑/明亮模式">🌙</button>
+<main>
+<span class="eyebrow">🖥️ 1Panel v2 · Host & Monitor 模块</span>
+<h1>可视化图集</h1>
+<p class="subtitle">~5000 行 Go。被管机器状态采集 + 远程操作。跟你 Sirius Cloud L1 readyz + L3 Obs 需求对位。</p>
+
+<h2><span class="num">01</span>模块结构</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    A[被管机器 Agent] --> B[host.go 320<br/>机器信息]
+    A --> C[monitor.go 642<br/>指标采集]
+    A --> D[host_tool.go 625<br/>远程操作]
+    A --> E[device.go 433<br/>设备信息]
+    A --> F[device_clean.go 1118<br/>磁盘清理]
+    A --> G[process.go 80<br/>进程列表]
+    A --> H[gpu.go<br/>GPU 信息]
+    style C fill:#2f6f5e,color:#fff
+    style D fill:#c97b3f,color:#fff
+    style F fill:#b06367,color:#fff
+</pre>
+<div class="caption">图 1：8 个文件分管不同子能力。3 大主力：host / monitor / host_tool</div>
+</div>
+
+<h2><span class="num">02</span>指标采集 4 层架构</h2>
+
+<p>采集器 → ring buffer → 持久化 → WebSocket/SSE 推前端。1 分钟采样，保留 60 个点（最近 1 小时）。</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    A[采集器<br/>1 分钟] --> B[内存 ring buffer<br/>最近 60 个点]
+    B --> C[持久化<br/>可选 SQLite]
+    C --> D[推送给 Core<br/>WebSocket / SSE]
+    D --> E[前端<br/>ECharts 实时图]
+    style A fill:#2f6f5e,color:#fff
+    style D fill:#c97b3f,color:#fff
+</pre>
+<div class="caption">图 2：4 层。ring buffer 防止内存无限增长，WebSocket/SSE 推前端实现实时</div>
+</div>
+
+<h2><span class="num">03</span>4 类指标采集</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    P[psutil 库 / /proc 文件] --> C[CPU<br/>psutil.CPUPercent]
+    P --> M[内存<br/>psutil.VirtualMemory]
+    P --> D[磁盘<br/>psutil.DiskUsage]
+    P --> N[网络<br/>psutil.NetIOStats]
+    C --> All[Metrics 结构体]
+    M --> All
+    D --> All
+    N --> All
+    style P fill:#2f6f5e,color:#fff
+    style All fill:#c97b3f,color:#fff
+</pre>
+<div class="caption">图 3：4 类指标统一用 psutil 库（Go 最常用系统信息库）</div>
+</div>
+
+<h2><span class="num">04</span>远程命令 4 重防御</h2>
+
+<p>跑命令 = 极高安全风险。1Panel 用 4 重防御：RBAC + 黑名单 + 超时 + 审计。</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    A[RunCommand req] --> B[1. RBAC 鉴权]
+    B -->|无权限| X1[403 Forbidden]
+    B -->|有权限| C[2. 黑名单过滤]
+    C -->|黑名单命中| X2[400 Blacklisted]
+    C -->|通过| D[3. 超时 30s]
+    D -->|超时| X3[408 Timeout]
+    D -->|完成| E[4. 审计日志]
+    E --> F[返回结果]
+    style B fill:#2f6f5e,color:#fff
+    style C fill:#c97b3f,color:#fff
+    style D fill:#b06367,color:#fff
+    style E fill:#5b8c5a,color:#fff
+</pre>
+<div class="caption">图 4：4 重防御依次执行。任何 1 关失败立刻拒绝</div>
+</div>
+
+<h2><span class="num">05</span>2 个必抄的设计</h2>
+
+<div class="cards">
+<div class="card">
+    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
+    <h3>1. 指标采集 + ring buffer</h3>
+    <p class="tagline">1 分钟采样，60 个点环形缓冲。</p>
+    <div class="example"><strong>必抄：</strong>Sirius Cloud L1 readyz 需要"机器健康状态"，L3 Obs 需要"历史指标图"。Python psutil + deque 30 行能写完。</div>
+</div>
+<div class="card">
+    <div class="star">⭐⭐⭐⭐ 必抄</div>
+    <h3>2. 远程命令 4 重防御</h3>
+    <p class="tagline">RBAC + 黑名单 + 超时 + 审计日志。</p>
+    <div class="example"><strong>必抄：</strong>你 L2 资产管理如果给用户"跑命令"功能，<strong>4 重防御必须都做</strong>。少任何一重都可能造成安全事故。</div>
+</div>
+</div>
+
+<h2><span class="num">06</span>3 个反模式（必避）</h2>
+
+<div class="cards">
+<div class="card warn-card">
+    <div class="star">🔴 高危</div>
+    <h3>远程命令 = 巨大安全风险</h3>
+    <p class="tagline">Core 被入侵 → 攻击者能跑任意命令 = 整台机器沦陷。</p>
+    <div class="example"><strong>避坑：</strong>默认<strong>禁用</strong>远程命令。必须 RBAC + MFA + 黑名单/白名单 + 全部命令审计告警。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">⚠️ 频率不够</div>
+    <h3>采样间隔 1 分钟（不是 15s）</h3>
+    <p class="tagline">满足不了高频监控（瞬时 spike 抓不到）。</p>
+    <div class="example"><strong>避坑：</strong>Sirius Cloud L3 Obs 用 Prometheus 体系（15s 采样）。1Panel 这套只适合基础监控。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">❌ 单点过大</div>
+    <h3>device_clean.go 1118 行</h3>
+    <p class="tagline">大文件扫描策略复杂（白名单 + 用户确认 + 多种来源）。</p>
+    <div class="example"><strong>避坑：</strong>先实现"找 top 100 大文件" + "用户手动删"，<strong>不要做自动删</strong>。</div>
+</div>
+</div>
+
+<h2><span class="num">07</span>Sirius Cloud 对位</h2>
+
+<table>
+<thead><tr><th>Sirius Cloud 需求</th><th>1Panel 对应</th><th style="text-align:center">推荐度</th></tr></thead>
+<tbody>
+<tr><td><strong>L1 Foundation /readyz</strong></td><td>monitor.go 指标采集</td><td style="text-align:center">⭐⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L3 Obs 历史指标</strong></td><td>monitor.go + 持久化</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L1 设备清单</strong></td><td>device.go / disk.go</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L2 远程命令</strong></td><td>host_tool.go 4 重防御</td><td style="text-align:center">⭐⭐⭐</td></tr>
+<tr><td><strong>L2 磁盘清理</strong></td><td>device_clean.go</td><td style="text-align:center">⭐⭐</td></tr>
+</tbody>
+</table>
+
+<h3>必抄清单</h3>
+<ol>
+<li>指标采集 + ring buffer（1 分钟 / 60 个点）</li>
+<li>远程命令 4 重防御（RBAC + 黑名单 + 超时 + 审计）</li>
+</ol>
+
+<h3>抄的时候要改</h3>
+<ol>
+<li>加 Prometheus 兼容（L3 高频监控）</li>
+<li>远程命令默认禁用（安全）</li>
+<li>磁盘清理不做自动删（用户手动确认）</li>
+</ol>
+
+<h2><span class="num">08</span>接下来怎么读</h2>
+
+<div class="cards">
+<div class="card">
+    <h3>30 分钟通道</h3>
+    <p class="tagline">本文档 + README.md §1 + monitor.go Collect</p>
+    <div class="example">理解 4 类指标采集。</div>
+</div>
+<div class="card">
+    <h3>2 小时通道</h3>
+    <p class="tagline">+ host_tool.go 4 重防御 + device_clean.go 大文件扫描</p>
+    <div class="example">看 4 重防御的 RBAC + 黑名单 + 超时 + 审计。</div>
+</div>
+<div class="card">
+    <h3>1 天写代码</h3>
+    <p class="tagline">Python psutil + ring buffer + FastAPI /readyz + WebSocket</p>
+    <div class="example">跑通"采集 → 内存 ring buffer → SSE 推前端"。</div>
+</div>
+</div>
+
+<footer>
+1Panel Host & Monitor 模块 · 可视化图集 v1 · 2026-08-24<br>
+详细注解：<code>10-host-monitor/README.md</code>（62 行 stub）· 人话版：<code>HUMAN-READABLE.md</code>（10 KB）<br>
+字体：Outfit + DM Serif Display · 图表：Mermaid · 配色：暖米色 / 墨绿 / 砖橙
+</footer>
+</main>
+
+<script>
+(function() {
+    const btn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('atlas-theme') || 'light';
+    applyTheme(saved);
+    btn.addEventListener('click', function() {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = cur === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem('atlas-theme', next);
+    });
+    function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        btn.textContent = t === 'dark' ? '☀️' : '🌙';
+    }
+})();
+(function() {
+    document.querySelectorAll('.card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            if (e.target.closest('a, button')) return;
+            card.classList.toggle('expanded');
+        });
+    });
+})();
+</script>
+</body>
+</html>

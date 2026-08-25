@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1Panel Runtime for AI 模块 · 可视化图集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }, sequence: { useMaxWidth: true, showSequenceNumbers: false }, securityLevel: 'loose' });</script>
+<style>
+:root { --bg: #f7f5f0; --card: #ffffff; --line: #e9e3d6; --line-soft: #f0ebde; --text: #14171e; --text-muted: #3a4256; --text-soft: #7c7a72; --primary: #2f6f5e; --primary-soft: rgba(47, 111, 94, 0.08); --accent: #c97b3f; --warn: #b06367; --warn-soft: rgba(176, 99, 103, 0.08); --good: #5b8c5a; --good-soft: rgba(91, 140, 90, 0.08); }
+:root[data-theme="dark"] { --bg: #14171e; --card: #1c2030; --line: #2a2f3e; --line-soft: #232732; --text: #e9e3d6; --text-muted: #b8b8c8; --text-soft: #7c7a92; --primary: #5fb89e; --primary-soft: rgba(95, 184, 158, 0.14); --accent: #e6a173; --warn: #d18488; --good: #8cc28a; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Outfit', 'Noto Serif SC', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; background-image: radial-gradient(circle at 0% 0%, rgba(47, 111, 94, 0.04), transparent 35%), radial-gradient(circle at 100% 100%, rgba(201, 123, 63, 0.04), transparent 35%); }
+main { max-width: 1080px; margin: 0 auto; padding: 56px 32px 96px; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--primary-soft); color: var(--primary); border-radius: 100px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 20px; }
+h1 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 52px; font-weight: 400; line-height: 1.15; letter-spacing: -0.01em; color: var(--text); margin-bottom: 20px; }
+.subtitle { font-size: 18px; color: var(--text-muted); line-height: 1.55; max-width: 720px; margin-bottom: 48px; }
+h2 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 34px; font-weight: 400; line-height: 1.25; margin: 80px 0 24px; color: var(--text); scroll-margin-top: 24px; }
+h2 .num { display: inline-block; font-size: 14px; font-weight: 600; color: var(--primary); letter-spacing: 0.1em; margin-right: 16px; vertical-align: middle; padding: 2px 10px; background: var(--primary-soft); border-radius: 6px; }
+h3 { font-size: 22px; font-weight: 600; margin: 40px 0 16px; color: var(--text); }
+p { margin-bottom: 14px; color: var(--text-muted); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; padding: 2px 6px; background: var(--line-soft); border-radius: 4px; color: var(--text); }
+pre { margin: 16px 0; padding: 16px; background: #14171e; color: #e9e3d6; border-radius: 6px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.55; }
+pre code { background: none; color: inherit; padding: 0; }
+.diagram { margin: 24px 0; padding: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+.diagram .mermaid { background: var(--bg); padding: 16px; border-radius: 6px; }
+.diagram .caption { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--text-soft); text-align: center; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 24px 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.card .star { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--primary-soft); color: var(--primary); border-radius: 4px; margin-bottom: 8px; }
+.card h3 { font-size: 17px; margin: 8px 0; }
+.card .tagline { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.card .example { font-size: 13px; color: var(--text-soft); padding: 8px 12px; background: var(--bg); border-radius: 4px; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.35s ease, opacity 0.25s, margin 0.25s; margin-top: 0; }
+.card.expanded .example { max-height: 500px; opacity: 1; margin-top: 12px; }
+.card::after { content: '▼ 点击展开'; display: block; text-align: center; margin-top: 10px; font-size: 11px; color: var(--text-soft); }
+.card.expanded::after { content: '▲ 收起'; }
+.warn-card { background: var(--warn-soft); border-color: var(--warn); }
+.warn-card .star { background: var(--warn); color: white; }
+.warn-card::after { content: '⚠️ 必避'; }
+table { width: 100%; border-collapse: collapse; margin: 16px 0; background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+th { background: var(--bg); font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+.theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 8px 14px; font-size: 16px; font-weight: 500; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 24px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: background 0.2s, transform 0.1s; font-family: inherit; }
+.theme-toggle:hover { background: var(--primary-soft); transform: scale(1.05); }
+footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-soft); text-align: center; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="theme-toggle" title="切换暗黑/明亮模式">🌙</button>
+<main>
+<span class="eyebrow">🤖 1Panel v2 · Runtime for AI 模块</span>
+<h1>可视化图集</h1>
+<p class="subtitle">~4000 行 Go。管 vLLM / TensorRT-LLM 推理运行时。强依赖 NVIDIA GPU。<strong>Sirius Cloud 不做 AI 推理，只学模式不抄实现</strong>。</p>
+
+<h2><span class="num">01</span>3 层 AI 推理架构</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    A[用户 Web UI] --> B[runtime.go 1382<br/>进程管理]
+    B --> C{选择 runtime}
+    C -->|vLLM| D[vLLM 进程]
+    C -->|TensorRT-LLM| E[TensorRT-LLM 进程]
+    C -->|ollama| F[ollama 进程]
+    D --> G[NVIDIA GPU]
+    E --> G
+    F --> G
+    D --> H[OpenAI 兼容 API]
+    E --> H
+    F --> H
+    H --> I[AI Agent / 外部调用]
+    style B fill:#2f6f5e,color:#fff
+    style G fill:#b06367,color:#fff
+    style H fill:#c97b3f,color:#fff
+</pre>
+<div class="caption">图 1：3 层。runtime 层管启停，引擎层跑进程，GPU 物理资源</div>
+</div>
+
+<h2><span class="num">02</span>启动推理 6 步</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant RS as runtime.go
+    participant GPU as GPU 池
+    participant DK as Docker
+    participant E as 引擎进程
+    U->>RS: StartRuntime(model=llama-3-70b, gpuIDs=[0,1])
+    RS->>RS: selectRuntime → vLLM
+    RS->>GPU: Allocate(80GB)
+    GPU-->>RS: [0, 1]
+    RS->>DK: docker pull vllm:latest
+    RS->>RS: downloadModel(llama-3-70b)
+    RS->>DK: docker run vllm (--gpus 0,1)
+    DK-->>E: 启动 vLLM 进程
+    RS->>E: waitForHealth(60s)
+    E-->>RS: 200 OK
+    RS->>RS: Save(Runtime metadata)
+    RS-->>U: {OpenAIURL: "http://container:8000/v1"}
+</pre>
+<div class="caption">图 2：6 步启动。最耗时是 model download（几 GB 到几十 GB）</div>
+</div>
+
+<h2><span class="num">03</span>GPU 池分配</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    A[runtime A<br/>需要 40GB] --> P[GPU 池]
+    B[runtime B<br/>需要 80GB] --> P
+    P -->|0: 24GB| A
+    P -->|0: 24GB| A
+    P -->|1: 40GB| A
+    P -->|2: 80GB| B
+    P -->|3: free| -
+    style P fill:#2f6f5e,color:#fff
+</pre>
+<div class="caption">图 3：GPU 是稀缺资源，池化管理避免冲突。mutex 保护</div>
+</div>
+
+<h2><span class="num">04</span>故障诊断 3 项</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    A[Diagnose runtime] --> B{nvidia-smi 检查}
+    B -->|GPU 内存 > 95%| C[warn: 内存不足]
+    A --> D{测量推理延迟}
+    D -->|> 5s| E[warn: 推理慢]
+    A --> F{检查 OOM Kill}
+    F -->|被 OOM 杀| G[critical: 进程被 OOM]
+    style C fill:#c97b3f,color:#fff
+    style E fill:#c97b3f,color:#fff
+    style G fill:#b06367,color:#fff
+</pre>
+<div class="caption">图 4：3 类诊断。GPU 内存 / 延迟 / OOM</div>
+</div>
+
+<h2><span class="num">05</span>1 个可借鉴的模式</h2>
+
+<div class="cards">
+<div class="card">
+    <div class="star">⭐⭐⭐ 可借鉴</div>
+    <h3>外部进程管理 + 健康检查 + API 暴露</h3>
+    <p class="tagline">runtime 抽象模式：启停 + 监控 + 诊断。</p>
+    <div class="example"><strong>可借鉴：</strong>跟"启动 MySQL 进程"是同一类问题。Sirius Cloud L2 部署 MySQL 时需要：分配资源（CPU/内存/端口） + 启停 + 健康检查 + 暴露连接信息 + 故障诊断。</div>
+</div>
+</div>
+
+<h2><span class="num">06</span>3 个反模式（必避）</h2>
+
+<div class="cards">
+<div class="card warn-card">
+    <div class="star">❌ 强依赖</div>
+    <h3>NVIDIA GPU + CUDA 强依赖</h3>
+    <p class="tagline">整套设计假设有 NVIDIA GPU + CUDA。</p>
+    <div class="example"><strong>避坑：</strong>普通 DBaaS 服务器<strong>根本没 GPU</strong>。Sirius Cloud 不做 AI 推理，整个模块跳过。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">⚠️ 单场景</div>
+    <h3>1382 行编排工作量大但服务单一场景</h3>
+    <p class="tagline">只服务"AI 推理"一个场景。</p>
+    <div class="example"><strong>避坑：</strong>不要照抄 1382 行。抽象你自己的"启动进程 + 监控 + 诊断"模式，每个 runtime 100-300 行。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">❌ 强依赖 Docker</div>
+    <h3>进程跑在 Docker 容器里</h3>
+    <p class="tagline">跟 1Panel 其他模块一样，假设 Docker 可用。</p>
+    <div class="example"><strong>避坑：</strong>你不用 Docker。用<strong>systemd unit 替代</strong>（生产推荐）或裸进程 + PID 文件。</div>
+</div>
+</div>
+
+<h2><span class="num">07</span>Sirius Cloud 对位</h2>
+
+<table>
+<thead><tr><th>Sirius Cloud 需求</th><th>1Panel 对应</th><th style="text-align:center">推荐度</th></tr></thead>
+<tbody>
+<tr><td><strong>新功能：AI 推理平台</strong></td><td>整套</td><td style="text-align:center">⭐⭐⭐（如果你要做）</td></tr>
+<tr><td><strong>L2 启动 MySQL 进程</strong></td><td>runtime 抽象模式</td><td style="text-align:center">⭐⭐⭐</td></tr>
+<tr><td><strong>L2 资源分配</strong></td><td>GPU 池 / 资源池</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L3 故障诊断</strong></td><td>runtime_diagnostics.go</td><td style="text-align:center">⭐⭐⭐</td></tr>
+</tbody>
+</table>
+
+<h3>可借鉴的 1 个模式</h3>
+<p>外部进程管理 + 健康检查 + API 暴露 —— 跟"启动 MySQL 进程"是同一类问题。</p>
+
+<h3>不抄的</h3>
+<ol>
+<li>整个 AI 推理模块（你 DBaaS 不做 AI）</li>
+<li>NVIDIA GPU 强依赖</li>
+<li>Docker 容器跑进程</li>
+</ol>
+
+<h2><span class="num">08</span>接下来怎么读</h2>
+
+<div class="cards">
+<div class="card">
+    <h3>30 分钟通道</h3>
+    <p class="tagline">本文档 + README.md §1 + runtime.go StartRuntime</p>
+    <div class="example">理解外部进程管理模式。</div>
+</div>
+<div class="card">
+    <h3>不建议深读</h3>
+    <p class="tagline">Sirius Cloud 不用 AI 推理，整个模块<strong>只看模式</strong>，不读实现</p>
+    <div class="example">节省时间投到 09-ai-agent / 12-security 等必抄模块。</div>
+</div>
+</div>
+
+<footer>
+1Panel Runtime for AI 模块 · 可视化图集 v1 · 2026-08-24<br>
+详细注解：<code>11-runtime-ai/README.md</code>（56 行 stub）· 人话版：<code>HUMAN-READABLE.md</code>（8 KB）<br>
+字体：Outfit + DM Serif Display · 图表：Mermaid · 配色：暖米色 / 墨绿 / 砖橙
+</footer>
+</main>
+
+<script>
+(function() {
+    const btn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('atlas-theme') || 'light';
+    applyTheme(saved);
+    btn.addEventListener('click', function() {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = cur === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem('atlas-theme', next);
+    });
+    function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        btn.textContent = t === 'dark' ? '☀️' : '🌙';
+    }
+})();
+(function() {
+    document.querySelectorAll('.card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            if (e.target.closest('a, button')) return;
+            card.classList.toggle('expanded');
+        });
+    });
+})();
+</script>
+</body>
+</html>

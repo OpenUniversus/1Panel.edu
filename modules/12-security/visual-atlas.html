@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1Panel Security 模块 · 可视化图集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }, sequence: { useMaxWidth: true, showSequenceNumbers: false }, securityLevel: 'loose' });
+</script>
+<style>
+:root { --bg: #f7f5f0; --card: #ffffff; --line: #e9e3d6; --line-soft: #f0ebde; --text: #14171e; --text-muted: #3a4256; --text-soft: #7c7a72; --primary: #2f6f5e; --primary-soft: rgba(47, 111, 94, 0.08); --accent: #c97b3f; --warn: #b06367; --warn-soft: rgba(176, 99, 103, 0.08); --good: #5b8c5a; --good-soft: rgba(91, 140, 90, 0.08); }
+:root[data-theme="dark"] { --bg: #14171e; --card: #1c2030; --line: #2a2f3e; --line-soft: #232732; --text: #e9e3d6; --text-muted: #b8b8c8; --text-soft: #7c7a92; --primary: #5fb89e; --primary-soft: rgba(95, 184, 158, 0.14); --accent: #e6a173; --warn: #d18488; --good: #8cc28a; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Outfit', 'Noto Serif SC', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; background-image: radial-gradient(circle at 0% 0%, rgba(47, 111, 94, 0.04), transparent 35%), radial-gradient(circle at 100% 100%, rgba(201, 123, 63, 0.04), transparent 35%); }
+main { max-width: 1080px; margin: 0 auto; padding: 56px 32px 96px; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--primary-soft); color: var(--primary); border-radius: 100px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 20px; }
+h1 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 52px; font-weight: 400; line-height: 1.15; letter-spacing: -0.01em; color: var(--text); margin-bottom: 20px; }
+.subtitle { font-size: 18px; color: var(--text-muted); line-height: 1.55; max-width: 720px; margin-bottom: 48px; }
+h2 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 34px; font-weight: 400; line-height: 1.25; margin: 80px 0 24px; color: var(--text); scroll-margin-top: 24px; }
+h2 .num { display: inline-block; font-size: 14px; font-weight: 600; color: var(--primary); letter-spacing: 0.1em; margin-right: 16px; vertical-align: middle; padding: 2px 10px; background: var(--primary-soft); border-radius: 6px; }
+h3 { font-size: 22px; font-weight: 600; margin: 40px 0 16px; color: var(--text); }
+p { margin-bottom: 14px; color: var(--text-muted); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; padding: 2px 6px; background: var(--line-soft); border-radius: 4px; color: var(--text); }
+pre { margin: 16px 0; padding: 16px; background: #14171e; color: #e9e3d6; border-radius: 6px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.55; }
+pre code { background: none; color: inherit; padding: 0; }
+.diagram { margin: 24px 0; padding: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+.diagram .mermaid { background: var(--bg); padding: 16px; border-radius: 6px; }
+.diagram .caption { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--text-soft); text-align: center; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 24px 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.card .star { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--primary-soft); color: var(--primary); border-radius: 4px; margin-bottom: 8px; }
+.card h3 { font-size: 17px; margin: 8px 0; }
+.card .tagline { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.card .example { font-size: 13px; color: var(--text-soft); padding: 8px 12px; background: var(--bg); border-radius: 4px; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.35s ease, opacity 0.25s, margin 0.25s; margin-top: 0; }
+.card.expanded .example { max-height: 500px; opacity: 1; margin-top: 12px; }
+.card::after { content: '▼ 点击展开'; display: block; text-align: center; margin-top: 10px; font-size: 11px; color: var(--text-soft); }
+.card.expanded::after { content: '▲ 收起'; }
+.warn-card { background: var(--warn-soft); border-color: var(--warn); }
+.warn-card .star { background: var(--warn); color: white; }
+.warn-card::after { content: '⚠️ 必避'; }
+table { width: 100%; border-collapse: collapse; margin: 16px 0; background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+th { background: var(--bg); font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+.theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 8px 14px; font-size: 16px; font-weight: 500; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 24px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: background 0.2s, transform 0.1s; font-family: inherit; }
+.theme-toggle:hover { background: var(--primary-soft); transform: scale(1.05); }
+footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-soft); text-align: center; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="theme-toggle" title="切换暗黑/明亮模式">🌙</button>
+<main>
+<span class="eyebrow">🔒 1Panel v2 · Security 模块</span>
+<h1>可视化图集</h1>
+<p class="subtitle">SSH 终端 + fail2ban + ClamAV + 端口转发。~6300 行 Go，搞懂"浏览器里 SSH 进被管机器"是怎么落地的。</p>
+
+<h2><span class="num">01</span>4 个子模块（不含防火墙）</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    User[用户/浏览器] --> WebUI[1Panel Web UI]
+    WebUI --> SSH[ssh.go<br/>1603 行]
+    WebUI --> F2B[fail2ban.go<br/>230 行]
+    WebUI --> AV[clam.go<br/>477 行]
+    WebUI --> FW[forward_service.go<br/>473 行]
+    SSH --> WSS[WebSocket]
+    WSS --> SSHConn[SSH 客户端<br/>连接池]
+    SSHConn --> RealServer[真实机器 :22]
+    F2B --> F2Bsvc[fail2ban 服务]
+    F2Bsvc --> Logs[监控 /var/log/secure]
+    F2Bsvc --> Iptables[iptables 封禁]
+    AV --> Clam[clamav-daemon]
+    Clam --> Quarantine[隔离区]
+    FW --> IptablesNAT[iptables NAT 转发]
+    style SSH fill:#2f6f5e,color:#fff
+    style F2B fill:#c97b3f,color:#fff
+    style AV fill:#b06367,color:#fff
+    style FW fill:#5b8c5a,color:#fff
+</pre>
+<div class="caption">图 1：4 个独立子模块。SSH 最大（1603 行），其他都是几百行。防火墙已单独研究（见 firewall-architecture.md）</div>
+</div>
+
+<h2><span class="num">02</span>核心：浏览器 SSH 终端时序</h2>
+
+<p>浏览器只能发 HTTP/WebSocket，<strong>没法直接发 TCP</strong>。所以需要"WebSocket ↔ SSH"双向桥。</p>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as 用户(浏览器)
+    participant B as 1Panel Backend
+    participant S as SSH Server(:22)
+    U->>B: WebSocket: ssh.connect(host, port, user, key)
+    B->>S: TCP: SSH handshake
+    S-->>B: SSH version exchange
+    B-->>U: WebSocket: connected
+    loop 双向数据流
+        U->>B: WebSocket: input data (xterm.js keystrokes)
+        B->>S: TCP: SSH encrypt + send
+        S-->>B: TCP: SSH output
+        B->>U: WebSocket: output data (xterm.js render)
+    end
+</pre>
+<div class="caption">图 2：WebSocket 是全双工通道，浏览器发键盘 → 后端加密 → SSH server；SSH 输出 → 后端推 WebSocket → 浏览器渲染</div>
+</div>
+
+<h2><span class="num">03</span>SSH 内部 4 块结构（推测 1400+ 行）</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    subgraph SSHService ["ssh.go (1603 行)"]
+        Pool[连接池<br/>300-400 行<br/>map[string]*ssh.Client]
+        WS[WebSocket 适配<br/>500-600 行<br/>双向桥 + xterm.js]
+        Cred[凭据管理<br/>400-500 行<br/>AES-GCM 加密存盘]
+        KH[known_hosts<br/>200-300 行<br/>防中间人白名单]
+    end
+    Pool --> WS
+    Cred --> Pool
+    KH --> Pool
+    style Pool fill:#2f6f5e,color:#fff
+    style WS fill:#c97b3f,color:#fff
+</pre>
+<div class="caption">图 3：4 块组成。连接池复用 SSH 连接，WebSocket 做双向桥，凭据加密存盘，known_hosts 防 MITM</div>
+</div>
+
+<h2><span class="num">04</span>fail2ban 工作原理</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    A[SSH / 1Panel 登录] --> B[写日志 /var/log/secure]
+    B --> C[fail2ban 服务<br/>正则匹配]
+    C -->|5 分钟内 5 次失败| D[iptables 封禁<br/>该 IP 1 小时]
+    C -->|白名单| E[放行]
+    D --> F[到期自动解封]
+    style C fill:#c97b3f,color:#fff
+    style D fill:#b06367,color:#fff
+</pre>
+<div class="caption">图 4：1Panel 监控 SSH + 1Panel 自身登录日志。5 次失败封 1 小时，可配</div>
+</div>
+
+<h2><span class="num">05</span>3 个必抄的设计</h2>
+
+<div class="cards">
+<div class="card">
+    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
+    <h3>1. WebSocket ↔ SSH 双向桥</h3>
+    <p class="tagline">1603 行生产级实现，直接抄能省 1-2 周。</p>
+    <div class="example"><strong>怎么抄：</strong>Python 用 paramiko + FastAPI WebSocket，200 行能写完最小版。完整版要加 xterm.js 协议、resize、颜色等细节。</div>
+</div>
+<div class="card">
+    <div class="star">⭐⭐⭐⭐⭐ 必抄</div>
+    <h3>2. 凭据加密存储</h3>
+    <p class="tagline">设计模式抄，实现用 Vault 替代。</p>
+    <div class="example"><strong>避坑：</strong>不要明文存盘，不要用可逆 Base64。1Panel 推测用 AES-GCM + 机器 master key，但你的 Sirius Cloud 用 HashiCorp Vault 更专业。</div>
+</div>
+<div class="card">
+    <div class="star">⭐⭐⭐⭐ 必抄</div>
+    <h3>3. fail2ban jail.local 模板化</h3>
+    <p class="tagline">跟 nginx.conf 渲染模式一样。</p>
+    <div class="example"><strong>价值：</strong>新加监控项只改模板，不改代码。跟 03-website 的 nginx.conf 渲染模式同源。</div>
+</div>
+</div>
+
+<h2><span class="num">06</span>4 个反模式（必避）</h2>
+
+<div class="cards">
+<div class="card warn-card">
+    <div class="star">⚠️ 待确认</div>
+    <h3>凭据存储策略</h3>
+    <p class="tagline">1Panel 说是加密，但具体怎么加密、master key 在哪需要看代码确认。</p>
+    <div class="example"><strong>避坑：</strong>你的 Sirius Cloud 凭据管理用 HashiCorp Vault 或 AWS Secrets Manager，<strong>不要自己实现</strong>。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">⚠️ 鉴权漏洞</div>
+    <h3>WebSocket 不鉴权 = 攻击者蹭用</h3>
+    <p class="tagline">WebSocket 握手后能发 SSH 命令，鉴权只在 HTTP 层不够。</p>
+    <div class="example"><strong>避坑：</strong>WebSocket 握手严格校验 JWT + IP 白名单 + 短时 token。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">⚠️ 资源浪费</div>
+    <h3>ClamAV 启动慢 + 吃内存</h3>
+    <p class="tagline">clamav-daemon 启动 ~10 秒，常驻 ~1GB 内存。</p>
+    <div class="example"><strong>避坑：</strong>按需启动（clamscan 命令行模式），或用云病毒扫描 API（VirusTotal）。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">❌ 分散管理</div>
+    <h3>fail2ban 配置分散 3 个文件</h3>
+    <p class="tagline">fail2ban.go 230 行 + jail.local 模板 + systemd 服务文件。</p>
+    <div class="example"><strong>避坑：</strong>所有 fail2ban 相关配置收 1 个 JailConfig struct。</div>
+</div>
+</div>
+
+<h2><span class="num">07</span>Sirius Cloud 对照表</h2>
+
+<table>
+<thead><tr><th>Sirius Cloud 需求</th><th>1Panel 对应</th><th style="text-align:center">推荐度</th></tr></thead>
+<tbody>
+<tr><td><strong>L2 资产管理 - 终端</strong></td><td>ssh.go 1603 行</td><td style="text-align:center">⭐⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L1 自动防爆破</strong></td><td>fail2ban.go + jail.local</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L2 文件上传病毒扫描</strong></td><td>clam.go ScanUpload</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L2 端口转发</strong></td><td>forward_service.go</td><td style="text-align:center">⭐⭐⭐</td></tr>
+<tr><td><strong>新功能：凭据保险柜</strong></td><td>SSH CredentialStore 设计</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
+</tbody>
+</table>
+
+<h3>必抄清单</h3>
+<ol>
+<li>WebSocket ↔ SSH 桥（1603 行直接抄）</li>
+<li>凭据加密存储（设计模式抄，实现用 Vault 替代）</li>
+<li>fail2ban 集成（避免重复造轮子）</li>
+</ol>
+
+<h3>抄的时候要改</h3>
+<ol>
+<li>不要明文存凭据（用 Vault）</li>
+<li>WebSocket 严格鉴权（不要只看 query string JWT）</li>
+<li>ClamAV 按需启动（不用常驻 daemon）</li>
+</ol>
+
+<h2><span class="num">08</span>接下来怎么读</h2>
+
+<div class="cards">
+<div class="card">
+    <h3>30 分钟通道</h3>
+    <p class="tagline">本文档 + README.md §2 (SSH 4 块结构) + ssh.go SSHService struct</p>
+    <div class="example">理解 WebSocket 双向桥的协议设计。</div>
+</div>
+<div class="card">
+    <h3>2 小时通道</h3>
+    <p class="tagline">+ ssh.go WebSocket handler + fail2ban.go 模板 + clam.go ScanUpload</p>
+    <div class="example">看 fail2ban 的 jail.local 怎么生成、clam 的隔离区怎么实现。</div>
+</div>
+<div class="card">
+    <h3>1 天写代码</h3>
+    <p class="tagline">Python paramiko + FastAPI WebSocket + fail2ban 模板 + clamscan + Vault</p>
+    <div class="example">写自己的 SiriusTerminalService。</div>
+</div>
+</div>
+
+<footer>
+1Panel Security 模块 · 可视化图集 v1 · 2026-08-24<br>
+详细注解：<code>12-security/README.md</code>（77 行 stub）· 人话版：<code>HUMAN-READABLE.md</code>（12 KB）· 关联：<code>firewall-architecture.md</code><br>
+字体：Outfit + DM Serif Display · 图表：Mermaid · 配色：暖米色 / 墨绿 / 砖橙
+</footer>
+</main>
+
+<script>
+(function() {
+    const btn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('atlas-theme') || 'light';
+    applyTheme(saved);
+    btn.addEventListener('click', function() {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = cur === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem('atlas-theme', next);
+    });
+    function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        btn.textContent = t === 'dark' ? '☀️' : '🌙';
+    }
+})();
+(function() {
+    document.querySelectorAll('.card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            if (e.target.closest('a, button')) return;
+            card.classList.toggle('expanded');
+        });
+    });
+})();
+</script>
+</body>
+</html>

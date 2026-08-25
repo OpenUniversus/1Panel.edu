@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1Panel Container 模块 · 可视化图集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' }, sequence: { useMaxWidth: true, showSequenceNumbers: false }, securityLevel: 'loose' });</script>
+<style>
+:root { --bg: #f7f5f0; --card: #ffffff; --line: #e9e3d6; --line-soft: #f0ebde; --text: #14171e; --text-muted: #3a4256; --text-soft: #7c7a72; --primary: #2f6f5e; --primary-soft: rgba(47, 111, 94, 0.08); --accent: #c97b3f; --warn: #b06367; --warn-soft: rgba(176, 99, 103, 0.08); --good: #5b8c5a; --good-soft: rgba(91, 140, 90, 0.08); }
+:root[data-theme="dark"] { --bg: #14171e; --card: #1c2030; --line: #2a2f3e; --line-soft: #232732; --text: #e9e3d6; --text-muted: #b8b8c8; --text-soft: #7c7a92; --primary: #5fb89e; --primary-soft: rgba(95, 184, 158, 0.14); --accent: #e6a173; --warn: #d18488; --good: #8cc28a; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Outfit', 'Noto Serif SC', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; background-image: radial-gradient(circle at 0% 0%, rgba(47, 111, 94, 0.04), transparent 35%), radial-gradient(circle at 100% 100%, rgba(201, 123, 63, 0.04), transparent 35%); }
+main { max-width: 1080px; margin: 0 auto; padding: 56px 32px 96px; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--primary-soft); color: var(--primary); border-radius: 100px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 20px; }
+h1 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 52px; font-weight: 400; line-height: 1.15; letter-spacing: -0.01em; color: var(--text); margin-bottom: 20px; }
+.subtitle { font-size: 18px; color: var(--text-muted); line-height: 1.55; max-width: 720px; margin-bottom: 48px; }
+h2 { font-family: 'DM Serif Display', 'Noto Serif SC', serif; font-size: 34px; font-weight: 400; line-height: 1.25; margin: 80px 0 24px; color: var(--text); scroll-margin-top: 24px; }
+h2 .num { display: inline-block; font-size: 14px; font-weight: 600; color: var(--primary); letter-spacing: 0.1em; margin-right: 16px; vertical-align: middle; padding: 2px 10px; background: var(--primary-soft); border-radius: 6px; }
+h3 { font-size: 22px; font-weight: 600; margin: 40px 0 16px; color: var(--text); }
+p { margin-bottom: 14px; color: var(--text-muted); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; padding: 2px 6px; background: var(--line-soft); border-radius: 4px; color: var(--text); }
+pre { margin: 16px 0; padding: 16px; background: #14171e; color: #e9e3d6; border-radius: 6px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.55; }
+pre code { background: none; color: inherit; padding: 0; }
+.diagram { margin: 24px 0; padding: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+.diagram .mermaid { background: var(--bg); padding: 16px; border-radius: 6px; }
+.diagram .caption { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--text-soft); text-align: center; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 24px 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 20px; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.card .star { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--primary-soft); color: var(--primary); border-radius: 4px; margin-bottom: 8px; }
+.card h3 { font-size: 17px; margin: 8px 0; }
+.card .tagline { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.card .example { font-size: 13px; color: var(--text-soft); padding: 8px 12px; background: var(--bg); border-radius: 4px; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.35s ease, opacity 0.25s, margin 0.25s; margin-top: 0; }
+.card.expanded .example { max-height: 500px; opacity: 1; margin-top: 12px; }
+.card::after { content: '▼ 点击展开'; display: block; text-align: center; margin-top: 10px; font-size: 11px; color: var(--text-soft); }
+.card.expanded::after { content: '▲ 收起'; }
+.warn-card { background: var(--warn-soft); border-color: var(--warn); }
+.warn-card .star { background: var(--warn); color: white; }
+.warn-card::after { content: '⚠️ 必避'; }
+table { width: 100%; border-collapse: collapse; margin: 16px 0; background: var(--card); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+th { background: var(--bg); font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+.theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 8px 14px; font-size: 16px; font-weight: 500; background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 24px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: background 0.2s, transform 0.1s; font-family: inherit; }
+.theme-toggle:hover { background: var(--primary-soft); transform: scale(1.05); }
+footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-soft); text-align: center; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="theme-toggle" title="切换暗黑/明亮模式">🌙</button>
+<main>
+<span class="eyebrow">🐳 1Panel v2 · Container 模块</span>
+<h1>可视化图集</h1>
+<p class="subtitle">~5400 行 Go + moby/moby/client SDK。Docker Engine API 1:1 包装。Sirius Cloud 不用 Docker，<strong>只看模式不抄实现</strong>。</p>
+
+<h2><span class="num">01</span>薄代理架构</h2>
+
+<p>跟其他模块的"自己实现核心逻辑"不同，Container 模块基本是 Docker API 的<strong>薄代理</strong>。</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    UI[Web UI] --> API[container.go API 层<br/>891 行]
+    API --> SVC[container.go Service 层<br/>1961 行]
+    SVC --> SDK[moby/moby/client<br/>Go SDK]
+    SDK --> Socket[/var/run/docker.sock<br/>unix socket]
+    Socket --> Docker[Docker daemon]
+    Docker --> Containers[真实容器]
+    style SVC fill:#2f6f5e,color:#fff
+    style SDK fill:#c97b3f,color:#fff
+</pre>
+<div class="caption">图 1：薄代理。1Panel 自己几乎不写逻辑，就是 SDK 方法的翻译层</div>
+</div>
+
+<h2><span class="num">02</span>重启容器时序（最常见操作）</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant API as container.go API
+    participant SVC as container.go Service
+    participant SDK as moby SDK
+    participant D as Docker daemon
+    U->>API: POST /containers/restart {id: "abc123"}
+    API->>SVC: RestartContainer(req)
+    SVC->>SDK: client.ContainerRestart(ctx, "abc123", timeout)
+    SDK->>D: POST /v1.41/containers/abc123/restart
+    D-->>SDK: 202 Accepted
+    SDK-->>SVC: nil
+    SVC-->>API: nil
+    API-->>U: {code: 200, msg: "ok"}
+</pre>
+<div class="caption">图 2：3 步转发。API → Service → SDK → Docker，没有 1Panel 自己的业务逻辑</div>
+</div>
+
+<h2><span class="num">03</span>容器更新（最复杂功能）</h2>
+
+<p>`container_update.go` 657 行：拉新镜像 → 停老容器 → 用新镜像起新容器，<strong>保留 volume 和 network</strong>。</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    A[用户点更新] --> B[inspect 老容器<br/>拿 env/volume/port/network]
+    B --> C[ImagePull 新镜像]
+    C --> D[ContainerStop 老容器]
+    D --> E[ContainerRemove 老容器<br/>保留 volume/network]
+    E --> F[ContainerCreate<br/>老配置 + 新镜像]
+    F --> G[ContainerStart]
+    G --> H[写 metadata]
+    style B fill:#c97b3f,color:#fff
+    style F fill:#2f6f5e,color:#fff
+</pre>
+<div class="caption">图 3：更新流程核心是<strong>保留 volume</strong>（用户数据不丢）+ 用老配置 + 新镜像起新容器</div>
+</div>
+
+<h2><span class="num">04</span>Docker SDK vs Docker CLI</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    subgraph 反例 "❌ 反例：调 shell"
+        S1[exec.Command docker restart id] --> S2[CombinedOutput]
+        S2 --> S3[parse stdout/stderr]
+    end
+    subgraph 正例 "✅ 正例：调 SDK"
+        C1[client.ContainerRestart ctx id] --> C2[类型安全返回 error]
+    end
+    style C1 fill:#5b8c5a,color:#fff
+    style S1 fill:#b06367,color:#fff
+</pre>
+<div class="caption">图 4：<strong>用 SDK 不用 CLI</strong>。性能好、错误处理结构化、类型安全</div>
+</div>
+
+<h2><span class="num">05</span>1 个核心抽象 + 1 个借鉴模式</h2>
+
+<div class="cards">
+<div class="card">
+    <div class="star">⭐⭐⭐⭐ 核心</div>
+    <h3>Docker SDK 隔离层</h3>
+    <p class="tagline">用 moby/moby/client Go SDK 直接调 unix socket。</p>
+    <div class="example"><strong>好处：</strong>性能更好 + 错误处理结构化 + 类型安全。<strong>不要</strong>用 exec.Command 调 docker CLI。</div>
+</div>
+<div class="card">
+    <div class="star">⭐⭐⭐⭐ 借鉴</div>
+    <h3>CRUD 抽象模式</h3>
+    <p class="tagline">所有资源都只要 5 个操作：List / Get / Create / Update / Delete。</p>
+    <div class="example"><strong>Sirius Cloud 借鉴：</strong>MySQL 实例 / Redis 实例 / PG 实例都遵循 5 个操作，UI 层不关心底层。</div>
+</div>
+</div>
+
+<h2><span class="num">06</span>2 个反模式（必避）</h2>
+
+<div class="cards">
+<div class="card warn-card">
+    <div class="star">❌ 强依赖 Docker</div>
+    <h3>整套模块依赖 /var/run/docker.sock</h3>
+    <p class="tagline">假设 Docker daemon 存在。</p>
+    <div class="example"><strong>Sirius Cloud：</strong>你<strong>不用 Docker</strong>，整个模块不引入。约束是硬性的，不要想着绕。</div>
+</div>
+<div class="card warn-card">
+    <div class="star">❌ 1:1 映射</div>
+    <h3>container.go 1961 行 = Docker API 翻译</h3>
+    <p class="tagline">几乎所有函数都是调 SDK 一个方法 + 翻译参数。</p>
+    <div class="example"><strong>避坑：</strong>不要自己手写"容器 CRUD 抽象层"，让前端直接调 Docker API 或 K8s API。</div>
+</div>
+</div>
+
+<h2><span class="num">07</span>Sirius Cloud 对位</h2>
+
+<table>
+<thead><tr><th>Sirius Cloud 需求</th><th>1Panel 对应</th><th style="text-align:center">推荐度</th></tr></thead>
+<tbody>
+<tr><td><strong>L2 资源 CRUD 抽象</strong></td><td>整套 CRUD 模式</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
+<tr><td><strong>L2 容器管理</strong></td><td>整套</td><td style="text-align:center">❌ 不用 Docker</td></tr>
+<tr><td><strong>L2 K8s 集群管理</strong></td><td>类似模式但用 K8s API</td><td style="text-align:center">⭐⭐⭐</td></tr>
+<tr><td><strong>新功能：MySQL 实例 CRUD</strong></td><td>借鉴 List/Get/Create/Update/Delete</td><td style="text-align:center">⭐⭐⭐⭐</td></tr>
+</tbody>
+</table>
+
+<h3>必抄清单</h3>
+<ol><li>CRUD 抽象模式（5 个操作覆盖所有资源）</li></ol>
+
+<h3>不抄的</h3>
+<ol><li>整个 Container 模块（你不用 Docker，抄了也没用）</li></ol>
+
+<h2><span class="num">08</span>接下来怎么读</h2>
+
+<div class="cards">
+<div class="card">
+    <h3>30 分钟通道</h3>
+    <p class="tagline">本文档 + README.md §1 + container.go ListContainer</p>
+    <div class="example">理解薄代理架构。</div>
+</div>
+<div class="card">
+    <h3>2 小时通道（如果以后用到 Docker）</h3>
+    <p class="tagline">+ container_update.go UpdateContainer + container_compose.go</p>
+    <div class="example">看 volume 保留策略 + compose 实现。</div>
+</div>
+<div class="card">
+    <h3>不建议深读</h3>
+    <p class="tagline">Sirius Cloud 不用 Docker，整个模块<strong>只看模式</strong>，不读实现</p>
+    <div class="example">把节省的时间投到 09-ai-agent / 12-security 等必抄模块。</div>
+</div>
+</div>
+
+<footer>
+1Panel Container 模块 · 可视化图集 v1 · 2026-08-24<br>
+详细注解：<code>02-container/README.md</code>（57 行 stub）· 人话版：<code>HUMAN-READABLE.md</code>（9 KB）<br>
+字体：Outfit + DM Serif Display · 图表：Mermaid · 配色：暖米色 / 墨绿 / 砖橙
+</footer>
+</main>
+
+<script>
+(function() {
+    const btn = document.getElementById('theme-toggle');
+    const saved = localStorage.getItem('atlas-theme') || 'light';
+    applyTheme(saved);
+    btn.addEventListener('click', function() {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = cur === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem('atlas-theme', next);
+    });
+    function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        btn.textContent = t === 'dark' ? '☀️' : '🌙';
+    }
+})();
+(function() {
+    document.querySelectorAll('.card').forEach(function(card) {
+        card.addEventListener('click', function(e) {
+            if (e.target.closest('a, button')) return;
+            card.classList.toggle('expanded');
+        });
+    });
+})();
+</script>
+</body>
+</html>
