@@ -9,7 +9,17 @@ Thumbs.db
 
 # Local state
 daily-mgmt-state.json
-.DS_mgmt/
+
+# Scheduler runtime artifacts
+.scheduler/state.json
+.scheduler/logs/
+.scheduler/.run-master.cmd
+
+# Backups
+.backups/
+
+# Archives (kept locally, not for repo)
+_archive_*
 
 # Python
 __pycache__/
