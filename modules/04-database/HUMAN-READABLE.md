@@ -1,4 +1,4 @@
-# 1Panel Database 模块 — 人话版
+﻿# 1Panel Database 模块 — 人话版
 
 > 30 分钟搞懂 1Panel 怎么管 4 种数据库。**详细代码注解在同目录 `README.md`（99 KB / 2192 行）**。
 > 这份文档是入口 —— 先看这个，再决定要不要啃那份。
@@ -594,5 +594,3 @@ connArgs := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=utf8%s",
 - 想做其他事 → 跟我说
 
 最后**你做的所有决定**都可以跟 1Panel 不一样 —— 1Panel 是参考，不是答案。
-
-## 测试增量同步 (1Panel.edu daily-mgmt test)
