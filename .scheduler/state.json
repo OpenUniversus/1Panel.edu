@@ -1,0 +1,74 @@
+﻿{
+    "schema_version":  1,
+    "history":  [
+
+                ],
+    "current_window":  {
+                           "window_id":  "win-20260825-0500",
+                           "sub_tasks":  [
+                                             {
+                                                 "due_at":  "2026-08-25T05:00:00.5161266+08:00",
+                                                 "id":  "index-rebuild",
+                                                 "finished_at":  "2026-08-25T09:15:39.2086268+08:00",
+                                                 "duration_sec":  0,
+                                                 "result":  "ok",
+                                                 "name":  "重建 KB 索引",
+                                                 "started_at":  "2026-08-25T09:15:38.9758957+08:00",
+                                                 "status":  "done"
+                                             },
+                                             {
+                                                 "due_at":  "2026-08-25T05:50:00.5161266+08:00",
+                                                 "id":  "quality-check",
+                                                 "finished_at":  "2026-08-25T09:15:47.3127410+08:00",
+                                                 "duration_sec":  0,
+                                                 "result":  "ok",
+                                                 "name":  "质量检查 (typo/断链)",
+                                                 "started_at":  "2026-08-25T09:15:47.0746605+08:00",
+                                                 "status":  "done"
+                                             },
+                                             {
+                                                 "due_at":  "2026-08-25T06:40:00.5161266+08:00",
+                                                 "id":  "stats-report",
+                                                 "finished_at":  "2026-08-25T09:15:48.4945535+08:00",
+                                                 "duration_sec":  0,
+                                                 "result":  "ok",
+                                                 "name":  "统计报告 (大小/文件)",
+                                                 "started_at":  "2026-08-25T09:15:48.1666435+08:00",
+                                                 "status":  "done"
+                                             },
+                                             {
+                                                 "due_at":  "2026-08-25T07:30:00.5161266+08:00",
+                                                 "id":  "git-sync",
+                                                 "finished_at":  null,
+                                                 "duration_sec":  null,
+                                                 "result":  null,
+                                                 "name":  "GitHub 同步 (daily-mgmt)",
+                                                 "started_at":  null,
+                                                 "status":  "pending"
+                                             },
+                                             {
+                                                 "due_at":  "2026-08-25T08:20:00.5161266+08:00",
+                                                 "id":  "backup-snapshot",
+                                                 "finished_at":  null,
+                                                 "duration_sec":  null,
+                                                 "result":  null,
+                                                 "name":  "KB 快照备份",
+                                                 "started_at":  null,
+                                                 "status":  "pending"
+                                             },
+                                             {
+                                                 "due_at":  "2026-08-25T09:10:00.5161266+08:00",
+                                                 "id":  "audit-log",
+                                                 "finished_at":  null,
+                                                 "duration_sec":  null,
+                                                 "result":  null,
+                                                 "name":  "窗口审计日志",
+                                                 "started_at":  null,
+                                                 "status":  "pending"
+                                             }
+                                         ],
+                           "generated_at":  "2026-08-25T09:14:29.4771643+08:00",
+                           "window_start":  "2026-08-25T05:00:00.5161266+08:00",
+                           "window_end":  "2026-08-25T10:00:00.5161266+08:00"
+                       }
+}
