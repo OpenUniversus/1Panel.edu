@@ -13,7 +13,17 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/utils/firewall/filter"
 )
 
-// DockerPortGuardPolicy (struct)
+// ============================================================
+// DockerPortGuardPolicy  Docker 端口防护策略表
+// ============================================================
+// 字段:
+//   - UUID (string) — 唯一标识
+//   - Family (string) — 协议族 ipv4/ipv6
+//   - HostIP/HostPort/Protocol — 唯一索引（一个 host 端口只一条策略）
+//   - Mode (string) — 防护模式（allow/deny/...）
+//   - Sources (string) — 来源 IP/CIDR
+//   - Description (string) — 备注
+// ============================================================
 type DockerPortGuardPolicy struct {
 	BaseModel
 
@@ -27,6 +37,12 @@ type DockerPortGuardPolicy struct {
 	Description string `gorm:"type:text" json:"description"`
 }
 
+// ============================================================
+// ForwardingRule  端口转发规则表
+// ============================================================
+// 字段:
+//   - Family/Protocol/Port/TargetIP/TargetPort/Interface — 组成唯一索引
+// ============================================================
 type ForwardingRule struct {
 	BaseModel
 
@@ -38,6 +54,15 @@ type ForwardingRule struct {
 	Interface  string `gorm:"size:32;not null;default:'';uniqueIndex:idx_forwarding_rule_identity" json:"interface"`
 }
 
+// ============================================================
+// FirewallRule  统一防火墙 v2 规则表（持久化）
+// ============================================================
+// 字段:
+//   - UUID (string) — 主键
+//   - ScopeKey/Provider/Family/Location — 范围信息
+//   - NativeKind/Protocol/Action/... — 规则内容
+//   - RuleKey/Origin/Owner/MatchKey/Revision — 匹配/归属/版本
+// ============================================================
 type FirewallRule struct {
 	UUID     string `gorm:"size:64;primaryKey" json:"uuid"`
 	ScopeKey string `gorm:"size:255;not null;index" json:"scopeKey"`
@@ -66,6 +91,9 @@ type FirewallRule struct {
 	Revision uint   `gorm:"not null;default:1" json:"revision"`
 }
 
+// ============================================================
+// FirewallRuleOwner  工具：组拼"规则所有者" (kind:id)
+// ============================================================
 func FirewallRuleOwner(sourceKind, sourceID string) string {
 	sourceKind = strings.TrimSpace(sourceKind)
 	sourceID = strings.TrimSpace(sourceID)
@@ -75,6 +103,14 @@ func FirewallRuleOwner(sourceKind, sourceID string) string {
 	return sourceKind + ":" + sourceID
 }
 
+// ============================================================
+// FirewallRuleFromDomain  把 filter 域对象转成持久化结构
+// ============================================================
+// 流程:
+//   1. 标准化 + 算 RuleKey
+//   2. 把 Scope 的 location (zone/chain) 提取出来
+//   3. 包装成 model.FirewallRule
+// ============================================================
 func FirewallRuleFromDomain(rule filter.FirewallRule) (FirewallRule, error) {
 	normalized, err := filter.NormalizeRule(rule)
 	if err != nil {
@@ -106,6 +142,9 @@ func FirewallRuleFromDomain(rule filter.FirewallRule) (FirewallRule, error) {
 	}, nil
 }
 
+// ============================================================
+// persistedFirewallOrderIndex  iptables/nftables/ufw 不持久化 OrderIndex
+// ============================================================
 func persistedFirewallOrderIndex(rule filter.FirewallRule) *int64 {
 	switch rule.Scope.Provider {
 	case filter.ProviderIptables, filter.ProviderNftables, filter.ProviderUFW:
@@ -115,6 +154,9 @@ func persistedFirewallOrderIndex(rule filter.FirewallRule) *int64 {
 	}
 }
 
+// ============================================================
+// firewallRuleLocation  工具：firewalld 用 zone，其他用 chain
+// ============================================================
 func firewallRuleLocation(scope filter.Scope) string {
 	switch scope.Provider {
 	case filter.ProviderFirewalld:

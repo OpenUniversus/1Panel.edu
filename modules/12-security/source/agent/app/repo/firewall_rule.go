@@ -24,7 +24,11 @@ var (
 	ErrFirewallPersistenceInvalid   = errors.New("invalid firewall persistence record")
 )
 
-// IFirewallRuleRepo (interface)
+// ============================================================
+// IFirewallRuleRepo  防火墙 v2 规则数据库访问接口
+// ============================================================
+// 方法: Create / GetByUUID / List / UpdateWithRevision / DeleteWithRevision
+// ============================================================
 type IFirewallRuleRepo interface {
 	Create(context.Context, *model.FirewallRule) error
 	GetByUUID(context.Context, string) (model.FirewallRule, error)
@@ -33,30 +37,51 @@ type IFirewallRuleRepo interface {
 	DeleteWithRevision(context.Context, string, uint) error
 }
 
+// ============================================================
+// FirewallRuleRepo  防火墙规则 GORM 仓库
+// ============================================================
+// 字段:
+//   - db (*gorm.DB) — DB 句柄（可能为 nil，自动用全局）
+// ============================================================
 type FirewallRuleRepo struct {
 	db *gorm.DB
 }
 
+// ============================================================
+// WithFirewallRuleScope  构造"按 scope_key 过滤"的 DBOption
+// ============================================================
 func WithFirewallRuleScope(scopeKey string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("scope_key = ?", scopeKey)
 	}
 }
 
+// ============================================================
+// WithFirewallRuleSource  构造"按 owner 过滤"的 DBOption
+// ============================================================
 func WithFirewallRuleSource(kind, id string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("owner = ?", model.FirewallRuleOwner(kind, id))
 	}
 }
 
+// ============================================================
+// NewIFirewallRuleRepo  构造接口实现
+// ============================================================
 func NewIFirewallRuleRepo() IFirewallRuleRepo {
 	return &FirewallRuleRepo{}
 }
 
+// ============================================================
+// NewFirewallRuleRepo  构造具体实现（注入 DB）
+// ============================================================
 func NewFirewallRuleRepo(db *gorm.DB) *FirewallRuleRepo {
 	return &FirewallRuleRepo{db: db}
 }
 
+// ============================================================
+// Create  新增一条防火墙规则（带必填校验、UUID/Revision 默认填充）
+// ============================================================
 func (r *FirewallRuleRepo) Create(ctx context.Context, rule *model.FirewallRule) error {
 	if err := prepareFirewallRule(rule); err != nil {
 		return err
@@ -64,12 +89,18 @@ func (r *FirewallRuleRepo) Create(ctx context.Context, rule *model.FirewallRule)
 	return r.dbFor(ctx).Create(rule).Error
 }
 
+// ============================================================
+// GetByUUID  按 UUID 查一条规则
+// ============================================================
 func (r *FirewallRuleRepo) GetByUUID(ctx context.Context, ruleUUID string) (model.FirewallRule, error) {
 	var rule model.FirewallRule
 	err := r.dbFor(ctx).Where("uuid = ?", ruleUUID).First(&rule).Error
 	return rule, err
 }
 
+// ============================================================
+// List  按条件列规则
+// ============================================================
 func (r *FirewallRuleRepo) List(ctx context.Context, opts ...DBOption) ([]model.FirewallRule, error) {
 	var rules []model.FirewallRule
 	db := r.dbFor(ctx).Model(&model.FirewallRule{})
@@ -79,6 +110,9 @@ func (r *FirewallRuleRepo) List(ctx context.Context, opts ...DBOption) ([]model.
 	return rules, db.Find(&rules).Error
 }
 
+// ============================================================
+// UpdateWithRevision  按"乐观锁"更新：expectedRevision 不一致就 409
+// ============================================================
 func (r *FirewallRuleRepo) UpdateWithRevision(ctx context.Context, ruleUUID string, expectedRevision uint, updates map[string]interface{}) error {
 	updates = sanitizeRuleUpdates(updates)
 	updates["revision"] = gorm.Expr("revision + 1")
@@ -94,6 +128,9 @@ func (r *FirewallRuleRepo) UpdateWithRevision(ctx context.Context, ruleUUID stri
 	return nil
 }
 
+// ============================================================
+// DeleteWithRevision  按乐观锁删除
+// ============================================================
 func (r *FirewallRuleRepo) DeleteWithRevision(ctx context.Context, ruleUUID string, expectedRevision uint) error {
 	result := r.dbFor(ctx).
 		Where("uuid = ? AND revision = ?", ruleUUID, expectedRevision).
@@ -124,6 +161,9 @@ func firewallDB(ctx context.Context, fallback *gorm.DB) *gorm.DB {
 	return fallback.WithContext(ctx)
 }
 
+// ============================================================
+// prepareFirewallRule  创建前的字段校验 + 默认值填充
+// ============================================================
 func prepareFirewallRule(rule *model.FirewallRule) error {
 	if rule == nil {
 		return fmt.Errorf("%w: rule is nil", ErrFirewallPersistenceInvalid)
@@ -147,6 +187,9 @@ func prepareFirewallRule(rule *model.FirewallRule) error {
 	return nil
 }
 
+// ============================================================
+// sanitizeRuleUpdates  过滤不允许客户端直接改的字段（id/uuid/revision/created_at）
+// ============================================================
 func sanitizeRuleUpdates(updates map[string]interface{}) map[string]interface{} {
 	result := cloneUpdates(updates)
 	delete(result, "id")

@@ -15,6 +15,11 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/utils/firewall/lifecycle"
 )
 
+// ============================================================
+// selectedDockerFirewallBackend  决定 Docker 防火墙后端（iptables/nftables）
+// ============================================================
+// 优先级: DB 设置 > 自动 fallback
+// ============================================================
 func selectedDockerFirewallBackend(fallback string) string {
 	selected := ""
 	if global.DB != nil {
@@ -31,6 +36,9 @@ func selectedDockerFirewallBackend(fallback string) string {
 	return constant.FirewallProviderIptables
 }
 
+// ============================================================
+// selectedSystemFirewallClient  拿系统防火墙 client (firewalld/ufw/iptables)
+// ============================================================
 func selectedSystemFirewallClient() (lifecycle.Client, error) {
 	if provider, _ := settingRepo.GetValueByKey(constant.FirewallSystemBackendKey); strings.TrimSpace(provider) != "" {
 		return lifecycle.NewClientFor(strings.TrimSpace(provider))
@@ -47,6 +55,9 @@ func NewSelectedSystemFirewallClient() (lifecycle.Client, error) {
 	return selectedSystemFirewallClient()
 }
 
+// ============================================================
+// selectedSystemFirewallProvider  拿系统防火墙后端名
+// ============================================================
 func selectedSystemFirewallProvider() (string, error) {
 	client, err := selectedSystemFirewallClient()
 	if err != nil {

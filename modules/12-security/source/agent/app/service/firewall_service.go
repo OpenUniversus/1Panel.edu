@@ -40,7 +40,16 @@ import (
 	"gorm.io/gorm"
 )
 
-// FirewallService (struct)
+// ============================================================
+// FirewallService  统一防火墙 v2 业务服务（CRUD + 状态/规则/对账）
+// ============================================================
+// 字段:
+//   - rules (repo.IFirewallRuleRepo) — 规则持久化
+//   - adapters (firewallRuleRuntimeRegistry) — 各 provider 适配器
+//   - selectedProvider (func) — 选择当前 provider 的策略
+//   - protectedPorts (func) — 系统受保护端口白名单
+//   - iptablesHelper (*iptables_helper.Manager) — iptables 工具
+// ============================================================
 type FirewallService struct {
 	rules            repo.IFirewallRuleRepo
 	adapters         firewallRuleRuntimeRegistry
@@ -51,6 +60,13 @@ type FirewallService struct {
 
 var firewallRuleMutationMu sync.Mutex
 
+// ============================================================
+// IFirewallService  防火墙服务接口
+// ============================================================
+// 方法: LoadBaseInfo / OperateFirewall / OperateFilterChain
+//       Inventory / LoadFirewallNativeDetail
+//       Check / Create / Delete / Update / Reorder
+// ============================================================
 type IFirewallService interface {
 	LoadBaseInfo(chainGroup string) (dto.FirewallSubsystemStatus, error)
 	OperateFirewall(request dto.FirewallLifecycleOperation) error
@@ -78,6 +94,9 @@ func newFirewallService() *FirewallService {
 	}
 }
 
+// ============================================================
+// LoadBaseInfo  拿防火墙子系统状态（运行中/已停止 + provider 名称）
+// ============================================================
 func (s *FirewallService) LoadBaseInfo(chainGroup string) (dto.FirewallSubsystemStatus, error) {
 	status := dto.FirewallSubsystemStatus{Version: "-", Name: "-", Backend: "-"}
 	client, err := selectedSystemFirewallClient()
@@ -102,6 +121,9 @@ func (s *FirewallService) LoadBaseInfo(chainGroup string) (dto.FirewallSubsystem
 	return status, nil
 }
 
+// ============================================================
+// OperateFirewall  启/停/重启系统防火墙
+// ============================================================
 func (s *FirewallService) OperateFirewall(request dto.FirewallLifecycleOperation) error {
 	switch request.Operation {
 	case "disableBanPing":
@@ -128,6 +150,9 @@ func (s *FirewallService) OperateFirewall(request dto.FirewallLifecycleOperation
 	return nil
 }
 
+// ============================================================
+// OperateFilterChain  应用/卸载/初始化 iptables 自定义链
+// ============================================================
 func (s *FirewallService) OperateFilterChain(request dto.FilterChainOperation) error {
 	provider, err := selectedSystemFirewallProvider()
 	if err != nil {
@@ -170,6 +195,9 @@ func (s *FirewallService) loadProtectedPorts() ([]firewall.PortWhitelist, error)
 	return s.protectedPorts()
 }
 
+// ============================================================
+// Inventory  拉"未管理 + 1Panel 托管"的全部规则清单
+// ============================================================
 func (s *FirewallService) Inventory(ctx context.Context, request dto.FirewallRuleInventory) (dto.FirewallRuleInventoryResponse, error) {
 	scope := request.Scope.Normalize()
 	if isCombinedUFWInventoryScope(scope) {
@@ -258,6 +286,9 @@ func (s *FirewallService) combinedUFWInventory(
 	return response, nil
 }
 
+// ============================================================
+// LoadFirewallNativeDetail  拿某条规则的"原生"详细定义（iptables/nftables 命令行）
+// ============================================================
 func (s *FirewallService) LoadFirewallNativeDetail(ctx context.Context, request dto.FirewallNativeDetail) (string, error) {
 	provider := filter.Provider(strings.ToLower(strings.TrimSpace(string(request.Provider))))
 	nativeKind := filter.NativeKind(strings.ToLower(strings.TrimSpace(string(request.NativeKind))))
@@ -313,6 +344,9 @@ func (s *FirewallService) checkUpdate(
 	}, nil
 }
 
+// ============================================================
+// Check  预检规则冲突/锁屏风险/锁面板风险
+// ============================================================
 func (s *FirewallService) Check(
 	ctx context.Context,
 	clientIP string,
@@ -481,6 +515,9 @@ type preparedFirewallRuleCreate struct {
 	authorization firewallRuleCreateAuthorization
 }
 
+// ============================================================
+// Create  批量创建防火墙 v2 规则（含 check 预检 + 原生应用 + 持久化）
+// ============================================================
 func (s *FirewallService) Create(
 	ctx context.Context,
 	request dto.FirewallRuleCreate,
@@ -807,6 +844,9 @@ type preparedFirewallRuleDelete struct {
 	runtime *firewallRuleRuntime
 }
 
+// ============================================================
+// Delete  批量删除规则（原子化：失败回滚）
+// ============================================================
 func (s *FirewallService) Delete(
 	ctx context.Context,
 	request dto.FirewallRuleDelete,
@@ -990,6 +1030,9 @@ func (s *FirewallService) restoreDeletedFirewallRecords(
 	return errors.Join(append([]error{cause}, restoreErrors...)...)
 }
 
+// ============================================================
+// Update  更新单条规则（乐观锁 + 客户端 IP 校验）
+// ============================================================
 func (s *FirewallService) Update(ctx context.Context, clientIP string, request dto.FirewallRuleUpdate) error {
 	firewallRuleMutationMu.Lock()
 	defer firewallRuleMutationMu.Unlock()
@@ -998,6 +1041,9 @@ func (s *FirewallService) Update(ctx context.Context, clientIP string, request d
 	return s.updateRule(ctx, clientIP, request.UUID, rule)
 }
 
+// ============================================================
+// Reorder  调整规则顺序（影响命中优先级）
+// ============================================================
 func (s *FirewallService) Reorder(ctx context.Context, clientIP string, request dto.FirewallRuleReorder) error {
 	firewallRuleMutationMu.Lock()
 	defer firewallRuleMutationMu.Unlock()
@@ -2396,6 +2442,9 @@ func LoadPanelPort() string {
 	return portSetting.Value
 }
 
+// ============================================================
+// SyncSystemPorts  对账"系统端口"配置（user 改 → 应用到防火墙）
+// ============================================================
 func (s *FirewallService) SyncSystemPorts(ctx context.Context, previous, current []dto.FirewallSystemPort) error {
 	previousSet, err := normalizeSystemPorts(previous)
 	if err != nil {

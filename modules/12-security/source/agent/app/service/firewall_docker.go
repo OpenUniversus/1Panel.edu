@@ -37,7 +37,11 @@ const (
 	dockerGuardComposeCreatedBy    = "createdBy"
 )
 
-// dockerGuardRuntime (interface)
+// ============================================================
+// dockerGuardRuntime  Docker 端口防护运行时接口
+// ============================================================
+// 方法: Initialize / Bind / Reconcile / Unbind / Cleanup / Initialized / Status
+// ============================================================
 type dockerGuardRuntime interface {
 	Initialize([]docker_guard.Policy) error
 	Bind() error
@@ -70,7 +74,11 @@ var (
 	ErrDockerUnavailable     = errors.New("Docker is unavailable")
 )
 
-// IDockerPortGuardService (interface)
+// ============================================================
+// IDockerPortGuardService  Docker 端口防护服务接口
+// ============================================================
+// 方法: LoadOverview / Operate / DeletePolicies / UpsertPolicies / Reconcile
+// ============================================================
 type IDockerPortGuardService interface {
 	LoadOverview(context.Context) (dto.DockerPortGuardList, error)
 	Operate(context.Context, dto.DockerPortGuardOperation) error
@@ -96,6 +104,9 @@ func ReconcileDockerPortGuardBestEffort(ctx context.Context) {
 	}
 }
 
+// ============================================================
+// LoadOverview  拿 Docker 端口防护全貌（运行时 + 策略 + 容器端口）
+// ============================================================
 func (s *DockerPortGuardService) LoadOverview(ctx context.Context) (dto.DockerPortGuardList, error) {
 	selectedBackend := selectedDockerFirewallBackend("")
 	base := s.runtimeStatus(s.guardRuntime(selectedBackend), selectedBackend)
@@ -145,6 +156,9 @@ func (s *DockerPortGuardService) LoadOverview(ctx context.Context) (dto.DockerPo
 	return dto.DockerPortGuardList{Base: base, Containers: groupDockerGuardContainers(endpoints)}, nil
 }
 
+// ============================================================
+// Operate  操作防护运行时（initialize / bind / unbind）
+// ============================================================
 func (s *DockerPortGuardService) Operate(ctx context.Context, request dto.DockerPortGuardOperation) error {
 	dockerPortGuardServiceMu.Lock()
 	defer dockerPortGuardServiceMu.Unlock()
@@ -195,6 +209,9 @@ func (s *DockerPortGuardService) Operate(ctx context.Context, request dto.Docker
 	}
 }
 
+// ============================================================
+// DeletePolicies  批量删策略 + 触发 reconcile
+// ============================================================
 func (s *DockerPortGuardService) DeletePolicies(ctx context.Context, request dto.DockerPortGuardPolicyBatchDelete) error {
 	dockerPortGuardServiceMu.Lock()
 	defer dockerPortGuardServiceMu.Unlock()
@@ -228,6 +245,9 @@ func normalizeDockerGuardPolicyUUIDs(values []string) ([]string, error) {
 	return uuids, nil
 }
 
+// ============================================================
+// UpsertPolicies  批量 upsert 策略 + 触发 reconcile
+// ============================================================
 func (s *DockerPortGuardService) UpsertPolicies(ctx context.Context, request dto.DockerPortGuardPolicyBatch) error {
 	dockerPortGuardServiceMu.Lock()
 	defer dockerPortGuardServiceMu.Unlock()
@@ -256,6 +276,9 @@ func (s *DockerPortGuardService) UpsertPolicies(ctx context.Context, request dto
 	return s.reconcileLocked(ctx)
 }
 
+// ============================================================
+// Reconcile  对账：把数据库里的策略与运行时拉齐
+// ============================================================
 func (s *DockerPortGuardService) Reconcile(ctx context.Context) error {
 	dockerPortGuardServiceMu.Lock()
 	defer dockerPortGuardServiceMu.Unlock()

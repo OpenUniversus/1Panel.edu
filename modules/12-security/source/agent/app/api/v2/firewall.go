@@ -27,7 +27,9 @@ import (
 // @Success 200 {object} dto.FirewallSubsystemStatus
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /hosts/firewall/base [post]
+// ============================================================
+// LoadFirewallBaseInfo  拿防火墙子系统状态（firewalld/ufw/iptables）
+// ============================================================
 func (b *BaseApi) LoadFirewallBaseInfo(c *gin.Context) {
 	var request dto.OperationWithName
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -51,7 +53,9 @@ func (b *BaseApi) LoadFirewallBaseInfo(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/operate [post]
-// @x-panel-log {"bodyKeys":["operation"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"[operation] 防火墙","formatEN":"[operation] firewall"}
+// ============================================================
+// OperateFirewall  启/停/重启防火墙
+// ============================================================
 func (b *BaseApi) OperateFirewall(c *gin.Context) {
 	var request dto.FirewallLifecycleOperation
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -72,7 +76,9 @@ func (b *BaseApi) OperateFirewall(c *gin.Context) {
 // @Success 200 {object} dto.FirewallSubsystemStatus
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /hosts/firewall/forward/base [post]
+// ============================================================
+// LoadForwardingBaseInfo  拿端口转发子系统状态
+// ============================================================
 func (b *BaseApi) LoadForwardingBaseInfo(c *gin.Context) {
 	data, err := forwardingService.LoadBaseInfo()
 	if err != nil {
@@ -89,7 +95,9 @@ func (b *BaseApi) LoadForwardingBaseInfo(c *gin.Context) {
 // @Success 200 {object} dto.PageResult
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /hosts/firewall/forward/search [post]
+// ============================================================
+// SearchForwardingRules  分页查端口转发规则
+// ============================================================
 func (b *BaseApi) SearchForwardingRules(c *gin.Context) {
 	var request dto.ForwardRuleSearch
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -112,7 +120,9 @@ func (b *BaseApi) SearchForwardingRules(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/forward/operate [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"更新端口转发规则","formatEN":"update port forward rules"}
+// ============================================================
+// OperateForwardingRules  批量增删改端口转发规则
+// ============================================================
 func (b *BaseApi) OperateForwardingRules(c *gin.Context) {
 	var request dto.ForwardRuleOperate
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -132,7 +142,9 @@ func (b *BaseApi) OperateForwardingRules(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/forward/enable [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"初始化并启用端口转发","formatEN":"initialize and enable port forwarding"}
+// ============================================================
+// EnableForwarding  初始化并启用端口转发子系统
+// ============================================================
 func (b *BaseApi) EnableForwarding(c *gin.Context) {
 	if err := forwardingService.Enable(); err != nil {
 		helper.InternalServer(c, err)
@@ -149,7 +161,9 @@ func (b *BaseApi) EnableForwarding(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/filter/operate [post]
-// @x-panel-log {"bodyKeys":["operate"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"[operate] 防火墙过滤链","formatEN":"[operate] firewall filter chain"}
+// ============================================================
+// OperateFilterChain  应用/卸载/初始化防火墙过滤链
+// ============================================================
 func (b *BaseApi) OperateFilterChain(c *gin.Context) {
 	var request dto.FilterChainOperation
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -171,7 +185,9 @@ func (b *BaseApi) OperateFilterChain(c *gin.Context) {
 // @Failure 400 {object} dto.Response
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /hosts/firewall/rules/search [post]
+// ============================================================
+// SearchFirewallRules  列出统一防火墙 v2 规则清单
+// ============================================================
 func (b *BaseApi) SearchFirewallRules(c *gin.Context) {
 	var request dto.FirewallRuleInventory
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -193,7 +209,9 @@ func (b *BaseApi) SearchFirewallRules(c *gin.Context) {
 // @Failure 400 {object} dto.Response
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /hosts/firewall/rules/native/detail [post]
+// ============================================================
+// LoadFirewallNativeDetail  拿"厂商原生"防火墙对象定义（iptables 规则等）
+// ============================================================
 func (b *BaseApi) LoadFirewallNativeDetail(c *gin.Context) {
 	var request dto.FirewallNativeDetail
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -215,7 +233,9 @@ func (b *BaseApi) LoadFirewallNativeDetail(c *gin.Context) {
 // @Failure 400 {object} dto.Response
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /hosts/firewall/rules/check [post]
+// ============================================================
+// CheckFirewallRules  校验防火墙规则冲突/重复（保存前 dry-run）
+// ============================================================
 func (b *BaseApi) CheckFirewallRules(c *gin.Context) {
 	var request dto.FirewallRuleCheck
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -239,7 +259,9 @@ func (b *BaseApi) CheckFirewallRules(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/rules [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"添加防火墙规则","formatEN":"create firewall rules"}
+// ============================================================
+// CreateFirewallRules  批量创建防火墙 v2 规则
+// ============================================================
 func (b *BaseApi) CreateFirewallRules(c *gin.Context) {
 	var request dto.FirewallRuleCreate
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -262,7 +284,9 @@ func (b *BaseApi) CreateFirewallRules(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/rules/delete [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"删除防火墙规则","formatEN":"delete firewall rules"}
+// ============================================================
+// DeleteFirewallRules  批量删除防火墙 v2 规则
+// ============================================================
 func (b *BaseApi) DeleteFirewallRules(c *gin.Context) {
 	var request dto.FirewallRuleDelete
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -285,7 +309,9 @@ func (b *BaseApi) DeleteFirewallRules(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/rules/update [post]
-// @x-panel-log {"bodyKeys":["uuid"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"更新防火墙规则 [uuid]","formatEN":"update firewall rule [uuid]"}
+// ============================================================
+// UpdateFirewallRule  更新单条防火墙规则
+// ============================================================
 func (b *BaseApi) UpdateFirewallRule(c *gin.Context) {
 	var request dto.FirewallRuleUpdate
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -310,7 +336,9 @@ func (b *BaseApi) UpdateFirewallRule(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/rules/reorder [post]
-// @x-panel-log {"bodyKeys":["uuid"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"调整防火墙规则顺序 [uuid]","formatEN":"reorder firewall rule [uuid]"}
+// ============================================================
+// ReorderFirewallRule  调整防火墙规则顺序（影响命中优先级）
+// ============================================================
 func (b *BaseApi) ReorderFirewallRule(c *gin.Context) {
 	var request dto.FirewallRuleReorder
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -326,6 +354,9 @@ func (b *BaseApi) ReorderFirewallRule(c *gin.Context) {
 	helper.Success(c)
 }
 
+// ============================================================
+// normalizeFirewallRuleUUID  工具：trim + 校验 UUID 非空
+// ============================================================
 func normalizeFirewallRuleUUID(c *gin.Context, value *string) bool {
 	if value == nil {
 		helper.BadRequest(c, repo.ErrFirewallPersistenceInvalid)
@@ -339,6 +370,9 @@ func normalizeFirewallRuleUUID(c *gin.Context, value *string) bool {
 	return true
 }
 
+// ============================================================
+// handleFirewallRuleError  把服务层错误映射到 HTTP 状态码 + 业务码
+// ============================================================
 func handleFirewallRuleError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, filter.ErrLockoutRisk), errors.Is(err, filter.ErrProtectedRule):
@@ -367,7 +401,9 @@ func handleFirewallRuleError(c *gin.Context, err error) {
 // @Success 200 {object} dto.FirewallSettings
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /hosts/firewall/settings [get]
+// ============================================================
+// LoadFirewallSettings  拿防火墙全局设置（启停哪个后端等）
+// ============================================================
 func (b *BaseApi) LoadFirewallSettings(c *gin.Context) {
 	data, err := firewallSettingService.Load(c.Request.Context())
 	if err != nil {
@@ -385,7 +421,9 @@ func (b *BaseApi) LoadFirewallSettings(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/settings/operate [post]
-// @x-panel-log {"bodyKeys":["subsystem","backend","operation"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"防火墙子系统 [subsystem] 后端 [operation] [backend]","formatEN":"[operation] firewall [subsystem] backend [backend]"}
+// ============================================================
+// OperateFirewallBackend  操作防火墙后端（firewalld/ufw/iptables 切换）
+// ============================================================
 func (b *BaseApi) OperateFirewallBackend(c *gin.Context) {
 	var request dto.FirewallBackendOperation
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -403,7 +441,9 @@ func (b *BaseApi) OperateFirewallBackend(c *gin.Context) {
 // @Success 200 {object} dto.DockerPortGuardList
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /hosts/firewall/docker/ports [get]
+// ============================================================
+// ListDockerPortGuard  列出 Docker 端口防护状态
+// ============================================================
 func (b *BaseApi) ListDockerPortGuard(c *gin.Context) {
 	data, err := dockerPortGuardService.LoadOverview(c.Request.Context())
 	if err != nil {
@@ -419,7 +459,9 @@ func (b *BaseApi) ListDockerPortGuard(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/docker/sync [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"同步 Docker 端口防护规则","formatEN":"sync Docker port guard rules"}
+// ============================================================
+// SyncDockerPortGuard  同步 Docker 端口防护规则（从 docker inspect 重建）
+// ============================================================
 func (b *BaseApi) SyncDockerPortGuard(c *gin.Context) {
 	if err := dockerPortGuardService.Reconcile(c.Request.Context()); err != nil {
 		handleDockerPortGuardError(c, err)
@@ -436,7 +478,9 @@ func (b *BaseApi) SyncDockerPortGuard(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/docker/operate [post]
-// @x-panel-log {"bodyKeys":["operation"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"[operation] Docker 端口防护","formatEN":"[operation] Docker port guard"}
+// ============================================================
+// OperateDockerPortGuard  操作 Docker 端口防护（启停/单条策略）
+// ============================================================
 func (b *BaseApi) OperateDockerPortGuard(c *gin.Context) {
 	var request dto.DockerPortGuardOperation
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -457,7 +501,9 @@ func (b *BaseApi) OperateDockerPortGuard(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/docker/policies/delete/batch [post]
-// @x-panel-log {"bodyKeys":["uuids"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"删除 Docker 端口防护策略 [uuids]","formatEN":"delete Docker port guard policies [uuids]"}
+// ============================================================
+// DeleteDockerPortGuardPolicies  批量删除 Docker 端口防护策略
+// ============================================================
 func (b *BaseApi) DeleteDockerPortGuardPolicies(c *gin.Context) {
 	var request dto.DockerPortGuardPolicyBatchDelete
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -478,7 +524,9 @@ func (b *BaseApi) DeleteDockerPortGuardPolicies(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /hosts/firewall/docker/policies/batch [post]
-// @x-panel-log {"bodyKeys":["mode"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"批量更新 Docker 端口防护策略 [mode]","formatEN":"batch update Docker port guard policies [mode]"}
+// ============================================================
+// UpsertDockerPortGuardPolicies  批量 upsert Docker 端口防护策略
+// ============================================================
 func (b *BaseApi) UpsertDockerPortGuardPolicies(c *gin.Context) {
 	var request dto.DockerPortGuardPolicyBatch
 	if err := helper.CheckBindAndValidate(&request, c); err != nil {
@@ -491,6 +539,9 @@ func (b *BaseApi) UpsertDockerPortGuardPolicies(c *gin.Context) {
 	helper.Success(c)
 }
 
+// ============================================================
+// handleDockerPortGuardError  Docker 端口防护错误处理
+// ============================================================
 func handleDockerPortGuardError(c *gin.Context, err error) {
 	if errors.Is(err, service.ErrDockerGuardInvalid) {
 		helper.ErrorWithBusinessCode(c, http.StatusBadRequest, "FW_DOCKER_GUARD_INVALID", "ErrInvalidParams", err)

@@ -25,16 +25,26 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/utils/firewall/ping"
 )
 
-// IFirewallSettingService (interface)
+// ============================================================
+// IFirewallSettingService  防火墙设置服务接口
+// ============================================================
+// 方法: Load (拿全局设置) / Operate (改 backend/启停)
+// ============================================================
 type IFirewallSettingService interface {
 	Load(context.Context) (dto.FirewallSettings, error)
 	Operate(context.Context, dto.FirewallBackendOperation) error
 }
 
+// ============================================================
+// FirewallSettingService  防火墙设置服务实现
+// ============================================================
 type FirewallSettingService struct{}
 
 func NewIFirewallSettingService() IFirewallSettingService { return &FirewallSettingService{} }
 
+// ============================================================
+// Load  拿全局防火墙设置（已安装 backend、当前 backend、Ping 状态等）
+// ============================================================
 func (s *FirewallSettingService) Load(ctx context.Context) (dto.FirewallSettings, error) {
 	result := dto.FirewallSettings{PingStatus: ping.LoadStatus()}
 	if ports, err := settingRepo.GetValueByKey(constant.FirewallPortWhiteList); err == nil {
@@ -173,6 +183,9 @@ func loadSystemFirewallFamilyStatus(provider, family string) (bool, bool, error)
 	}
 }
 
+// ============================================================
+// Operate  操作防火墙子系统后端（system / docker / forward）
+// ============================================================
 func (s *FirewallSettingService) Operate(ctx context.Context, request dto.FirewallBackendOperation) error {
 	if request.Subsystem != "system" && request.Backend != constant.FirewallProviderIptables && request.Backend != constant.FirewallProviderNftables {
 		return fmt.Errorf("%s only supports iptables or nftables", request.Subsystem)
@@ -189,6 +202,9 @@ func (s *FirewallSettingService) Operate(ctx context.Context, request dto.Firewa
 	}
 }
 
+// ============================================================
+// operateDocker  Docker 子系统后端切换
+// ============================================================
 func (s *FirewallSettingService) operateDocker(ctx context.Context, request dto.FirewallBackendOperation) error {
 	var guard dockerGuardRuntime = docker_guard.NewManager()
 	if request.Backend == constant.FirewallProviderNftables {
@@ -213,6 +229,9 @@ func (s *FirewallSettingService) operateDocker(ctx context.Context, request dto.
 	return nil
 }
 
+// ============================================================
+// operateSystem  系统子系统后端切换
+// ============================================================
 func (s *FirewallSettingService) operateSystem(request dto.FirewallBackendOperation) error {
 	if _, err := lifecycle.NewClientFor(request.Backend); err != nil {
 		return err
@@ -267,6 +286,9 @@ func cleanupSystemBackend(backend string) error {
 	}
 }
 
+// ============================================================
+// operateForwarding  端口转发子系统启停/切换
+// ============================================================
 func (s *FirewallSettingService) operateForwarding(request dto.FirewallBackendOperation) error {
 	manager, err := newForwardingManagerFor(request.Backend)
 	if err != nil {
