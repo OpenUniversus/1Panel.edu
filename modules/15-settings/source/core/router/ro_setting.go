@@ -13,9 +13,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SettingRouter (struct)
+// ============================================================
+// SettingRouter  core 端系统设置路由
+// ============================================================
+// 方法: InitRouter(Router) — 注册 /settings/* 路由
+// ============================================================
 type SettingRouter struct{}
 
+// ============================================================
+// InitRouter  注册 /core/settings/* 路由（含 session/密码过期中间件）
+// ============================================================
 func (s *SettingRouter) InitRouter(Router *gin.RouterGroup) {
 	baseApi := v2.ApiGroupApp.BaseApi
 

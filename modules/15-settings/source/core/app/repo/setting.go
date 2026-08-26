@@ -18,7 +18,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// SettingRepo (struct)
+// ============================================================
+// SettingRepo  core 端系统设置仓库（带 5min 内存缓存）
+// ============================================================
 type SettingRepo struct{}
 
 var (
@@ -26,7 +28,12 @@ var (
 	settingTTL   = 5 * time.Minute
 )
 
-// ISettingRepo (interface)
+// ============================================================
+// ISettingRepo  core 端系统设置仓库接口
+// ============================================================
+// 方法: List / Get / GetValueByKey / Create / Update / UpdateIfMatch
+//       UpdateOrCreate / DefaultMenu
+// ============================================================
 type ISettingRepo interface {
 	List(opts ...global.DBOption) ([]model.Setting, error)
 	Get(opts ...global.DBOption) (model.Setting, error)
@@ -78,6 +85,9 @@ func (u *SettingRepo) Get(opts ...global.DBOption) (model.Setting, error) {
 	return settings, err
 }
 
+// ============================================================
+// GetValueByKey  拿 value（先看 5min 内存缓存）
+// ============================================================
 func (u *SettingRepo) GetValueByKey(key string) (string, error) {
 	if val, found := settingCache.Get(key); found {
 		return val.(string), nil
@@ -99,6 +109,9 @@ func (u *SettingRepo) Update(key, value string) error {
 	return nil
 }
 
+// ============================================================
+// UpdateIfMatch  按 CAS 方式更新（oldValue 匹配才更新）
+// ============================================================
 func (u *SettingRepo) UpdateIfMatch(key, oldValue, value string) (bool, error) {
 	result := global.DB.Model(&model.Setting{}).
 		Where("key = ? AND value = ?", key, oldValue).
@@ -133,6 +146,9 @@ func (u *SettingRepo) UpdateOrCreate(key, value string) error {
 	return nil
 }
 
+// ============================================================
+// DefaultMenu  初始化 HideMenu（恢复默认菜单可见性）
+// ============================================================
 func (u *SettingRepo) DefaultMenu() error {
 	menus := helper.LoadMenus()
 	if err := global.DB.Model(&model.Setting{}).

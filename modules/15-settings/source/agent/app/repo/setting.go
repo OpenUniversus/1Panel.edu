@@ -15,10 +15,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// SettingRepo (struct)
+// ============================================================
+// SettingRepo  系统设置 GORM 仓库
+// ============================================================
 type SettingRepo struct{}
 
-// ISettingRepo (interface)
+// ============================================================
+// ISettingRepo  系统设置仓库接口
+// ============================================================
+// 方法: GetList / Get / GetValueByKey / Create / Update / UpdateOrCreate / WithByKey
+//       Description 相关: GetDescription / GetDescriptionList / Create / Update / Del / WithByID
+// ============================================================
 type ISettingRepo interface {
 	GetList(opts ...DBOption) ([]model.Setting, error)
 	Get(opts ...DBOption) (model.Setting, error)
@@ -69,6 +76,9 @@ func (s *SettingRepo) Get(opts ...DBOption) (model.Setting, error) {
 	return settings, err
 }
 
+// ============================================================
+// GetValueByKey  工具：直接拿 value 不关心其他字段
+// ============================================================
 func (s *SettingRepo) GetValueByKey(key string) (string, error) {
 	var setting model.Setting
 	if err := global.DB.Model(&model.Setting{}).Where("key = ?", key).First(&setting).Error; err != nil {
@@ -87,6 +97,9 @@ func (s *SettingRepo) Update(key, value string) error {
 	return global.DB.Model(&model.Setting{}).Where("key = ?", key).Updates(map[string]interface{}{"value": value}).Error
 }
 
+// ============================================================
+// UpdateOrCreate  upsert：存在就更新，不存在就创建
+// ============================================================
 func (s *SettingRepo) UpdateOrCreate(key, value string) error {
 	var setting model.Setting
 	result := global.DB.Where("key = ?", key).First(&setting)

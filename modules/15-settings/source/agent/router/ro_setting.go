@@ -12,9 +12,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SettingRouter (struct)
+// ============================================================
+// SettingRouter  系统设置路由
+// ============================================================
+// 方法:
+//   - InitRouter(Router) — 注册 /settings/* 路由
+// ============================================================
 type SettingRouter struct{}
 
+// ============================================================
+// InitRouter  注册 /settings/* 路由
+// ============================================================
+// 分组:
+//   - /settings/search/update  — 系统设置查询/修改
+//   - /settings/terminal/ai/*  — 终端 AI
+//   - /settings/files/ai/*     — 文件管理 AI
+//   - /settings/file-history/* — 文件历史
+//   - /settings/snapshot/*     — 快照 (属于另一模块但挂这里)
+//   - /settings/ssh/*          — 本机 SSH 连接
+// ============================================================
 func (s *SettingRouter) InitRouter(Router *gin.RouterGroup) {
 	settingRouter := Router.Group("settings")
 	baseApi := v2.ApiGroupApp.BaseApi

@@ -47,7 +47,15 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-// SettingService (struct)
+// ============================================================
+// SettingService  core 端系统设置服务
+// ============================================================
+// 方法: GetSettingInfo / GetSettingBaseInfo / GetTerminalInfo
+//       Update / UpdateBindInfo / UpdatePort / UpdateProxy
+//       UpdateSSL / LoadFromCert / UpdateSystemSSL / GenerateRSAKey
+//       UpdateAppstoreConfig / GetAppstoreConfig / DefaultMenu
+//       GetMemo / UpdateMemo
+// ============================================================
 type SettingService struct{}
 
 // ISettingService (interface)
@@ -81,6 +89,9 @@ func NewISettingService() ISettingService {
 	return &SettingService{}
 }
 
+// ============================================================
+// GetSettingInfo  拿系统设置详情
+// ============================================================
 func (u *SettingService) GetSettingInfo() (*dto.SettingInfo, error) {
 	setting, err := settingRepo.List()
 	if err != nil {
@@ -116,6 +127,9 @@ func (u *SettingService) GetSettingInfo() (*dto.SettingInfo, error) {
 	return &info, err
 }
 
+// ============================================================
+// GetSettingBaseInfo  拿基础设置（不含敏感字段）
+// ============================================================
 func (u *SettingService) GetSettingBaseInfo() (*dto.SettingBaseInfo, error) {
 	setting, err := settingRepo.List()
 	if err != nil {
@@ -190,6 +204,9 @@ func sortShowMenus(menus []dto.ShowMenu) {
 	})
 }
 
+// ============================================================
+// Update  更新配置（敏感字段加密 + 触发后置任务如重启面板）
+// ============================================================
 func (u *SettingService) Update(c *gin.Context, key, value string) error {
 	oldVal, err := settingRepo.Get(repo.WithByKey(key))
 	if err != nil {
@@ -281,6 +298,9 @@ func (u *SettingService) Update(c *gin.Context, key, value string) error {
 	return nil
 }
 
+// ============================================================
+// LoadInterfaceAddr  拿本机所有网络接口 IP
+// ============================================================
 func (u *SettingService) LoadInterfaceAddr() ([]string, error) {
 	addrMap := make(map[string]struct{})
 	addrs, err := net.InterfaceAddrs()
@@ -300,6 +320,9 @@ func (u *SettingService) LoadInterfaceAddr() ([]string, error) {
 	return data, nil
 }
 
+// ============================================================
+// UpdateBindInfo  更新监听 IP / IPv6 开关
+// ============================================================
 func (u *SettingService) UpdateBindInfo(req dto.BindInfo) error {
 	if err := settingRepo.Update("Ipv6", req.Ipv6); err != nil {
 		return err
@@ -314,6 +337,9 @@ func (u *SettingService) UpdateBindInfo(req dto.BindInfo) error {
 	return nil
 }
 
+// ============================================================
+// UpdateProxy  更新服务器代理
+// ============================================================
 func (u *SettingService) UpdateProxy(req dto.ProxyUpdate) error {
 	if req.ProxyType == "https" || req.ProxyType == "http" {
 		req.ProxyUrl = req.ProxyType + "://" + req.ProxyUrl
@@ -353,6 +379,9 @@ func (u *SettingService) UpdateProxy(req dto.ProxyUpdate) error {
 	return nil
 }
 
+// ============================================================
+// UpdatePort  修改面板监听端口
+// ============================================================
 func (u *SettingService) UpdatePort(port uint) error {
 	if common.ScanPort(int(port)) {
 		return buserr.WithDetail("ErrPortInUsed", port, nil)
@@ -381,6 +410,9 @@ func (u *SettingService) UpdatePort(port uint) error {
 	return nil
 }
 
+// ============================================================
+// UpdateSSL  更新系统 SSL 证书
+// ============================================================
 func (u *SettingService) UpdateSSL(c *gin.Context, req dto.SSLUpdate) error {
 	secretDir := path.Join(global.CONF.Base.InstallDir, "1panel/secret")
 	if req.SSL == constant.StatusDisable {
@@ -501,6 +533,9 @@ func (u *SettingService) UpdateSSL(c *gin.Context, req dto.SSLUpdate) error {
 	return u.UpdateSystemSSL()
 }
 
+// ============================================================
+// LoadFromCert  从系统证书加载 SSL 信息
+// ============================================================
 func (u *SettingService) LoadFromCert() (*dto.SSLInfo, error) {
 	ssl, err := settingRepo.Get(repo.WithByKey("SSL"))
 	if err != nil {
@@ -553,6 +588,9 @@ func (u *SettingService) LoadFromCert() (*dto.SSLInfo, error) {
 	return &data, nil
 }
 
+// ============================================================
+// GetTerminalInfo  拿终端设置
+// ============================================================
 func (u *SettingService) GetTerminalInfo() (*dto.TerminalInfo, error) {
 	setting, err := settingRepo.List()
 	if err != nil {
@@ -572,6 +610,9 @@ func (u *SettingService) GetTerminalInfo() (*dto.TerminalInfo, error) {
 	}
 	return &info, err
 }
+// ============================================================
+// UpdateTerminal  更新终端设置
+// ============================================================
 func (u *SettingService) UpdateTerminal(req dto.TerminalInfo) error {
 	if err := settingRepo.UpdateOrCreate("LineHeight", req.LineHeight); err != nil {
 		return err
@@ -630,6 +671,9 @@ func (u *SettingService) clearPasskeySettings() error {
 	return xpack.AuthProvider.ClearPasskeys()
 }
 
+// ============================================================
+// UpdateSystemSSL  重载系统 SSL（重新生成证书 + 加载）
+// ============================================================
 func (u *SettingService) UpdateSystemSSL() error {
 	certPath := path.Join(global.CONF.Base.InstallDir, "1panel/secret/server.crt")
 	keyPath := path.Join(global.CONF.Base.InstallDir, "1panel/secret/server.key")
@@ -706,6 +750,9 @@ func checkCertValid() error {
 	return nil
 }
 
+// ============================================================
+// GenerateRSAKey  生成新的 RSA 密钥（用于 JWT 签名）
+// ============================================================
 func (u *SettingService) GenerateRSAKey() error {
 	priKey, _ := settingRepo.Get(repo.WithByKey("PASSWORD_PRIVATE_KEY"))
 	pubKey, _ := settingRepo.Get(repo.WithByKey("PASSWORD_PUBLIC_KEY"))
@@ -732,10 +779,16 @@ func (u *SettingService) GenerateRSAKey() error {
 	return nil
 }
 
+// ============================================================
+// UpdateAppstoreConfig  更新应用商店地址
+// ============================================================
 func (u *SettingService) UpdateAppstoreConfig(req dto.AppstoreUpdate) error {
 	return settingRepo.UpdateOrCreate(req.Scope, req.Status)
 }
 
+// ============================================================
+// GetAppstoreConfig  拿应用商店配置
+// ============================================================
 func (u *SettingService) GetAppstoreConfig() (*dto.AppstoreConfig, error) {
 	res := &dto.AppstoreConfig{}
 	res.UninstallDeleteImage, _ = settingRepo.GetValueByKey("UninstallDeleteImage")
@@ -836,10 +889,16 @@ func checkProxy(req dto.ProxyUpdate) error {
 	return nil
 }
 
+// ============================================================
+// DefaultMenu  重置菜单可见性
+// ============================================================
 func (u *SettingService) DefaultMenu() error {
 	return settingRepo.DefaultMenu()
 }
 
+// ============================================================
+// GetMemo  拿仪表盘备忘录
+// ============================================================
 func (u *SettingService) GetMemo() (string, error) {
 	memo, err := settingRepo.GetValueByKey("DashboardMemo")
 	if err != nil {
@@ -848,6 +907,9 @@ func (u *SettingService) GetMemo() (string, error) {
 	return memo, nil
 }
 
+// ============================================================
+// UpdateMemo  更新仪表盘备忘录
+// ============================================================
 func (u *SettingService) UpdateMemo(content string) error {
 	return settingRepo.UpdateOrCreate("DashboardMemo", content)
 }

@@ -7,7 +7,11 @@
 
 package model
 
-// Setting (struct)
+// ============================================================
+// Setting  core 端系统设置表（key-value）
+// ============================================================
+// 字段: Key / Value / About (说明)
+// ============================================================
 type Setting struct {
 	BaseModel
 	Key   string `json:"key" gorm:"not null;"`

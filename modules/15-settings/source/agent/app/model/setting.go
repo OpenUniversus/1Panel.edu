@@ -7,7 +7,14 @@
 
 package model
 
-// Setting (struct)
+// ============================================================
+// Setting  系统设置表（key-value 存储）
+// ============================================================
+// 字段:
+//   - Key (string) — 配置项 key（唯一）
+//   - Value (string) — 配置项 value
+//   - About (string) — 配置项说明
+// ============================================================
 type Setting struct {
 	BaseModel
 	Key   string `json:"key" gorm:"not null;"`
@@ -15,6 +22,9 @@ type Setting struct {
 	About string `json:"about"`
 }
 
+// ============================================================
+// CommonDescription  常用描述（用于面板内说明文字）
+// ============================================================
 type CommonDescription struct {
 	ID          string `json:"id"`
 	Type        string `json:"type"`
@@ -23,6 +33,9 @@ type CommonDescription struct {
 	Description string `json:"description"`
 }
 
+// ============================================================
+// NodeInfo  节点信息（多节点部署场景）
+// ============================================================
 type NodeInfo struct {
 	Scope     string `json:"scope"`
 	BaseDir   string `json:"baseDir"`
@@ -32,6 +45,9 @@ type NodeInfo struct {
 	ServerKey string `json:"serverKey"`
 }
 
+// ============================================================
+// LocalConnInfo  本机 SSH 连接信息
+// ============================================================
 type LocalConnInfo struct {
 	Addr       string `json:"addr"`
 	Port       uint   `json:"port"`

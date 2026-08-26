@@ -21,7 +21,9 @@ import (
 // @Success 200 {object} dto.SettingInfo
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/search [post]
+// ============================================================
+// GetSettingInfo  拿系统设置详情
+// ============================================================
 func (b *BaseApi) GetSettingInfo(c *gin.Context) {
 	setting, err := settingService.GetSettingInfo()
 	if err != nil {
@@ -36,7 +38,9 @@ func (b *BaseApi) GetSettingInfo(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/terminal/ai/search [post]
+// ============================================================
+// GetTerminalAISettingInfo  拿终端 AI 配置
+// ============================================================
 func (b *BaseApi) GetTerminalAISettingInfo(c *gin.Context) {
 	setting, err := settingService.GetTerminalAIInfo()
 	if err != nil {
@@ -51,7 +55,9 @@ func (b *BaseApi) GetTerminalAISettingInfo(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/search/available [get]
+// ============================================================
+// GetSystemAvailable  健康检查（永远返 200）
+// ============================================================
 func (b *BaseApi) GetSystemAvailable(c *gin.Context) {
 	helper.Success(c)
 }
@@ -64,7 +70,9 @@ func (b *BaseApi) GetSystemAvailable(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /settings/update [post]
-// @x-panel-log {"bodyKeys":["key","value"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"修改系统配置 [key] => [value]","formatEN":"update system setting [key] => [value]"}
+// ============================================================
+// UpdateSetting  更新系统配置项（key/value）
+// ============================================================
 func (b *BaseApi) UpdateSetting(c *gin.Context) {
 	var req dto.AgentSettingUpdate
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -86,7 +94,9 @@ func (b *BaseApi) UpdateSetting(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /settings/terminal/ai/update [post]
-// @x-panel-log {"bodyKeys":["aiStatus","aiAccountId"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"更新终端 AI 设置 [aiStatus][aiAccountId]","formatEN":"update terminal AI setting [aiStatus][aiAccountId]"}
+// ============================================================
+// UpdateTerminalAISetting  更新终端 AI 配置
+// ============================================================
 func (b *BaseApi) UpdateTerminalAISetting(c *gin.Context) {
 	var req dto.TerminalAIInfo
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -105,7 +115,9 @@ func (b *BaseApi) UpdateTerminalAISetting(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/files/ai/search [post]
+// ============================================================
+// GetFileManageAISettingInfo  拿文件管理 AI 配置
+// ============================================================
 func (b *BaseApi) GetFileManageAISettingInfo(c *gin.Context) {
 	setting, err := settingService.GetFileManageAIInfo()
 	if err != nil {
@@ -123,7 +135,9 @@ func (b *BaseApi) GetFileManageAISettingInfo(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /settings/files/ai/update [post]
-// @x-panel-log {"bodyKeys":["aiStatus","aiAccountId"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"更新文件管理 AI 设置 [aiStatus][aiAccountId]","formatEN":"update file manage AI setting [aiStatus][aiAccountId]"}
+// ============================================================
+// UpdateFileManageAISetting  更新文件管理 AI 配置
+// ============================================================
 func (b *BaseApi) UpdateFileManageAISetting(c *gin.Context) {
 	var req dto.FileManageAIInfo
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -141,7 +155,9 @@ func (b *BaseApi) UpdateFileManageAISetting(c *gin.Context) {
 // @Success 200 {object} response.FileHistorySettingInfo
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/file-history/search [post]
+// ============================================================
+// GetFileHistorySettingInfo  拿文件历史记录设置
+// ============================================================
 func (b *BaseApi) GetFileHistorySettingInfo(c *gin.Context) {
 	setting, err := settingService.GetFileHistorySettingInfo()
 	if err != nil {
@@ -158,7 +174,9 @@ func (b *BaseApi) GetFileHistorySettingInfo(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/file-history/update [post]
+// ============================================================
+// UpdateFileHistorySetting  更新文件历史记录设置
+// ============================================================
 func (b *BaseApi) UpdateFileHistorySetting(c *gin.Context) {
 	var req request.FileHistorySettingUpdate
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -176,7 +194,9 @@ func (b *BaseApi) UpdateFileHistorySetting(c *gin.Context) {
 // @Success 200 {string} path
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/website/dir [get]
+// ============================================================
+// LoadWebsiteDir  拿网站根目录
+// ============================================================
 func (b *BaseApi) LoadWebsiteDir(c *gin.Context) {
 	helper.SuccessWithData(c, settingService.GetWebsiteDir())
 }
@@ -186,7 +206,9 @@ func (b *BaseApi) LoadWebsiteDir(c *gin.Context) {
 // @Success 200 {string} path
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/basedir [get]
+// ============================================================
+// LoadBaseDir  拿 1Panel 数据根目录
+// ============================================================
 func (b *BaseApi) LoadBaseDir(c *gin.Context) {
 	helper.SuccessWithData(c, global.Dir.DataDir)
 }
@@ -196,7 +218,9 @@ func (b *BaseApi) LoadBaseDir(c *gin.Context) {
 // @Success 200 {object} dto.SSHConnData
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/ssh/conn [get]
+// ============================================================
+// LoadLocalConn  拿本机 SSH 连接信息
+// ============================================================
 func (b *BaseApi) LoadLocalConn(c *gin.Context) {
 	helper.SuccessWithData(c, settingService.GetLocalConn())
 }
@@ -206,7 +230,9 @@ func (b *BaseApi) LoadLocalConn(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/ssh/check [post]
+// ============================================================
+// CheckLocalConn  测试本机 SSH 连接是否可用
+// ============================================================
 func (b *BaseApi) CheckLocalConn(c *gin.Context) {
 	client, err := loadLocalConn()
 	if err == nil && client != nil {
@@ -223,7 +249,9 @@ func (b *BaseApi) CheckLocalConn(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /settings/ssh/default [post]
-// @x-panel-log {"bodyKeys":["defaultConn"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"本地终端默认连接 [defaultConn]","formatEN":"update system default conn [defaultConn]"}
+// ============================================================
+// SetDefaultIsConn  设定"默认是否直连本机"标志
+// ============================================================
 func (b *BaseApi) SetDefaultIsConn(c *gin.Context) {
 	var req dto.SSHDefaultConn
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -242,7 +270,9 @@ func (b *BaseApi) SetDefaultIsConn(c *gin.Context) {
 // @Success 200 {boolean} isOk
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/ssh/check/info [post]
+// ============================================================
+// CheckLocalConnByInfo  按指定连接信息测试 SSH 连通性
+// ============================================================
 func (b *BaseApi) CheckLocalConnByInfo(c *gin.Context) {
 	var req dto.SSHConnData
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -257,7 +287,9 @@ func (b *BaseApi) CheckLocalConnByInfo(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/ssh [post]
+// ============================================================
+// SaveLocalConn  保存本机 SSH 连接信息
+// ============================================================
 func (b *BaseApi) SaveLocalConn(c *gin.Context) {
 	var req dto.SSHConnData
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -271,6 +303,9 @@ func (b *BaseApi) SaveLocalConn(c *gin.Context) {
 	helper.Success(c)
 }
 
+// ============================================================
+// loadLocalConn  工具：拿 DB 里的本机连接信息并建 SSH 客户端
+// ============================================================
 func loadLocalConn() (*ssh.SSHClient, error) {
 	connInDB, err := settingService.GetLocalConnForSSH()
 	if err != nil {
@@ -295,7 +330,9 @@ func loadLocalConn() (*ssh.SSHClient, error) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /settings/description/save [post]
+// ============================================================
+// SaveDescription  保存常用描述（个人简介、面板说明等）
+// ============================================================
 func (b *BaseApi) SaveDescription(c *gin.Context) {
 	var req dto.CommonDescription
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {

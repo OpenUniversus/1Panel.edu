@@ -31,7 +31,14 @@ import (
 	"github.com/jinzhu/copier"
 )
 
-// SettingService (struct)
+// ============================================================
+// SettingService  系统设置业务服务
+// ============================================================
+// 方法: GetSettingInfo / GetTerminalAIInfo / GetFileManageAIInfo
+//       Update / UpdateTerminalAI / UpdateFileManageAI / UpdateFileHistorySetting
+//       GetLocalConn / SaveConnInfo / SetDefaultIsConn / TestConnByInfo
+//       GetWebsiteDir / GetSystemProxy / SaveDescription
+// ============================================================
 type SettingService struct{}
 
 // ISettingService (interface)
@@ -60,6 +67,9 @@ func NewISettingService() ISettingService {
 	return &SettingService{}
 }
 
+// ============================================================
+// GetSettingInfo  拉系统设置详情（主题/语言/面板端口/用户/密码策略等）
+// ============================================================
 func (u *SettingService) GetSettingInfo() (*dto.SettingInfo, error) {
 	setting, err := settingRepo.GetList()
 	if err != nil {
@@ -82,6 +92,9 @@ func (u *SettingService) GetSettingInfo() (*dto.SettingInfo, error) {
 	return &info, err
 }
 
+// ============================================================
+// GetTerminalAIInfo  拿终端 AI 设置（启停/账号/API key）
+// ============================================================
 func (u *SettingService) GetTerminalAIInfo() (*dto.TerminalAIInfo, error) {
 	info := &dto.TerminalAIInfo{
 		AIStatus:              constant.StatusDisable,
@@ -107,6 +120,9 @@ func (u *SettingService) GetTerminalAIInfo() (*dto.TerminalAIInfo, error) {
 	return info, nil
 }
 
+// ============================================================
+// GetFileManageAIInfo  拿文件管理 AI 设置
+// ============================================================
 func (u *SettingService) GetFileManageAIInfo() (*dto.FileManageAIInfo, error) {
 	info := &dto.FileManageAIInfo{
 		AIStatus:    constant.StatusDisable,
@@ -121,10 +137,16 @@ func (u *SettingService) GetFileManageAIInfo() (*dto.FileManageAIInfo, error) {
 	return info, nil
 }
 
+// ============================================================
+// GetFileHistorySettingInfo  拿文件历史记录设置
+// ============================================================
 func (u *SettingService) GetFileHistorySettingInfo() (*response.FileHistorySettingInfo, error) {
 	return historyService.GetSettingInfo()
 }
 
+// ============================================================
+// GetWebsiteDir  拿网站根目录路径
+// ============================================================
 func (u *SettingService) GetWebsiteDir() string {
 	value, _ := settingRepo.GetValueByKey("WEBSITE_DIR")
 	if value == "" {
@@ -133,6 +155,9 @@ func (u *SettingService) GetWebsiteDir() string {
 	return value
 }
 
+// ============================================================
+// Update  更新配置项（含敏感字段加密 + 触发后置任务）
+// ============================================================
 func (u *SettingService) Update(key, value string) error {
 	oldValue := constant.FirewallPortWhiteListValue
 	if key == constant.FirewallPortWhiteList {
@@ -152,6 +177,9 @@ func (u *SettingService) Update(key, value string) error {
 	return nil
 }
 
+// ============================================================
+// UpdateTerminalAI  更新终端 AI 设置
+// ============================================================
 func (u *SettingService) UpdateTerminalAI(req dto.TerminalAIInfo) error {
 	if strings.EqualFold(strings.TrimSpace(req.AIStatus), constant.StatusEnable) {
 		accountID, err := strconv.ParseUint(strings.TrimSpace(req.AIAccountID), 10, 64)
@@ -184,6 +212,9 @@ func (u *SettingService) UpdateTerminalAI(req dto.TerminalAIInfo) error {
 	return nil
 }
 
+// ============================================================
+// UpdateFileManageAI  更新文件管理 AI 设置
+// ============================================================
 func (u *SettingService) UpdateFileManageAI(req dto.FileManageAIInfo) error {
 	if strings.EqualFold(strings.TrimSpace(req.AIStatus), constant.StatusEnable) {
 		accountID, err := strconv.ParseUint(strings.TrimSpace(req.AIAccountID), 10, 64)
@@ -214,10 +245,16 @@ func (u *SettingService) UpdateFileManageAI(req dto.FileManageAIInfo) error {
 	return nil
 }
 
+// ============================================================
+// UpdateFileHistorySetting  更新文件历史记录设置
+// ============================================================
 func (u *SettingService) UpdateFileHistorySetting(req request.FileHistorySettingUpdate) error {
 	return historyService.UpdateSetting(req)
 }
 
+// ============================================================
+// TestConnByInfo  用给定连接信息测试 SSH 连通性
+// ============================================================
 func (u *SettingService) TestConnByInfo(req dto.SSHConnData) bool {
 	if req.AuthMode == "password" && len(req.Password) != 0 {
 		password, err := base64.StdEncoding.DecodeString(req.Password)
@@ -248,6 +285,9 @@ func (u *SettingService) TestConnByInfo(req dto.SSHConnData) bool {
 	return true
 }
 
+// ============================================================
+// SaveConnInfo  保存本机 SSH 连接信息（含加密）
+// ============================================================
 func (u *SettingService) SaveConnInfo(req dto.SSHConnData) error {
 	if req.AuthMode == "password" && len(req.Password) != 0 {
 		password, err := base64.StdEncoding.DecodeString(req.Password)
@@ -284,6 +324,9 @@ func (u *SettingService) SaveConnInfo(req dto.SSHConnData) error {
 	return nil
 }
 
+// ============================================================
+// SetDefaultIsConn  设定"默认连本机"标志
+// ============================================================
 func (u *SettingService) SetDefaultIsConn(req dto.SSHDefaultConn) error {
 	if req.DefaultConn == constant.StatusDisable && req.WithReset {
 		if err := settingRepo.Update("LocalSSHConn", ""); err != nil {
@@ -293,6 +336,9 @@ func (u *SettingService) SetDefaultIsConn(req dto.SSHDefaultConn) error {
 	return settingRepo.Update("LocalSSHConnShow", req.DefaultConn)
 }
 
+// ============================================================
+// GetSystemProxy  拿系统代理设置（http/https/no）
+// ============================================================
 func (u *SettingService) GetSystemProxy() (*dto.SystemProxy, error) {
 	systemProxy := dto.SystemProxy{}
 	systemProxy.Type, _ = settingRepo.GetValueByKey("ProxyType")
@@ -321,6 +367,9 @@ func (u *SettingService) loadLocalConn() dto.SSHConnData {
 	return data
 }
 
+// ============================================================
+// GetLocalConn  拿本机 SSH 连接信息（脱敏）
+// ============================================================
 func (u *SettingService) GetLocalConn() dto.SSHConnData {
 	data := u.loadLocalConn()
 	if len(data.Password) != 0 {
@@ -335,6 +384,9 @@ func (u *SettingService) GetLocalConn() dto.SSHConnData {
 	return data
 }
 
+// ============================================================
+// GetLocalConnForSSH  拿本机 SSH 完整连接信息（用于建客户端）
+// ============================================================
 func (u *SettingService) GetLocalConnForSSH() (dto.SSHConnData, error) {
 	data := u.loadLocalConn()
 	if len(data.Addr) == 0 {
@@ -343,6 +395,9 @@ func (u *SettingService) GetLocalConnForSSH() (dto.SSHConnData, error) {
 	return data, nil
 }
 
+// ============================================================
+// SaveDescription  保存常用描述
+// ============================================================
 func (u *SettingService) SaveDescription(req dto.CommonDescription) error {
 	if len(req.Description) == 0 && !req.IsPinned {
 		_ = settingRepo.DelDescription(req.ID)

@@ -33,7 +33,9 @@ import (
 // @Success 200 {object} dto.SettingInfo
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /core/settings/search [post]
+// ============================================================
+// GetSettingInfo  拿系统设置详情（core 端）
+// ============================================================
 func (b *BaseApi) GetSettingInfo(c *gin.Context) {
 	setting, err := settingService.GetSettingInfo()
 	if err != nil {
@@ -48,7 +50,9 @@ func (b *BaseApi) GetSettingInfo(c *gin.Context) {
 // @Success 200 {object} dto.SettingBaseInfo
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /core/settings/search/base [post]
+// ============================================================
+// GetSettingBaseInfo  拿基础设置（不含敏感字段）
+// ============================================================
 func (b *BaseApi) GetSettingBaseInfo(c *gin.Context) {
 	setting, err := settingService.GetSettingBaseInfo()
 	if err != nil {
@@ -63,7 +67,9 @@ func (b *BaseApi) GetSettingBaseInfo(c *gin.Context) {
 // @Success 200 {object} dto.TerminalInfo
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /core/settings/terminal/search [post]
+// ============================================================
+// GetTerminalSettingInfo  拿终端设置
+// ============================================================
 func (b *BaseApi) GetTerminalSettingInfo(c *gin.Context) {
 	setting, err := settingService.GetTerminalInfo()
 	if err != nil {
@@ -78,7 +84,9 @@ func (b *BaseApi) GetTerminalSettingInfo(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /core/settings/search/available [get]
+// ============================================================
+// GetSystemAvailable  健康检查
+// ============================================================
 func (b *BaseApi) GetSystemAvailable(c *gin.Context) {
 	helper.Success(c)
 }
@@ -91,7 +99,9 @@ func (b *BaseApi) GetSystemAvailable(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /core/settings/update [post]
-// @x-panel-log {"bodyKeys":["key","value"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"修改系统配置 [key] => [value]","formatEN":"update system setting [key] => [value]"}
+// ============================================================
+// UpdateSetting  更新系统配置（含值范围/格式校验）
+// ============================================================
 func (b *BaseApi) UpdateSetting(c *gin.Context) {
 	var req dto.SettingUpdate
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -134,6 +144,9 @@ func (b *BaseApi) UpdateSetting(c *gin.Context) {
 	helper.Success(c)
 }
 
+// ============================================================
+// checkSettingValueRange  工具：按 key 校验值范围（SessionTimeout/ExpirationDays）
+// ============================================================
 func checkSettingValueRange(key, value string) bool {
 	switch key {
 	case "SessionTimeout":
@@ -161,7 +174,9 @@ func checkSettingValueRange(key, value string) bool {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /core/settings/terminal/update [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"修改系统终端配置","formatEN":"update system terminal setting"}
+// ============================================================
+// UpdateTerminalSetting  更新终端配置
+// ============================================================
 func (b *BaseApi) UpdateTerminalSetting(c *gin.Context) {
 	var req dto.TerminalInfo
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -183,7 +198,9 @@ func (b *BaseApi) UpdateTerminalSetting(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /core/settings/proxy/update [post]
-// @x-panel-log {"bodyKeys":["proxyUrl","proxyPort"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"服务器代理配置 [proxyPort]:[proxyPort]","formatEN":"set proxy [proxyPort]:[proxyPort]."}
+// ============================================================
+// UpdateProxy  更新服务器代理设置
+// ============================================================
 func (b *BaseApi) UpdateProxy(c *gin.Context) {
 	var req dto.ProxyUpdate
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -214,7 +231,9 @@ func (b *BaseApi) UpdateProxy(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /core/settings/menu/update [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"隐藏高级功能菜单","formatEN":"Hide advanced feature menu."}
+// ============================================================
+// UpdateMenu  隐藏/显示高级功能菜单
+// ============================================================
 func (b *BaseApi) UpdateMenu(c *gin.Context) {
 	var req dto.SettingUpdate
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -235,7 +254,9 @@ func (b *BaseApi) UpdateMenu(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /core/settings/menu/default [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"初始化菜单","formatEN":"Init menu."}
+// ============================================================
+// DefaultMenu  初始化菜单（首次使用）
+// ============================================================
 func (b *BaseApi) DefaultMenu(c *gin.Context) {
 	if err := settingService.DefaultMenu(); err != nil {
 		helper.InternalServer(c, err)
@@ -252,7 +273,9 @@ func (b *BaseApi) DefaultMenu(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /core/settings/ssl/update [post]
-// @x-panel-log {"bodyKeys":["ssl"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"修改系统 ssl => [ssl]","formatEN":"update system ssl => [ssl]"}
+// ============================================================
+// UpdateSSL  更新系统 SSL 证书
+// ============================================================
 func (b *BaseApi) UpdateSSL(c *gin.Context) {
 	var req dto.SSLUpdate
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -271,7 +294,9 @@ func (b *BaseApi) UpdateSSL(c *gin.Context) {
 // @Success 200 {object} dto.SSLInfo
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /core/settings/ssl/info [get]
+// ============================================================
+// LoadFromCert  从系统证书文件加载 SSL 信息
+// ============================================================
 func (b *BaseApi) LoadFromCert(c *gin.Context) {
 	info, err := settingService.LoadFromCert()
 	if err != nil {
@@ -286,7 +311,9 @@ func (b *BaseApi) LoadFromCert(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /core/settings/ssl/download [post]
+// ============================================================
+// DownloadSSL  下载系统证书文件
+// ============================================================
 func (b *BaseApi) DownloadSSL(c *gin.Context) {
 	pathItem := path.Join(global.CONF.Base.InstallDir, "1panel/secret/server.crt")
 	if _, err := os.Stat(pathItem); err != nil {
@@ -303,7 +330,9 @@ func (b *BaseApi) DownloadSSL(c *gin.Context) {
 // @Success 200 {array} string
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /core/settings/interface [get]
+// ============================================================
+// LoadInterfaceAddr  拿本机所有网络接口地址
+// ============================================================
 func (b *BaseApi) LoadInterfaceAddr(c *gin.Context) {
 	data, err := settingService.LoadInterfaceAddr()
 	if err != nil {
@@ -321,7 +350,9 @@ func (b *BaseApi) LoadInterfaceAddr(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /core/settings/bind/update [post]
-// @x-panel-log {"bodyKeys":["ipv6", "bindAddress"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"修改系统监听信息 => ipv6: [ipv6], 监听 IP: [bindAddress]","formatEN":"update system bind info => ipv6: [ipv6], 监听 IP: [bindAddress]"}
+// ============================================================
+// UpdateBindInfo  更新系统监听地址/启用 ipv6
+// ============================================================
 func (b *BaseApi) UpdateBindInfo(c *gin.Context) {
 	var req dto.BindInfo
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -343,7 +374,9 @@ func (b *BaseApi) UpdateBindInfo(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /core/settings/port/update [post]
-// @x-panel-log {"bodyKeys":["serverPort"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"修改系统端口 => [serverPort]","formatEN":"update system port => [serverPort]"}
+// ============================================================
+// UpdatePort  修改系统监听端口
+// ============================================================
 func (b *BaseApi) UpdatePort(c *gin.Context) {
 	var req dto.PortUpdate
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -363,7 +396,9 @@ func (b *BaseApi) UpdatePort(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /core/settings/ssl/reload [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"重载系统 SSL","formatEN":"reload system SSL"}
+// ============================================================
+// ReloadSSL  重载系统 SSL（仅允许本机调用）
+// ============================================================
 func (b *BaseApi) ReloadSSL(c *gin.Context) {
 	clientIP := c.ClientIP()
 	if ip := net.ParseIP(clientIP); ip == nil || !ip.IsLoopback() {
@@ -384,7 +419,9 @@ func (b *BaseApi) ReloadSSL(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /core/settings/apps/store/update [post]
+// ============================================================
+// UpdateAppstoreConfig  更新应用商店地址
+// ============================================================
 func (b *BaseApi) UpdateAppstoreConfig(c *gin.Context) {
 	var req dto.AppstoreUpdate
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -403,7 +440,9 @@ func (b *BaseApi) UpdateAppstoreConfig(c *gin.Context) {
 // @Success 200 {object} dto.AppstoreConfig
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /core/settings/apps/store/config [get]
+// ============================================================
+// GetAppstoreConfig  拿应用商店配置
+// ============================================================
 func (b *BaseApi) GetAppstoreConfig(c *gin.Context) {
 	res, err := settingService.GetAppstoreConfig()
 	if err != nil {
@@ -418,7 +457,9 @@ func (b *BaseApi) GetAppstoreConfig(c *gin.Context) {
 // @Success 200 {string} memo
 // @Security ApiKeyAuth
 // @Security Timestamp
-// @Router /core/settings/memo [get]
+// ============================================================
+// GetMemo  拿仪表盘备忘录
+// ============================================================
 func (b *BaseApi) GetMemo(c *gin.Context) {
 	memo, err := settingService.GetMemo()
 	if err != nil {
@@ -436,7 +477,9 @@ func (b *BaseApi) GetMemo(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Security Timestamp
 // @Router /core/settings/memo [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"更新仪表盘备忘录","formatEN":"update dashboard memo"}
+// ============================================================
+// UpdateMemo  更新仪表盘备忘录
+// ============================================================
 func (b *BaseApi) UpdateMemo(c *gin.Context) {
 	var req dto.MemoUpdate
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
@@ -449,6 +492,9 @@ func (b *BaseApi) UpdateMemo(c *gin.Context) {
 	helper.Success(c)
 }
 
+// ============================================================
+// checkEntrancePattern  校验安全入口（5-116 位字母数字，且不与系统路径冲突）
+// ============================================================
 func checkEntrancePattern(val string) bool {
 	if len(val) == 0 {
 		return true
@@ -482,6 +528,9 @@ func checkEntrancePattern(val string) bool {
 	return true
 }
 
+// ============================================================
+// normalizePasskeyTrustedProxies  标准化 Passkey 可信代理（多行 IP/CIDR）
+// ============================================================
 func normalizePasskeyTrustedProxies(value string) (string, error) {
 	if strings.TrimSpace(value) == "" {
 		return "", nil
