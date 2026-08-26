@@ -12,7 +12,7 @@
 | 3 | 01-app-store | P3 | TODO | 下一跑 |
 | 4 | 03-website | P3 | TODO | |
 | 5 | 12-security (Nginx) | P2 | TODO | 拆自旧 12-security |
-| 6 | 12-ssl (SSL) | P2 | TODO | 拆自旧 12-security |
+| 6 | 12-ssl (SSL) | P2 | **DONE v3** | 72.6 KB HR + 28.3 KB VA, 9 func × 4 段, 10 Mermaid, 12/12 self-verify |
 | 7 | 06-cronjob | P2 | TODO | |
 | 8 | 08-file | P2 | TODO | |
 | 9 | 10-host-monitor | P1 | TODO | |
@@ -28,7 +28,7 @@
 ## 推进顺序 (按优先级)
 
 1. ⭐⭐⭐ 14-auth ✅ → 02-container ❄️ → 01-app-store ▶️ → 03-website
-2. ⭐⭐ 12-security → 12-ssl → 06-cronjob → 08-file
+2. ⭐⭐ 12-security → **12-ssl ✅** → 06-cronjob → 08-file
 3. ⭐ 10-host-monitor → 05-backup-snapshot → 15-settings → 16-terminal
 4. - 04-database → 07-alert → 09-ai-agent → 11-runtime-ai → 13-frontend
 

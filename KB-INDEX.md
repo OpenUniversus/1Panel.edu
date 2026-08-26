@@ -18,5 +18,9 @@
 | 12-security | OK | OK | 27.6 KB |
 | 13-frontend | OK | OK | 24.4 KB |
 | 14-auth | OK | OK | 139.3 KB |
+| 12-ssl | OK | OK | 100.9 KB (v3) |
+| 15-settings | -- | stub | TBD |
+| 16-terminal | -- | stub | TBD |
 
-**汇总**: 14 HR + 14 VA = 0.61 MB
+**汇总**: 15 HR + 14 VA + 2 stub = 0.71 MB
+**更新**: 12-ssl v3 完工 (2026-08-26), 15-settings / 16-terminal 待写
