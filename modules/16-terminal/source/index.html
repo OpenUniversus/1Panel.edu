@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminal 终端 · 源码注解 · 1Panel.edu KB</title>
+  <link rel="stylesheet" href="../assets/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { background: var(--bg); color: var(--fg); font-family: 'JetBrains Mono', 'Noto Serif SC', monospace; margin: 0; padding: 0; }
+    .layout { display: grid; grid-template-columns: 280px 1fr; max-width: 1400px; margin: 0 auto; padding: 24px; gap: 24px; }
+    aside.toc { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; font-size: 12px; padding: 16px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; }
+    aside.toc h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 8px; }
+    aside.toc a { display: block; padding: 4px 8px; color: var(--fg-2); text-decoration: none; border-radius: 4px; }
+    aside.toc a:hover { background: var(--bg-3); color: var(--accent); }
+    main { min-width: 0; }
+    header.doc { padding: 20px 24px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 24px; }
+    header.doc h1 { font-size: 24px; margin: 0 0 8px 0; }
+    header.doc p { color: var(--fg-2); margin: 4px 0; font-size: 13px; }
+    header.doc .meta { display: flex; gap: 16px; margin-top: 12px; font-size: 12px; color: var(--fg-3); }
+    .file-section { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
+    .file-section h2 { font-size: 14px; padding: 10px 16px; background: var(--bg-3); margin: 0; border-bottom: 1px solid var(--border); color: var(--accent); font-weight: 600; }
+    .file-section h2 .path { color: var(--fg-3); font-weight: 400; font-size: 12px; margin-left: 8px; }
+    pre.code { margin: 0; padding: 14px 0; overflow-x: auto; font-size: 12.5px; line-height: 1.5; }
+    pre.code .line { display: block; padding: 0 16px 0 0; }
+    pre.code .ln { display: inline-block; width: 50px; padding: 0 12px; color: var(--fg-3); text-align: right; user-select: none; border-right: 1px solid var(--border); margin-right: 12px; }
+    .kw { color: #c084fc; }
+    .ty { color: #38bdf8; }
+    .str { color: #fbbf24; }
+    .cmt { color: #64748b; font-style: italic; }
+    .num { color: #34d399; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } aside.toc { display: none; } }
+  </style>
+</head>
+<body>
+<nav class="top">
+  <a class="brand" href="../index.html"><span class="logo">1P</span>1Panel.edu KB</a>
+  <div class="nav-links">
+    <a href="../index.html">目录</a>
+    <a href="../modules/16-terminal#">本模块</a>
+    <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</nav>
+<div class="layout">
+  <aside class="toc">
+    <h3>📁 文件目录 (7)</h3>
+    <a href="#f-process.go">agent/app/api/v2/process.go</a>
+    <a href="#f-terminal.go">agent/app/api/v2/terminal.go</a>
+    <a href="#f-process.go">agent/app/dto/request/process.go</a>
+    <a href="#f-process.go">agent/app/service/process.go</a>
+    <a href="#f-ro_process.go">agent/router/ro_process.go</a>
+    <a href="#f-ro_toolbox.go">agent/router/ro_toolbox.go</a>
+    <a href="#f-process.go">agent/utils/psutil/process.go</a>
+  </aside>
+  <main>
+    <header class="doc">
+      <h1>Terminal 终端 · 源码注解</h1>
+      <p>本目录是 1Panel 上游源码 (commit: dev-v2) 的拷贝, 加上中文 file header 注解.</p>
+      <p>文件是合法 Go 源码, 可以直接用 <code>go build</code> 编译. 注解只增加 <code>//</code> 注释, 不改变语义.</p>
+      <div class="meta">
+        <span>📂 7 .go files</span>
+        <span>💾 29.8 KB</span>
+        <span>📅 上游 commit: dev-v2</span>
+      </div>
+    </header>
+    <div class="file-section" id="f-process.go">
+  <h2>📄 process.go <span class="path">agent/app/api/v2/process.go</span></h2>
+  <pre class="code"><span class="line"><span class="ln">   1</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   2</span><span class=<span class="str">"cmt"</span>>// 模块: Terminal 终端 (agent/app/api/v2/process.<span class="kw">go</span>)</span></span>
+<span class="line"><span class="ln">   3</span><span class=<span class="str">"cmt"</span>>// 文件: process.<span class="kw">go</span> — 主代码</span></span>
+<span class="line"><span class="ln">   4</span><span class=<span class="str">"cmt"</span>>// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2</span></span>
+<span class="line"><span class="ln">   5</span><span class=<span class="str">"cmt"</span>>//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 <span class="kw">go</span> build 编译</span></span>
+<span class="line"><span class="ln">   6</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   7</span></span>
+<span class="line"><span class="ln">   8</span><span class="kw">package</span> v2</span>
+<span class="line"><span class="ln">   9</span></span>
+<span class="line"><span class="ln">  10</span><span class="kw">import</span> (</span>
+<span class="line"><span class="ln">  11</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/app/api/v2/helper"</span></span>
+<span class="line"><span class="ln">  12</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/app/dto/request"</span></span>
+<span class="line"><span class="ln">  13</span>	websocket2 <span class="str">"github.com/1Panel-dev/1Panel/agent/utils/websocket"</span></span>
+<span class="line"><span class="ln">  14</span>	<span class="str">"github.com/gin-gonic/gin"</span></span>
+<span class="line"><span class="ln">  15</span>	<span class="str">"github.com/gorilla/websocket"</span></span>
+<span class="line"><span class="ln">  16</span>)</span>
+<span class="line"><span class="ln">  17</span></span>
+<span class="line"><span class="ln">  18</span><span class=<span class="str">"cmt"</span>>// @Tags Process</span></span>
+<span class="line"><span class="ln">  19</span><span class=<span class="str">"cmt"</span>>// @Summary Process ws</span></span>
+<span class="line"><span class="ln">  20</span><span class=<span class="str">"cmt"</span>>// @Success <span class="num">200</span></span></span>
+<span class="line"><span class="ln">  21</span><span class=<span class="str">"cmt"</span>>// @Security ApiKeyAuth</span></span>
+<span class="line"><span class="ln">  22</span><span class=<span class="str">"cmt"</span>>// @Security Timestamp</span></span>
+<span class="line"><span class="ln">  23</span><span class=<span class="str">"cmt"</span>>// @Router /process/ws [get]</span></span>
+<span class="line"><span class="ln">  24</span><span class="kw">func</span> (b *BaseApi) ProcessWs(c *gin.Context) {</span>
+<span class="line"><span class="ln">  25</span>	<span class="kw">if</span> !websocket.IsWebSocketUpgrade(c.Request) {</span>
+<span class="line"><span class="ln">  26</span>		helper.Success(c)</span>
+<span class="line"><span class="ln">  27</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln">  28</span>	}</span>
+<span class="line"><span class="ln">  29</span>	ws, err := wsUpgrade.Upgrade(c.Writer, c.Request, nil)</span>
+<span class="line"><span class="ln">  30</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln">  31</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln">  32</span>	}</span>
+<span class="line"><span class="ln">  33</span>	wsClient := websocket2.NewWsClient(<span class="str">"processClient"</span>, ws)</span>
+<span class="line"><span class="ln">  34</span>	<span class="kw">go</span> wsClient.Read()</span>
+<span class="line"><span class="ln">  35</span>	<span class="kw">go</span> wsClient.Write()</span>
+<span class="line"><span class="ln">  36</span>}</span>
+<span class="line"><span class="ln">  37</span></span>
+<span class="line"><span class="ln">  38</span><span class=<span class="str">"cmt"</span>>// @Tags Process</span></span>
+<span class="line"><span class="ln">  39</span><span class=<span class="str">"cmt"</span>>// @Summary Stop Process</span></span>
+<span class="line"><span class="ln">  40</span><span class=<span class="str">"cmt"</span>>// @Param request body request.ProcessReq true <span class="str">"request"</span></span></span>
+<span class="line"><span class="ln">  41</span><span class=<span class="str">"cmt"</span>>// @Success <span class="num">200</span></span></span>
+<span class="line"><span class="ln">  42</span><span class=<span class="str">"cmt"</span>>// @Security ApiKeyAuth</span></span>
+<span class="line"><span class="ln">  43</span><span class=<span class="str">"cmt"</span>>// @Security Timestamp</span></span>
+<span class="line"><span class="ln">  44</span><span class=<span class="str">"cmt"</span>>// @Router /process/stop [post]</span></span>
+<span class="line"><span class="ln">  45</span><span class=<span class="str">"cmt"</span>>// @x-panel-log {<span class="str">"bodyKeys"</span>:[<span class="str">"PID"</span>],<span class="str">"paramKeys"</span>:[],<span class="str">"BeforeFunctions"</span>:[],<span class="str">"formatZH"</span>:<span class="str">"结束进程 [PID]"</span>,<span class="str">"formatEN"</span>:<span class="str">"结束进程 [PID]"</span>}</span></span>
+<span class="line"><span class="ln">  46</span><span class="kw">func</span> (b *BaseApi) StopProcess(c *gin.Context) {</span>
+<span class="line"><span class="ln">  47</span>	<span class="kw">var</span> req request.ProcessReq</span>
+<span class="line"><span class="ln">  48</span>	<span class="kw">if</span> err := helper.CheckBindAndValidate(&amp;req, c); err != nil {</span>
+<span class="line"><span class="ln">  49</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln">  50</span>	}</span>
+<span class="line"><span class="ln">  51</span>	<span class="kw">if</span> err := processService.StopProcess(req); err != nil {</span>
+<span class="line"><span class="ln">  52</span>		helper.BadRequest(c, err)</span>
+<span class="line"><span class="ln">  53</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln">  54</span>	}</span>
+<span class="line"><span class="ln">  55</span>	helper.Success(c)</span>
+<span class="line"><span class="ln">  56</span>}</span>
+<span class="line"><span class="ln">  57</span></span>
+<span class="line"><span class="ln">  58</span><span class=<span class="str">"cmt"</span>>// @Tags Process</span></span>
+<span class="line"><span class="ln">  59</span><span class=<span class="str">"cmt"</span>>// @Summary Get Process Info By PID</span></span>
+<span class="line"><span class="ln">  60</span><span class=<span class="str">"cmt"</span>>// @Param pid path <span class="ty">int</span> true <span class="str">"PID"</span></span></span>
+<span class="line"><span class="ln">  61</span><span class=<span class="str">"cmt"</span>>// @Success <span class="num">200</span></span></span>
+<span class="line"><span class="ln">  62</span><span class=<span class="str">"cmt"</span>>// @Security ApiKeyAuth</span></span>
+<span class="line"><span class="ln">  63</span><span class=<span class="str">"cmt"</span>>// @Security Timestamp</span></span>
+<span class="line"><span class="ln">  64</span><span class=<span class="str">"cmt"</span>>// @Router /process/{pid} [get]</span></span>
+<span class="line"><span class="ln">  65</span><span class="kw">func</span> (b *BaseApi) GetProcessInfoByPID(c *gin.Context) {</span>
+<span class="line"><span class="ln">  66</span>	pid, err := helper.GetParamInt32(<span class="str">"pid"</span>, c)</span>
+<span class="line"><span class="ln">  67</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln">  68</span>		helper.BadRequest(c, err)</span>
+<span class="line"><span class="ln">  69</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln">  70</span>	}</span>
+<span class="line"><span class="ln">  71</span>	data, err := processService.GetProcessInfoByPID(pid)</span>
+<span class="line"><span class="ln">  72</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln">  73</span>		helper.BadRequest(c, err)</span>
+<span class="line"><span class="ln">  74</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln">  75</span>	}</span>
+<span class="line"><span class="ln">  76</span>	helper.SuccessWithData(c, data)</span>
+<span class="line"><span class="ln">  77</span>}</span>
+<span class="line"><span class="ln">  78</span></span>
+<span class="line"><span class="ln">  79</span><span class=<span class="str">"cmt"</span>>// @Tags Process</span></span>
+<span class="line"><span class="ln">  80</span><span class=<span class="str">"cmt"</span>>// @Summary Get Listening Process</span></span>
+<span class="line"><span class="ln">  81</span><span class=<span class="str">"cmt"</span>>// @Success <span class="num">200</span></span></span>
+<span class="line"><span class="ln">  82</span><span class=<span class="str">"cmt"</span>>// @Security ApiKeyAuth</span></span>
+<span class="line"><span class="ln">  83</span><span class=<span class="str">"cmt"</span>>// @Security Timestamp</span></span>
+<span class="line"><span class="ln">  84</span><span class=<span class="str">"cmt"</span>>// @Router /process/listening [post]</span></span>
+<span class="line"><span class="ln">  85</span><span class="kw">func</span> (b *BaseApi) GetListeningProcess(c *gin.Context) {</span>
+<span class="line"><span class="ln">  86</span>	procs, err := processService.GetListeningProcess(c)</span>
+<span class="line"><span class="ln">  87</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln">  88</span>		helper.BadRequest(c, err)</span>
+<span class="line"><span class="ln">  89</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln">  90</span>	}</span>
+<span class="line"><span class="ln">  91</span>	helper.SuccessWithData(c, procs)</span>
+<span class="line"><span class="ln">  92</span>}</span>
+<span class="line"><span class="ln">  93</span></span></pre>
+</div>
+    <div class="file-section" id="f-terminal.go">
+  <h2>📄 terminal.go <span class="path">agent/app/api/v2/terminal.go</span></h2>
+  <pre class="code"><span class="line"><span class="ln">   1</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   2</span><span class=<span class="str">"cmt"</span>>// 模块: Terminal 终端 (agent/app/api/v2/terminal.<span class="kw">go</span>)</span></span>
+<span class="line"><span class="ln">   3</span><span class=<span class="str">"cmt"</span>>// 文件: terminal.<span class="kw">go</span> — 主代码</span></span>
+<span class="line"><span class="ln">   4</span><span class=<span class="str">"cmt"</span>>// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2</span></span>
+<span class="line"><span class="ln">   5</span><span class=<span class="str">"cmt"</span>>//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 <span class="kw">go</span> build 编译</span></span>
+<span class="line"><span class="ln">   6</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   7</span></span>
+<span class="line"><span class="ln">   8</span><span class="kw">package</span> v2</span>
+<span class="line"><span class="ln">   9</span></span>
+<span class="line"><span class="ln">  10</span><span class="kw">import</span> (</span>
+<span class="line"><span class="ln">  11</span>	<span class="str">"encoding/base64"</span></span>
+<span class="line"><span class="ln">  12</span>	<span class="str">"encoding/json"</span></span>
+<span class="line"><span class="ln">  13</span>	<span class="str">"fmt"</span></span>
+<span class="line"><span class="ln">  14</span>	<span class="str">"net/http"</span></span>
+<span class="line"><span class="ln">  15</span>	<span class="str">"strconv"</span></span>
+<span class="line"><span class="ln">  16</span>	<span class="str">"time"</span></span>
+<span class="line"><span class="ln">  17</span></span>
+<span class="line"><span class="ln">  18</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/app/api/v2/helper"</span></span>
+<span class="line"><span class="ln">  19</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/app/dto"</span></span>
+<span class="line"><span class="ln">  20</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/app/model"</span></span>
+<span class="line"><span class="ln">  21</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/app/service"</span></span>
+<span class="line"><span class="ln">  22</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/global"</span></span>
+<span class="line"><span class="ln">  23</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/utils/cmd"</span></span>
+<span class="line"><span class="ln">  24</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/utils/ssh"</span></span>
+<span class="line"><span class="ln">  25</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/utils/terminal"</span></span>
+<span class="line"><span class="ln">  26</span>	<span class="str">"github.com/gin-gonic/gin"</span></span>
+<span class="line"><span class="ln">  27</span>	<span class="str">"github.com/gorilla/websocket"</span></span>
+<span class="line"><span class="ln">  28</span>	<span class="str">"github.com/pkg/errors"</span></span>
+<span class="line"><span class="ln">  29</span>)</span>
+<span class="line"><span class="ln">  30</span></span>
+<span class="line"><span class="ln">  31</span><span class=<span class="str">"cmt"</span>>// @Tags Terminal</span></span>
+<span class="line"><span class="ln">  32</span><span class=<span class="str">"cmt"</span>>// @Summary Ws local terminal</span></span>
+<span class="line"><span class="ln">  33</span><span class=<span class="str">"cmt"</span>>// @Param command query <span class="ty">string</span> false <span class="str">"command"</span></span></span>
+<span class="line"><span class="ln">  34</span><span class=<span class="str">"cmt"</span>>// @Success <span class="num">200</span></span></span>
+<span class="line"><span class="ln">  35</span><span class=<span class="str">"cmt"</span>>// @Security ApiKeyAuth</span></span>
+<span class="line"><span class="ln">  36</span><span class=<span class="str">"cmt"</span>>// @Security Timestamp</span></span>
+<span class="line"><span class="ln">  37</span><span class=<span class="str">"cmt"</span>>// @Router /hosts/terminal/local [get]</span></span>
+<span class="line"><span class="ln">  38</span><span class="kw">func</span> (b *BaseApi) WsLocalTerminal(c *gin.Context) {</span>
+<span class="line"><span class="ln">  39</span>	b.runSSHSession(c, loadLocalConn, c.DefaultQuery(<span class="str">"command"</span>, <span class="str">""</span>))</span>
+<span class="line"><span class="ln">  40</span>}</span>
+<span class="line"><span class="ln">  41</span></span>
+<span class="line"><span class="ln">  42</span><span class=<span class="str">"cmt"</span>>// @Tags Terminal</span></span>
+<span class="line"><span class="ln">  43</span><span class=<span class="str">"cmt"</span>>// @Summary Ws host SSH</span></span>
+<span class="line"><span class="ln">  44</span><span class=<span class="str">"cmt"</span>>// @Param id query integer false <span class="str">"id"</span></span></span>
+<span class="line"><span class="ln">  45</span><span class=<span class="str">"cmt"</span>>// @Param command query <span class="ty">string</span> false <span class="str">"command"</span></span></span>
+<span class="line"><span class="ln">  46</span><span class=<span class="str">"cmt"</span>>// @Success <span class="num">200</span></span></span>
+<span class="line"><span class="ln">  47</span><span class=<span class="str">"cmt"</span>>// @Security ApiKeyAuth</span></span>
+<span class="line"><span class="ln">  48</span><span class=<span class="str">"cmt"</span>>// @Security Timestamp</span></span>
+<span class="line"><span class="ln">  49</span><span class=<span class="str">"cmt"</span>>// @Router /hosts/terminal/ssh [get]</span></span>
+<span class="line"><span class="ln">  50</span><span class="kw">func</span> (b *BaseApi) WsHostSSH(c *gin.Context) {</span>
+<span class="line"><span class="ln">  51</span>	b.runSSHSession(c, <span class="kw">func</span>() (*ssh.SSHClient, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln">  52</span>		hostID, _ := strconv.Atoi(c.DefaultQuery(<span class="str">"id"</span>, <span class="str">"<span class="num">0</span>"</span>))</span>
+<span class="line"><span class="ln">  53</span>		<span class="kw">if</span> hostID &lt;= <span class="num">0</span> {</span>
+<span class="line"><span class="ln">  54</span>			<span class="kw">return</span> nil, errors.New(<span class="str">"missing host id"</span>)</span>
+<span class="line"><span class="ln">  55</span>		}</span>
+<span class="line"><span class="ln">  56</span>		host, err := service.GetHostInfo(<span class="ty">uint</span>(hostID))</span>
+<span class="line"><span class="ln">  57</span>		<span class="kw">return</span> newHostSSHClient(host, err)</span>
+<span class="line"><span class="ln">  58</span>	}, c.DefaultQuery(<span class="str">"command"</span>, <span class="str">""</span>))</span>
+<span class="line"><span class="ln">  59</span>}</span>
+<span class="line"><span class="ln">  60</span></span>
+<span class="line"><span class="ln">  61</span><span class=<span class="str">"cmt"</span>>// @Tags Terminal</span></span>
+<span class="line"><span class="ln">  62</span><span class=<span class="str">"cmt"</span>>// @Summary Ws container terminal</span></span>
+<span class="line"><span class="ln">  63</span><span class=<span class="str">"cmt"</span>>// @Param cols query integer false <span class="str">"cols"</span></span></span>
+<span class="line"><span class="ln">  64</span><span class=<span class="str">"cmt"</span>>// @Param rows query integer false <span class="str">"rows"</span></span></span>
+<span class="line"><span class="ln">  65</span><span class=<span class="str">"cmt"</span>>// @Success <span class="num">200</span></span></span>
+<span class="line"><span class="ln">  66</span><span class=<span class="str">"cmt"</span>>// @Security ApiKeyAuth</span></span>
+<span class="line"><span class="ln">  67</span><span class=<span class="str">"cmt"</span>>// @Security Timestamp</span></span>
+<span class="line"><span class="ln">  68</span><span class=<span class="str">"cmt"</span>>// @Router /hosts/terminal/container [get]</span></span>
+<span class="line"><span class="ln">  69</span><span class="kw">func</span> (b *BaseApi) WsContainerTerminal(c *gin.Context) {</span>
+<span class="line"><span class="ln">  70</span>	wsConn, cols, rows, ok := prepareTerminalSession(c)</span>
+<span class="line"><span class="ln">  71</span>	<span class="kw">if</span> !ok {</span>
+<span class="line"><span class="ln">  72</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln">  73</span>	}</span>
+<span class="line"><span class="ln">  74</span>	<span class="kw">defer</span> wsConn.Close()</span>
+<span class="line"><span class="ln">  75</span></span>
+<span class="line"><span class="ln">  76</span>	slave, err := loadContainerTerminalCommand(c)</span>
+<span class="line"><span class="ln">  77</span>	<span class="kw">if</span> wshandleError(wsConn, err) {</span>
+<span class="line"><span class="ln">  78</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln">  79</span>	}</span>
+<span class="line"><span class="ln">  80</span>	<span class="kw">defer</span> slave.Close()</span>
+<span class="line"><span class="ln">  81</span></span>
+<span class="line"><span class="ln">  82</span>	tty, err := terminal.NewLocalWsSession(cols, rows, wsConn, slave, false)</span>
+<span class="line"><span class="ln">  83</span>	<span class="kw">if</span> wshandleError(wsConn, err) {</span>
+<span class="line"><span class="ln">  84</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln">  85</span>	}</span>
+<span class="line"><span class="ln">  86</span></span>
+<span class="line"><span class="ln">  87</span>	quitChan := make(<span class="kw">chan</span> <span class="ty">bool</span>, <span class="num">3</span>)</span>
+<span class="line"><span class="ln">  88</span>	tty.Start(quitChan)</span>
+<span class="line"><span class="ln">  89</span>	<span class="kw">go</span> slave.Wait(quitChan)</span>
+<span class="line"><span class="ln">  90</span></span>
+<span class="line"><span class="ln">  91</span>	&lt;-quitChan</span>
+<span class="line"><span class="ln">  92</span></span>
+<span class="line"><span class="ln">  93</span>	global.LOG.Info(<span class="str">"websocket finished"</span>)</span>
+<span class="line"><span class="ln">  94</span>	closeTerminalConn(wsConn)</span>
+<span class="line"><span class="ln">  95</span>}</span>
+<span class="line"><span class="ln">  96</span></span>
+<span class="line"><span class="ln">  97</span><span class="kw">func</span> prepareTerminalSession(c *gin.Context) (*websocket.Conn, <span class="ty">int</span>, <span class="ty">int</span>, <span class="ty">bool</span>) {</span>
+<span class="line"><span class="ln">  98</span>	<span class="kw">if</span> !websocket.IsWebSocketUpgrade(c.Request) {</span>
+<span class="line"><span class="ln">  99</span>		helper.Success(c)</span>
+<span class="line"><span class="ln"> 100</span>		<span class="kw">return</span> nil, <span class="num">0</span>, <span class="num">0</span>, false</span>
+<span class="line"><span class="ln"> 101</span>	}</span>
+<span class="line"><span class="ln"> 102</span>	wsConn, err := upGrader.Upgrade(c.Writer, c.Request, nil)</span>
+<span class="line"><span class="ln"> 103</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 104</span>		global.LOG.Errorf(<span class="str">"gin context http handler failed, err: %v"</span>, err)</span>
+<span class="line"><span class="ln"> 105</span>		<span class="kw">return</span> nil, <span class="num">0</span>, <span class="num">0</span>, false</span>
+<span class="line"><span class="ln"> 106</span>	}</span>
+<span class="line"><span class="ln"> 107</span></span>
+<span class="line"><span class="ln"> 108</span>	<span class="kw">if</span> global.CONF.Base.IsDemo {</span>
+<span class="line"><span class="ln"> 109</span>		<span class="kw">if</span> wshandleError(wsConn, errors.New(<span class="str">"   demo server, prohibit this operation!"</span>)) {</span>
+<span class="line"><span class="ln"> 110</span>			<span class="kw">return</span> nil, <span class="num">0</span>, <span class="num">0</span>, false</span>
+<span class="line"><span class="ln"> 111</span>		}</span>
+<span class="line"><span class="ln"> 112</span>	}</span>
+<span class="line"><span class="ln"> 113</span></span>
+<span class="line"><span class="ln"> 114</span>	cols, err := strconv.Atoi(c.DefaultQuery(<span class="str">"cols"</span>, <span class="str">"<span class="num">80</span>"</span>))</span>
+<span class="line"><span class="ln"> 115</span>	<span class="kw">if</span> wshandleError(wsConn, errors.WithMessage(err, <span class="str">"invalid param cols in request"</span>)) {</span>
+<span class="line"><span class="ln"> 116</span>		<span class="kw">return</span> nil, <span class="num">0</span>, <span class="num">0</span>, false</span>
+<span class="line"><span class="ln"> 117</span>	}</span>
+<span class="line"><span class="ln"> 118</span>	rows, err := strconv.Atoi(c.DefaultQuery(<span class="str">"rows"</span>, <span class="str">"<span class="num">40</span>"</span>))</span>
+<span class="line"><span class="ln"> 119</span>	<span class="kw">if</span> wshandleError(wsConn, errors.WithMessage(err, <span class="str">"invalid param rows in request"</span>)) {</span>
+<span class="line"><span class="ln"> 120</span>		<span class="kw">return</span> nil, <span class="num">0</span>, <span class="num">0</span>, false</span>
+<span class="line"><span class="ln"> 121</span>	}</span>
+<span class="line"><span class="ln"> 122</span>	<span class="kw">return</span> wsConn, cols, rows, true</span>
+<span class="line"><span class="ln"> 123</span>}</span>
+<span class="line"><span class="ln"> 124</span></span>
+<span class="line"><span class="ln"> 125</span><span class="kw">func</span> (b *BaseApi) runSSHSession(c *gin.Context, connect <span class="kw">func</span>() (*ssh.SSHClient, <span class="ty">error</span>), command <span class="ty">string</span>) {</span>
+<span class="line"><span class="ln"> 126</span>	wsConn, cols, rows, ok := prepareTerminalSession(c)</span>
+<span class="line"><span class="ln"> 127</span>	<span class="kw">if</span> !ok {</span>
+<span class="line"><span class="ln"> 128</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln"> 129</span>	}</span>
+<span class="line"><span class="ln"> 130</span>	<span class="kw">defer</span> wsConn.Close()</span>
+<span class="line"><span class="ln"> 131</span></span>
+<span class="line"><span class="ln"> 132</span>	client, clientErr := connect()</span>
+<span class="line"><span class="ln"> 133</span>	<span class="kw">if</span> wshandleError(wsConn, errors.WithMessage(clientErr, <span class="str">"failed to set up the connection. Please check the host information"</span>)) {</span>
+<span class="line"><span class="ln"> 134</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln"> 135</span>	}</span>
+<span class="line"><span class="ln"> 136</span>	<span class="kw">defer</span> client.Close()</span>
+<span class="line"><span class="ln"> 137</span></span>
+<span class="line"><span class="ln"> 138</span>	sws, err := terminal.NewLogicSshWsSession(cols, rows, client.Client, wsConn, command)</span>
+<span class="line"><span class="ln"> 139</span>	<span class="kw">if</span> wshandleError(wsConn, err) {</span>
+<span class="line"><span class="ln"> 140</span>		<span class="kw">return</span></span>
+<span class="line"><span class="ln"> 141</span>	}</span>
+<span class="line"><span class="ln"> 142</span>	<span class="kw">defer</span> sws.Close()</span>
+<span class="line"><span class="ln"> 143</span></span>
+<span class="line"><span class="ln"> 144</span>	quitChan := make(<span class="kw">chan</span> <span class="ty">bool</span>, <span class="num">3</span>)</span>
+<span class="line"><span class="ln"> 145</span>	sws.Start(quitChan)</span>
+<span class="line"><span class="ln"> 146</span>	<span class="kw">go</span> sws.Wait(quitChan)</span>
+<span class="line"><span class="ln"> 147</span></span>
+<span class="line"><span class="ln"> 148</span>	&lt;-quitChan</span>
+<span class="line"><span class="ln"> 149</span></span>
+<span class="line"><span class="ln"> 150</span>	closeTerminalConn(wsConn)</span>
+<span class="line"><span class="ln"> 151</span>}</span>
+<span class="line"><span class="ln"> 152</span></span>
+<span class="line"><span class="ln"> 153</span><span class="kw">func</span> closeTerminalConn(wsConn *websocket.Conn) {</span>
+<span class="line"><span class="ln"> 154</span>	dt := time.Now().Add(time.Second)</span>
+<span class="line"><span class="ln"> 155</span>	_ = wsConn.WriteControl(websocket.CloseMessage, nil, dt)</span>
+<span class="line"><span class="ln"> 156</span>}</span>
+<span class="line"><span class="ln"> 157</span></span>
+<span class="line"><span class="ln"> 158</span><span class="kw">func</span> newHostSSHClient(host *model.Host, err <span class="ty">error</span>) (*ssh.SSHClient, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln"> 159</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 160</span>		<span class="kw">return</span> nil, errors.WithMessage(err, <span class="str">"load host info by id failed"</span>)</span>
+<span class="line"><span class="ln"> 161</span>	}</span>
+<span class="line"><span class="ln"> 162</span>	connInfo := ssh.ConnInfo{</span>
+<span class="line"><span class="ln"> 163</span>		Addr:       host.Addr,</span>
+<span class="line"><span class="ln"> 164</span>		Port:       <span class="ty">int</span>(host.Port),</span>
+<span class="line"><span class="ln"> 165</span>		User:       host.User,</span>
+<span class="line"><span class="ln"> 166</span>		AuthMode:   host.AuthMode,</span>
+<span class="line"><span class="ln"> 167</span>		Password:   host.Password,</span>
+<span class="line"><span class="ln"> 168</span>		PrivateKey: []<span class="ty">byte</span>(host.PrivateKey),</span>
+<span class="line"><span class="ln"> 169</span>	}</span>
+<span class="line"><span class="ln"> 170</span>	<span class="kw">if</span> len(host.PassPhrase) != <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 171</span>		connInfo.PassPhrase = []<span class="ty">byte</span>(host.PassPhrase)</span>
+<span class="line"><span class="ln"> 172</span>	}</span>
+<span class="line"><span class="ln"> 173</span>	<span class="kw">return</span> ssh.NewClient(connInfo)</span>
+<span class="line"><span class="ln"> 174</span>}</span>
+<span class="line"><span class="ln"> 175</span></span>
+<span class="line"><span class="ln"> 176</span><span class="kw">func</span> loadContainerTerminalCommand(c *gin.Context) (*terminal.LocalCommand, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln"> 177</span>	source := c.Query(<span class="str">"source"</span>)</span>
+<span class="line"><span class="ln"> 178</span>	<span class="kw">var</span> (</span>
+<span class="line"><span class="ln"> 179</span>		initCmd []<span class="ty">string</span></span>
+<span class="line"><span class="ln"> 180</span>		err     <span class="ty">error</span></span>
+<span class="line"><span class="ln"> 181</span>	)</span>
+<span class="line"><span class="ln"> 182</span>	<span class="kw">switch</span> source {</span>
+<span class="line"><span class="ln"> 183</span>	<span class="kw">case</span> <span class="str">"redis"</span>, <span class="str">"redis-cluster"</span>:</span>
+<span class="line"><span class="ln"> 184</span>		initCmd, err = loadRedisInitCmd(c, source)</span>
+<span class="line"><span class="ln"> 185</span>	<span class="kw">case</span> <span class="str">"ollama"</span>:</span>
+<span class="line"><span class="ln"> 186</span>		initCmd, err = loadOllamaInitCmd(c)</span>
+<span class="line"><span class="ln"> 187</span>	<span class="kw">case</span> <span class="str">"container"</span>:</span>
+<span class="line"><span class="ln"> 188</span>		initCmd, err = loadContainerInitCmd(c)</span>
+<span class="line"><span class="ln"> 189</span>	<span class="kw">case</span> <span class="str">"database"</span>:</span>
+<span class="line"><span class="ln"> 190</span>		initCmd, err = loadDatabaseInitCmd(c)</span>
+<span class="line"><span class="ln"> 191</span>	<span class="kw">default</span>:</span>
+<span class="line"><span class="ln"> 192</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"not support such source %s"</span>, source)</span>
+<span class="line"><span class="ln"> 193</span>	}</span>
+<span class="line"><span class="ln"> 194</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 195</span>		<span class="kw">return</span> nil, err</span>
+<span class="line"><span class="ln"> 196</span>	}</span>
+<span class="line"><span class="ln"> 197</span>	<span class="kw">return</span> terminal.NewCommand(<span class="str">"docker"</span>, initCmd...)</span>
+<span class="line"><span class="ln"> 198</span>}</span>
+<span class="line"><span class="ln"> 199</span></span>
+<span class="line"><span class="ln"> 200</span><span class="kw">func</span> loadRedisInitCmd(c *gin.Context, redisType <span class="ty">string</span>) ([]<span class="ty">string</span>, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln"> 201</span>	name := c.Query(<span class="str">"name"</span>)</span>
+<span class="line"><span class="ln"> 202</span>	from := c.Query(<span class="str">"from"</span>)</span>
+<span class="line"><span class="ln"> 203</span>	commands := []<span class="ty">string</span>{<span class="str">"exec"</span>, <span class="str">"-it"</span>}</span>
+<span class="line"><span class="ln"> 204</span>	database, err := databaseService.Get(name)</span>
+<span class="line"><span class="ln"> 205</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 206</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"no such database in db, err: %v"</span>, err)</span>
+<span class="line"><span class="ln"> 207</span>	}</span>
+<span class="line"><span class="ln"> 208</span>	<span class="kw">if</span> from == <span class="str">"local"</span> {</span>
+<span class="line"><span class="ln"> 209</span>		redisInfo, err := appInstallService.LoadConnInfo(dto.OperationWithNameAndType{Name: name, Type: redisType})</span>
+<span class="line"><span class="ln"> 210</span>		<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 211</span>			<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"no such app in db, err: %v"</span>, err)</span>
+<span class="line"><span class="ln"> 212</span>		}</span>
+<span class="line"><span class="ln"> 213</span>		name = redisInfo.ContainerName</span>
+<span class="line"><span class="ln"> 214</span>		commands = append(commands, []<span class="ty">string</span>{name, <span class="str">"redis-cli"</span>}...)</span>
+<span class="line"><span class="ln"> 215</span>		<span class="kw">if</span> len(database.Password) != <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 216</span>			commands = append(commands, []<span class="ty">string</span>{<span class="str">"-a"</span>, database.Password, <span class="str">"--no-auth-warning"</span>}...)</span>
+<span class="line"><span class="ln"> 217</span>		}</span>
+<span class="line"><span class="ln"> 218</span>	} <span class="kw">else</span> {</span>
+<span class="line"><span class="ln"> 219</span>		name = <span class="str">"1Panel-redis-cli-tools"</span></span>
+<span class="line"><span class="ln"> 220</span>		commands = append(commands, []<span class="ty">string</span>{name, <span class="str">"redis-cli"</span>, <span class="str">"-h"</span>, database.Address, <span class="str">"-p"</span>, fmt.Sprintf(<span class="str">"%v"</span>, database.Port)}...)</span>
+<span class="line"><span class="ln"> 221</span>		<span class="kw">if</span> len(database.Password) != <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 222</span>			commands = append(commands, []<span class="ty">string</span>{<span class="str">"-a"</span>, database.Password, <span class="str">"--no-auth-warning"</span>}...)</span>
+<span class="line"><span class="ln"> 223</span>		}</span>
+<span class="line"><span class="ln"> 224</span>	}</span>
+<span class="line"><span class="ln"> 225</span>	<span class="kw">return</span> commands, nil</span>
+<span class="line"><span class="ln"> 226</span>}</span>
+<span class="line"><span class="ln"> 227</span></span>
+<span class="line"><span class="ln"> 228</span><span class="kw">func</span> loadOllamaInitCmd(c *gin.Context) ([]<span class="ty">string</span>, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln"> 229</span>	name := c.Query(<span class="str">"name"</span>)</span>
+<span class="line"><span class="ln"> 230</span>	<span class="kw">if</span> cmd.CheckIllegal(name) {</span>
+<span class="line"><span class="ln"> 231</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"ollama model %s contains illegal characters"</span>, name)</span>
+<span class="line"><span class="ln"> 232</span>	}</span>
+<span class="line"><span class="ln"> 233</span>	ollamaInfo, err := appInstallService.LoadConnInfo(dto.OperationWithNameAndType{Name: <span class="str">""</span>, Type: <span class="str">"ollama"</span>})</span>
+<span class="line"><span class="ln"> 234</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 235</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"no such app in db, err: %v"</span>, err)</span>
+<span class="line"><span class="ln"> 236</span>	}</span>
+<span class="line"><span class="ln"> 237</span>	containerName := ollamaInfo.ContainerName</span>
+<span class="line"><span class="ln"> 238</span>	<span class="kw">return</span> []<span class="ty">string</span>{<span class="str">"exec"</span>, <span class="str">"-it"</span>, containerName, <span class="str">"ollama"</span>, <span class="str">"run"</span>, name}, nil</span>
+<span class="line"><span class="ln"> 239</span>}</span>
+<span class="line"><span class="ln"> 240</span></span>
+<span class="line"><span class="ln"> 241</span><span class="kw">func</span> loadContainerInitCmd(c *gin.Context) ([]<span class="ty">string</span>, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln"> 242</span>	containerID := c.Query(<span class="str">"containerid"</span>)</span>
+<span class="line"><span class="ln"> 243</span>	command := c.Query(<span class="str">"command"</span>)</span>
+<span class="line"><span class="ln"> 244</span>	user := c.Query(<span class="str">"user"</span>)</span>
+<span class="line"><span class="ln"> 245</span>	<span class="kw">if</span> cmd.CheckIllegal(user, containerID, command) {</span>
+<span class="line"><span class="ln"> 246</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"the command contains illegal characters. command: %s, user: %s, containerID: %s"</span>, command, user, containerID)</span>
+<span class="line"><span class="ln"> 247</span>	}</span>
+<span class="line"><span class="ln"> 248</span>	<span class="kw">if</span> len(command) == <span class="num">0</span> || len(containerID) == <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 249</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"<span class="ty">error</span> param of command: %s or containerID: %s"</span>, command, containerID)</span>
+<span class="line"><span class="ln"> 250</span>	}</span>
+<span class="line"><span class="ln"> 251</span>	commands := []<span class="ty">string</span>{<span class="str">"exec"</span>, <span class="str">"-it"</span>, containerID, command}</span>
+<span class="line"><span class="ln"> 252</span>	<span class="kw">if</span> len(user) != <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 253</span>		commands = []<span class="ty">string</span>{<span class="str">"exec"</span>, <span class="str">"-it"</span>, <span class="str">"-u"</span>, user, containerID, command}</span>
+<span class="line"><span class="ln"> 254</span>	}</span>
+<span class="line"><span class="ln"> 255</span></span>
+<span class="line"><span class="ln"> 256</span>	<span class="kw">return</span> commands, nil</span>
+<span class="line"><span class="ln"> 257</span>}</span>
+<span class="line"><span class="ln"> 258</span></span>
+<span class="line"><span class="ln"> 259</span><span class="kw">func</span> loadDatabaseInitCmd(c *gin.Context) ([]<span class="ty">string</span>, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln"> 260</span>	database := c.Query(<span class="str">"database"</span>)</span>
+<span class="line"><span class="ln"> 261</span>	databaseType := c.Query(<span class="str">"databaseType"</span>)</span>
+<span class="line"><span class="ln"> 262</span>	<span class="kw">if</span> len(databaseType) == <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 263</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"<span class="ty">error</span> param of database: %s or database <span class="kw">type</span>: %s"</span>, database, databaseType)</span>
+<span class="line"><span class="ln"> 264</span>	}</span>
+<span class="line"><span class="ln"> 265</span>	databaseConn, err := appInstallService.LoadConnInfo(dto.OperationWithNameAndType{Type: databaseType, Name: database})</span>
+<span class="line"><span class="ln"> 266</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 267</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"no such database in db, err: %v"</span>, err)</span>
+<span class="line"><span class="ln"> 268</span>	}</span>
+<span class="line"><span class="ln"> 269</span>	<span class="kw">if</span> len(databaseConn.ContainerName) == <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 270</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"no such database container <span class="kw">for</span> database: %s or database <span class="kw">type</span>: %s"</span>, database, databaseType)</span>
+<span class="line"><span class="ln"> 271</span>	}</span>
+<span class="line"><span class="ln"> 272</span>	commands := []<span class="ty">string</span>{<span class="str">"exec"</span>, <span class="str">"-it"</span>, databaseConn.ContainerName}</span>
+<span class="line"><span class="ln"> 273</span>	<span class="kw">switch</span> databaseType {</span>
+<span class="line"><span class="ln"> 274</span>	<span class="kw">case</span> <span class="str">"mysql"</span>, <span class="str">"mysql-cluster"</span>:</span>
+<span class="line"><span class="ln"> 275</span>		commands = append(commands, []<span class="ty">string</span>{<span class="str">"mysql"</span>, <span class="str">"-uroot"</span>, <span class="str">"-p"</span> + databaseConn.Password}...)</span>
+<span class="line"><span class="ln"> 276</span>	<span class="kw">case</span> <span class="str">"mariadb"</span>:</span>
+<span class="line"><span class="ln"> 277</span>		commands = append(commands, []<span class="ty">string</span>{<span class="str">"mariadb"</span>, <span class="str">"-uroot"</span>, <span class="str">"-p"</span> + databaseConn.Password}...)</span>
+<span class="line"><span class="ln"> 278</span>	<span class="kw">case</span> <span class="str">"mongodb"</span>:</span>
+<span class="line"><span class="ln"> 279</span>		commands = append(commands, []<span class="ty">string</span>{</span>
+<span class="line"><span class="ln"> 280</span>			<span class="str">"mongosh"</span>,</span>
+<span class="line"><span class="ln"> 281</span>			<span class="str">"--username"</span>, databaseConn.Username,</span>
+<span class="line"><span class="ln"> 282</span>			<span class="str">"--password"</span>, databaseConn.Password,</span>
+<span class="line"><span class="ln"> 283</span>			<span class="str">"--authenticationDatabase"</span>, <span class="str">"admin"</span>,</span>
+<span class="line"><span class="ln"> 284</span>		}...)</span>
+<span class="line"><span class="ln"> 285</span>	<span class="kw">case</span> <span class="str">"postgresql"</span>, <span class="str">"postgresql-cluster"</span>:</span>
+<span class="line"><span class="ln"> 286</span>		commands = []<span class="ty">string</span>{<span class="str">"exec"</span>, <span class="str">"-e"</span>, fmt.Sprintf(<span class="str">"PGPASSWORD=%s"</span>, databaseConn.Password), <span class="str">"-it"</span>, databaseConn.ContainerName, <span class="str">"psql"</span>, <span class="str">"-t"</span>, <span class="str">"-U"</span>, databaseConn.Username}</span>
+<span class="line"><span class="ln"> 287</span>	}</span>
+<span class="line"><span class="ln"> 288</span></span>
+<span class="line"><span class="ln"> 289</span>	<span class="kw">return</span> commands, nil</span>
+<span class="line"><span class="ln"> 290</span>}</span>
+<span class="line"><span class="ln"> 291</span></span>
+<span class="line"><span class="ln"> 292</span><span class="kw">func</span> wshandleError(ws *websocket.Conn, err <span class="ty">error</span>) <span class="ty">bool</span> {</span>
+<span class="line"><span class="ln"> 293</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 294</span>		global.LOG.Errorf(<span class="str">"handler ws faled:, err: %v"</span>, err)</span>
+<span class="line"><span class="ln"> 295</span>		dt := time.Now().Add(time.Second)</span>
+<span class="line"><span class="ln"> 296</span>		<span class="kw">if</span> ctlerr := ws.WriteControl(websocket.CloseMessage, []<span class="ty">byte</span>(err.Error()), dt); ctlerr != nil {</span>
+<span class="line"><span class="ln"> 297</span>			wsData, err := json.Marshal(terminal.WsMsg{</span>
+<span class="line"><span class="ln"> 298</span>				Type: terminal.WsMsgCmd,</span>
+<span class="line"><span class="ln"> 299</span>				Data: base64.StdEncoding.EncodeToString([]<span class="ty">byte</span>(err.Error())),</span>
+<span class="line"><span class="ln"> 300</span>			})</span>
+<span class="line"><span class="ln"> 301</span>			<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 302</span>				_ = ws.WriteMessage(websocket.TextMessage, []<span class="ty">byte</span>(<span class="str">"{\"</span><span class="kw">type</span>\<span class="str">":\"</span>cmd\<span class="str">",\"</span>data\<span class="str">":\"</span>failed to encoding to json\<span class="str">"}"</span>))</span>
+<span class="line"><span class="ln"> 303</span>			} <span class="kw">else</span> {</span>
+<span class="line"><span class="ln"> 304</span>				_ = ws.WriteMessage(websocket.TextMessage, wsData)</span>
+<span class="line"><span class="ln"> 305</span>			}</span>
+<span class="line"><span class="ln"> 306</span>		}</span>
+<span class="line"><span class="ln"> 307</span>		<span class="kw">return</span> true</span>
+<span class="line"><span class="ln"> 308</span>	}</span>
+<span class="line"><span class="ln"> 309</span>	<span class="kw">return</span> false</span>
+<span class="line"><span class="ln"> 310</span>}</span>
+<span class="line"><span class="ln"> 311</span></span>
+<span class="line"><span class="ln"> 312</span><span class="kw">var</span> upGrader = websocket.Upgrader{</span>
+<span class="line"><span class="ln"> 313</span>	ReadBufferSize:  <span class="num">4096</span>,</span>
+<span class="line"><span class="ln"> 314</span>	WriteBufferSize: <span class="num">16384</span>,</span>
+<span class="line"><span class="ln"> 315</span>	CheckOrigin: <span class="kw">func</span>(r *http.Request) <span class="ty">bool</span> {</span>
+<span class="line"><span class="ln"> 316</span>		<span class="kw">return</span> true</span>
+<span class="line"><span class="ln"> 317</span>	},</span>
+<span class="line"><span class="ln"> 318</span>}</span>
+<span class="line"><span class="ln"> 319</span></span></pre>
+</div>
+    <div class="file-section" id="f-process.go">
+  <h2>📄 process.go <span class="path">agent/app/dto/request/process.go</span></h2>
+  <pre class="code"><span class="line"><span class="ln">   1</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   2</span><span class=<span class="str">"cmt"</span>>// 模块: Terminal 终端 (agent/app/dto/request/process.<span class="kw">go</span>)</span></span>
+<span class="line"><span class="ln">   3</span><span class=<span class="str">"cmt"</span>>// 文件: process.<span class="kw">go</span> — 主代码</span></span>
+<span class="line"><span class="ln">   4</span><span class=<span class="str">"cmt"</span>>// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2</span></span>
+<span class="line"><span class="ln">   5</span><span class=<span class="str">"cmt"</span>>//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 <span class="kw">go</span> build 编译</span></span>
+<span class="line"><span class="ln">   6</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   7</span></span>
+<span class="line"><span class="ln">   8</span><span class="kw">package</span> request</span>
+<span class="line"><span class="ln">   9</span></span>
+<span class="line"><span class="ln">  10</span><span class=<span class="str">"cmt"</span>>// ProcessReq (<span class="kw">struct</span>)</span></span>
+<span class="line"><span class="ln">  11</span><span class="kw">type</span> ProcessReq <span class="kw">struct</span> {</span>
+<span class="line"><span class="ln">  12</span>	PID <span class="ty">int32</span> <span class="str">`json:<span class="str">"PID"</span>  validate:<span class="str">"required"</span>`</span></span>
+<span class="line"><span class="ln">  13</span>}</span>
+<span class="line"><span class="ln">  14</span></span></pre>
+</div>
+    <div class="file-section" id="f-process.go">
+  <h2>📄 process.go <span class="path">agent/app/service/process.go</span></h2>
+  <pre class="code"><span class="line"><span class="ln">   1</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   2</span><span class=<span class="str">"cmt"</span>>// 模块: Terminal 终端 (agent/app/service/process.<span class="kw">go</span>)</span></span>
+<span class="line"><span class="ln">   3</span><span class=<span class="str">"cmt"</span>>// 文件: process.<span class="kw">go</span> — 主代码</span></span>
+<span class="line"><span class="ln">   4</span><span class=<span class="str">"cmt"</span>>// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2</span></span>
+<span class="line"><span class="ln">   5</span><span class=<span class="str">"cmt"</span>>//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 <span class="kw">go</span> build 编译</span></span>
+<span class="line"><span class="ln">   6</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   7</span></span>
+<span class="line"><span class="ln">   8</span><span class="kw">package</span> service</span>
+<span class="line"><span class="ln">   9</span></span>
+<span class="line"><span class="ln">  10</span><span class="kw">import</span> (</span>
+<span class="line"><span class="ln">  11</span>	<span class="str">"bufio"</span></span>
+<span class="line"><span class="ln">  12</span>	<span class="str">"context"</span></span>
+<span class="line"><span class="ln">  13</span>	<span class="str">"fmt"</span></span>
+<span class="line"><span class="ln">  14</span>	<span class="str">"os"</span></span>
+<span class="line"><span class="ln">  15</span>	<span class="str">"strconv"</span></span>
+<span class="line"><span class="ln">  16</span>	<span class="str">"strings"</span></span>
+<span class="line"><span class="ln">  17</span>	<span class="str">"syscall"</span></span>
+<span class="line"><span class="ln">  18</span>	<span class="str">"time"</span></span>
+<span class="line"><span class="ln">  19</span></span>
+<span class="line"><span class="ln">  20</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/app/dto/request"</span></span>
+<span class="line"><span class="ln">  21</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/utils/common"</span></span>
+<span class="line"><span class="ln">  22</span>	agentPsutil <span class="str">"github.com/1Panel-dev/1Panel/agent/utils/psutil"</span></span>
+<span class="line"><span class="ln">  23</span>	<span class="str">"github.com/1Panel-dev/1Panel/agent/utils/websocket"</span></span>
+<span class="line"><span class="ln">  24</span>	<span class="str">"github.com/shirou/gopsutil/v4/net"</span></span>
+<span class="line"><span class="ln">  25</span>	<span class="str">"github.com/shirou/gopsutil/v4/process"</span></span>
+<span class="line"><span class="ln">  26</span>)</span>
+<span class="line"><span class="ln">  27</span></span>
+<span class="line"><span class="ln">  28</span><span class=<span class="str">"cmt"</span>>// ProcessService (<span class="kw">struct</span>)</span></span>
+<span class="line"><span class="ln">  29</span><span class="kw">type</span> ProcessService <span class="kw">struct</span>{}</span>
+<span class="line"><span class="ln">  30</span></span>
+<span class="line"><span class="ln">  31</span><span class=<span class="str">"cmt"</span>>// IProcessService (<span class="kw">interface</span>)</span></span>
+<span class="line"><span class="ln">  32</span><span class="kw">type</span> IProcessService <span class="kw">interface</span> {</span>
+<span class="line"><span class="ln">  33</span>	StopProcess(req request.ProcessReq) <span class="ty">error</span></span>
+<span class="line"><span class="ln">  34</span>	GetProcessInfoByPID(pid <span class="ty">int32</span>) (*websocket.PsProcessData, <span class="ty">error</span>)</span>
+<span class="line"><span class="ln">  35</span>	GetListeningProcess(c context.Context) ([]ListeningProcess, <span class="ty">error</span>)</span>
+<span class="line"><span class="ln">  36</span>}</span>
+<span class="line"><span class="ln">  37</span></span>
+<span class="line"><span class="ln">  38</span><span class="kw">func</span> NewIProcessService() IProcessService {</span>
+<span class="line"><span class="ln">  39</span>	<span class="kw">return</span> &amp;ProcessService{}</span>
+<span class="line"><span class="ln">  40</span>}</span>
+<span class="line"><span class="ln">  41</span></span>
+<span class="line"><span class="ln">  42</span><span class="kw">func</span> (ps *ProcessService) StopProcess(req request.ProcessReq) <span class="ty">error</span> {</span>
+<span class="line"><span class="ln">  43</span>	proc, err := process.NewProcess(req.PID)</span>
+<span class="line"><span class="ln">  44</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln">  45</span>		<span class="kw">return</span> err</span>
+<span class="line"><span class="ln">  46</span>	}</span>
+<span class="line"><span class="ln">  47</span>	<span class="kw">if</span> err := proc.Kill(); err != nil {</span>
+<span class="line"><span class="ln">  48</span>		<span class="kw">return</span> err</span>
+<span class="line"><span class="ln">  49</span>	}</span>
+<span class="line"><span class="ln">  50</span>	<span class="kw">return</span> nil</span>
+<span class="line"><span class="ln">  51</span>}</span>
+<span class="line"><span class="ln">  52</span></span>
+<span class="line"><span class="ln">  53</span><span class="kw">type</span> ListeningProcess <span class="kw">struct</span> {</span>
+<span class="line"><span class="ln">  54</span>	PID      <span class="ty">int32</span></span>
+<span class="line"><span class="ln">  55</span>	Port     <span class="kw">map</span>[<span class="ty">uint32</span>]<span class="kw">struct</span>{}</span>
+<span class="line"><span class="ln">  56</span>	Protocol <span class="ty">uint32</span></span>
+<span class="line"><span class="ln">  57</span>	Name     <span class="ty">string</span></span>
+<span class="line"><span class="ln">  58</span>}</span>
+<span class="line"><span class="ln">  59</span></span>
+<span class="line"><span class="ln">  60</span><span class="kw">func</span> (ps *ProcessService) GetListeningProcess(c context.Context) ([]ListeningProcess, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln">  61</span>	conn, err := net.ConnectionsMaxWithContext(c, <span class="str">"inet"</span>, <span class="num">32768</span>)</span>
+<span class="line"><span class="ln">  62</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln">  63</span>		<span class="kw">return</span> nil, err</span>
+<span class="line"><span class="ln">  64</span>	}</span>
+<span class="line"><span class="ln">  65</span>	<span class=<span class="str">"cmt"</span>>// One cache entry per (PID, socket <span class="kw">type</span>) so TCP and UDP sockets are not merged under one Protocol.</span></span>
+<span class="line"><span class="ln">  66</span>	<span class="kw">type</span> procKey <span class="kw">struct</span> {</span>
+<span class="line"><span class="ln">  67</span>		pid      <span class="ty">int32</span></span>
+<span class="line"><span class="ln">  68</span>		protocol <span class="ty">uint32</span></span>
+<span class="line"><span class="ln">  69</span>	}</span>
+<span class="line"><span class="ln">  70</span>	procCache := make(<span class="kw">map</span>[procKey]ListeningProcess, <span class="num">64</span>)</span>
+<span class="line"><span class="ln">  71</span></span>
+<span class="line"><span class="ln">  72</span>	<span class="kw">for</span> _, conn := <span class="kw">range</span> conn {</span>
+<span class="line"><span class="ln">  73</span>		<span class="kw">if</span> conn.Pid == <span class="num">0</span> {</span>
+<span class="line"><span class="ln">  74</span>			<span class="kw">continue</span></span>
+<span class="line"><span class="ln">  75</span>		}</span>
+<span class="line"><span class="ln">  76</span></span>
+<span class="line"><span class="ln">  77</span>		<span class="kw">if</span> (conn.Status == <span class="str">"LISTEN"</span> &amp;&amp; conn.Type == syscall.SOCK_STREAM) || (conn.Type == syscall.SOCK_DGRAM &amp;&amp; conn.Raddr.Port == <span class="num">0</span>) {</span>
+<span class="line"><span class="ln">  78</span>			key := procKey{pid: conn.Pid, protocol: conn.Type}</span>
+<span class="line"><span class="ln">  79</span>			<span class="kw">if</span> _, exists := procCache[key]; !exists {</span>
+<span class="line"><span class="ln">  80</span>				proc, err := process.NewProcess(conn.Pid)</span>
+<span class="line"><span class="ln">  81</span>				<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln">  82</span>					<span class="kw">continue</span></span>
+<span class="line"><span class="ln">  83</span>				}</span>
+<span class="line"><span class="ln">  84</span>				procData := ListeningProcess{</span>
+<span class="line"><span class="ln">  85</span>					PID: conn.Pid,</span>
+<span class="line"><span class="ln">  86</span>				}</span>
+<span class="line"><span class="ln">  87</span>				procData.Name, _ = proc.Name()</span>
+<span class="line"><span class="ln">  88</span>				procData.Port = make(<span class="kw">map</span>[<span class="ty">uint32</span>]<span class="kw">struct</span>{})</span>
+<span class="line"><span class="ln">  89</span>				procData.Port[conn.Laddr.Port] = <span class="kw">struct</span>{}{}</span>
+<span class="line"><span class="ln">  90</span>				procData.Protocol = conn.Type</span>
+<span class="line"><span class="ln">  91</span>				procCache[key] = procData</span>
+<span class="line"><span class="ln">  92</span>			} <span class="kw">else</span> {</span>
+<span class="line"><span class="ln">  93</span>				p := procCache[key]</span>
+<span class="line"><span class="ln">  94</span>				p.Port[conn.Laddr.Port] = <span class="kw">struct</span>{}{}</span>
+<span class="line"><span class="ln">  95</span>				procCache[key] = p</span>
+<span class="line"><span class="ln">  96</span>			}</span>
+<span class="line"><span class="ln">  97</span>		}</span>
+<span class="line"><span class="ln">  98</span>	}</span>
+<span class="line"><span class="ln">  99</span></span>
+<span class="line"><span class="ln"> 100</span>	procs := make([]ListeningProcess, <span class="num">0</span>, len(procCache))</span>
+<span class="line"><span class="ln"> 101</span>	<span class="kw">for</span> _, proc := <span class="kw">range</span> procCache {</span>
+<span class="line"><span class="ln"> 102</span>		procs = append(procs, proc)</span>
+<span class="line"><span class="ln"> 103</span>	}</span>
+<span class="line"><span class="ln"> 104</span></span>
+<span class="line"><span class="ln"> 105</span>	<span class="kw">return</span> procs, nil</span>
+<span class="line"><span class="ln"> 106</span>}</span>
+<span class="line"><span class="ln"> 107</span></span>
+<span class="line"><span class="ln"> 108</span><span class="kw">func</span> (ps *ProcessService) GetProcessInfoByPID(pid <span class="ty">int32</span>) (*websocket.PsProcessData, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln"> 109</span>	p, err := process.NewProcess(pid)</span>
+<span class="line"><span class="ln"> 110</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 111</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"get process info by pid %v: %v"</span>, pid, err)</span>
+<span class="line"><span class="ln"> 112</span>	}</span>
+<span class="line"><span class="ln"> 113</span></span>
+<span class="line"><span class="ln"> 114</span>	exists, err := p.IsRunning()</span>
+<span class="line"><span class="ln"> 115</span>	<span class="kw">if</span> err != nil || !exists {</span>
+<span class="line"><span class="ln"> 116</span>		<span class="kw">return</span> nil, fmt.Errorf(<span class="str">"process %v is not running"</span>, pid)</span>
+<span class="line"><span class="ln"> 117</span>	}</span>
+<span class="line"><span class="ln"> 118</span></span>
+<span class="line"><span class="ln"> 119</span>	data := &amp;websocket.PsProcessData{</span>
+<span class="line"><span class="ln"> 120</span>		PID: pid,</span>
+<span class="line"><span class="ln"> 121</span>	}</span>
+<span class="line"><span class="ln"> 122</span></span>
+<span class="line"><span class="ln"> 123</span>	<span class="kw">if</span> name, err := p.Name(); err == nil {</span>
+<span class="line"><span class="ln"> 124</span>		data.Name = name</span>
+<span class="line"><span class="ln"> 125</span>	}</span>
+<span class="line"><span class="ln"> 126</span></span>
+<span class="line"><span class="ln"> 127</span>	<span class="kw">if</span> ppid, err := p.Ppid(); err == nil {</span>
+<span class="line"><span class="ln"> 128</span>		data.PPID = ppid</span>
+<span class="line"><span class="ln"> 129</span>	}</span>
+<span class="line"><span class="ln"> 130</span></span>
+<span class="line"><span class="ln"> 131</span>	<span class="kw">if</span> username, err := p.Username(); err == nil {</span>
+<span class="line"><span class="ln"> 132</span>		data.Username = username</span>
+<span class="line"><span class="ln"> 133</span>	}</span>
+<span class="line"><span class="ln"> 134</span></span>
+<span class="line"><span class="ln"> 135</span>	<span class="kw">if</span> status, err := p.Status(); err == nil {</span>
+<span class="line"><span class="ln"> 136</span>		<span class="kw">if</span> len(status) &gt; <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 137</span>			data.Status = status[<span class="num">0</span>]</span>
+<span class="line"><span class="ln"> 138</span>		}</span>
+<span class="line"><span class="ln"> 139</span>	}</span>
+<span class="line"><span class="ln"> 140</span></span>
+<span class="line"><span class="ln"> 141</span>	<span class="kw">if</span> createTime, err := agentPsutil.NewProcessCreateTimeResolver().CreateTime(p); err == nil {</span>
+<span class="line"><span class="ln"> 142</span>		data.StartTime = time.Unix(createTime/<span class="num">1000</span>, <span class="num">0</span>).Format(<span class="str">"<span class="num">2006</span>-<span class="num">01</span>-<span class="num">02</span> <span class="num">15</span>:<span class="num">04</span>:<span class="num">05</span>"</span>)</span>
+<span class="line"><span class="ln"> 143</span>	}</span>
+<span class="line"><span class="ln"> 144</span></span>
+<span class="line"><span class="ln"> 145</span>	<span class="kw">if</span> numThreads, err := p.NumThreads(); err == nil {</span>
+<span class="line"><span class="ln"> 146</span>		data.NumThreads = numThreads</span>
+<span class="line"><span class="ln"> 147</span>	}</span>
+<span class="line"><span class="ln"> 148</span></span>
+<span class="line"><span class="ln"> 149</span>	<span class="kw">if</span> connections, err := p.Connections(); err == nil {</span>
+<span class="line"><span class="ln"> 150</span>		data.NumConnections = len(connections)</span>
+<span class="line"><span class="ln"> 151</span></span>
+<span class="line"><span class="ln"> 152</span>		<span class="kw">var</span> connects []websocket.ProcessConnect</span>
+<span class="line"><span class="ln"> 153</span>		<span class="kw">for</span> _, conn := <span class="kw">range</span> connections {</span>
+<span class="line"><span class="ln"> 154</span>			pc := websocket.ProcessConnect{</span>
+<span class="line"><span class="ln"> 155</span>				Status: conn.Status,</span>
+<span class="line"><span class="ln"> 156</span>				Laddr:  conn.Laddr,</span>
+<span class="line"><span class="ln"> 157</span>				Raddr:  conn.Raddr,</span>
+<span class="line"><span class="ln"> 158</span>				PID:    pid,</span>
+<span class="line"><span class="ln"> 159</span>				Name:   data.Name,</span>
+<span class="line"><span class="ln"> 160</span>			}</span>
+<span class="line"><span class="ln"> 161</span>			connects = append(connects, pc)</span>
+<span class="line"><span class="ln"> 162</span>		}</span>
+<span class="line"><span class="ln"> 163</span>		data.Connects = connects</span>
+<span class="line"><span class="ln"> 164</span>	}</span>
+<span class="line"><span class="ln"> 165</span></span>
+<span class="line"><span class="ln"> 166</span>	<span class="kw">if</span> cpuPercent, err := p.CPUPercent(); err == nil {</span>
+<span class="line"><span class="ln"> 167</span>		data.CpuValue = cpuPercent</span>
+<span class="line"><span class="ln"> 168</span>		data.CpuPercent = fmt.Sprintf(<span class="str">"%.2f%%"</span>, cpuPercent)</span>
+<span class="line"><span class="ln"> 169</span>	}</span>
+<span class="line"><span class="ln"> 170</span></span>
+<span class="line"><span class="ln"> 171</span>	<span class="kw">if</span> ioCounters, err := p.IOCounters(); err == nil {</span>
+<span class="line"><span class="ln"> 172</span>		data.DiskRead = common.FormatBytes(ioCounters.ReadBytes)</span>
+<span class="line"><span class="ln"> 173</span>		data.DiskWrite = common.FormatBytes(ioCounters.WriteBytes)</span>
+<span class="line"><span class="ln"> 174</span>	}</span>
+<span class="line"><span class="ln"> 175</span></span>
+<span class="line"><span class="ln"> 176</span>	<span class="kw">if</span> cmdline, err := p.Cmdline(); err == nil {</span>
+<span class="line"><span class="ln"> 177</span>		data.CmdLine = cmdline</span>
+<span class="line"><span class="ln"> 178</span>	}</span>
+<span class="line"><span class="ln"> 179</span></span>
+<span class="line"><span class="ln"> 180</span>	<span class="kw">if</span> memDetail, err := getMemoryDetail(p.Pid); err == nil {</span>
+<span class="line"><span class="ln"> 181</span>		data.Rss = common.FormatBytes(memDetail.RSS)</span>
+<span class="line"><span class="ln"> 182</span>		data.VMS = common.FormatBytes(memDetail.VMS)</span>
+<span class="line"><span class="ln"> 183</span>		data.HWM = common.FormatBytes(memDetail.HWM)</span>
+<span class="line"><span class="ln"> 184</span>		data.Data = common.FormatBytes(memDetail.Data)</span>
+<span class="line"><span class="ln"> 185</span>		data.Stack = common.FormatBytes(memDetail.Stack)</span>
+<span class="line"><span class="ln"> 186</span>		data.Locked = common.FormatBytes(memDetail.Locked)</span>
+<span class="line"><span class="ln"> 187</span>		data.Swap = common.FormatBytes(memDetail.Swap)</span>
+<span class="line"><span class="ln"> 188</span>		data.Dirty = common.FormatBytes(memDetail.Dirty)</span>
+<span class="line"><span class="ln"> 189</span>		data.RssValue = memDetail.RSS</span>
+<span class="line"><span class="ln"> 190</span>		data.PSS = common.FormatBytes(memDetail.PSS)</span>
+<span class="line"><span class="ln"> 191</span>		data.USS = common.FormatBytes(memDetail.USS)</span>
+<span class="line"><span class="ln"> 192</span>		data.Shared = common.FormatBytes(memDetail.Shared)</span>
+<span class="line"><span class="ln"> 193</span>		data.Text = common.FormatBytes(memDetail.Text)</span>
+<span class="line"><span class="ln"> 194</span>	}</span>
+<span class="line"><span class="ln"> 195</span></span>
+<span class="line"><span class="ln"> 196</span>	<span class="kw">if</span> envs, err := p.Environ(); err == nil {</span>
+<span class="line"><span class="ln"> 197</span>		data.Envs = envs</span>
+<span class="line"><span class="ln"> 198</span>	}</span>
+<span class="line"><span class="ln"> 199</span></span>
+<span class="line"><span class="ln"> 200</span>	<span class="kw">if</span> openFiles, err := p.OpenFiles(); err == nil {</span>
+<span class="line"><span class="ln"> 201</span>		data.OpenFiles = openFiles</span>
+<span class="line"><span class="ln"> 202</span>	}</span>
+<span class="line"><span class="ln"> 203</span></span>
+<span class="line"><span class="ln"> 204</span>	<span class="kw">return</span> data, nil</span>
+<span class="line"><span class="ln"> 205</span>}</span>
+<span class="line"><span class="ln"> 206</span></span>
+<span class="line"><span class="ln"> 207</span><span class=<span class="str">"cmt"</span>>// MemoryDetail (<span class="kw">struct</span>)</span></span>
+<span class="line"><span class="ln"> 208</span><span class="kw">type</span> MemoryDetail <span class="kw">struct</span> {</span>
+<span class="line"><span class="ln"> 209</span>	RSS    <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 210</span>	VMS    <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 211</span>	HWM    <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 212</span>	Data   <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 213</span>	Stack  <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 214</span>	Locked <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 215</span>	Swap   <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 216</span></span>
+<span class="line"><span class="ln"> 217</span>	PSS    <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 218</span>	USS    <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 219</span>	Shared <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 220</span>	Text   <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 221</span>	Dirty  <span class="ty">uint64</span></span>
+<span class="line"><span class="ln"> 222</span>}</span>
+<span class="line"><span class="ln"> 223</span></span>
+<span class="line"><span class="ln"> 224</span><span class="kw">func</span> getMemoryDetail(pid <span class="ty">int32</span>) (*MemoryDetail, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln"> 225</span>	mem := &amp;MemoryDetail{}</span>
+<span class="line"><span class="ln"> 226</span></span>
+<span class="line"><span class="ln"> 227</span>	<span class="kw">if</span> err := readStatus(pid, mem); err != nil {</span>
+<span class="line"><span class="ln"> 228</span>		<span class="kw">return</span> nil, err</span>
+<span class="line"><span class="ln"> 229</span>	}</span>
+<span class="line"><span class="ln"> 230</span></span>
+<span class="line"><span class="ln"> 231</span>	<span class="kw">if</span> err := readSmapsRollup(pid, mem); err != nil {</span>
+<span class="line"><span class="ln"> 232</span>		<span class="kw">if</span> err := readSmaps(pid, mem); err != nil {</span>
+<span class="line"><span class="ln"> 233</span>			<span class="kw">return</span> nil, err</span>
+<span class="line"><span class="ln"> 234</span>		}</span>
+<span class="line"><span class="ln"> 235</span>	}</span>
+<span class="line"><span class="ln"> 236</span>	<span class="kw">return</span> mem, nil</span>
+<span class="line"><span class="ln"> 237</span>}</span>
+<span class="line"><span class="ln"> 238</span></span>
+<span class="line"><span class="ln"> 239</span><span class="kw">func</span> readStatus(pid <span class="ty">int32</span>, mem *MemoryDetail) <span class="ty">error</span> {</span>
+<span class="line"><span class="ln"> 240</span>	filePath := fmt.Sprintf(<span class="str">"/proc/%d/status"</span>, pid)</span>
+<span class="line"><span class="ln"> 241</span>	file, err := os.Open(filePath)</span>
+<span class="line"><span class="ln"> 242</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 243</span>		<span class="kw">return</span> err</span>
+<span class="line"><span class="ln"> 244</span>	}</span>
+<span class="line"><span class="ln"> 245</span>	<span class="kw">defer</span> file.Close()</span>
+<span class="line"><span class="ln"> 246</span></span>
+<span class="line"><span class="ln"> 247</span>	scanner := bufio.NewScanner(file)</span>
+<span class="line"><span class="ln"> 248</span></span>
+<span class="line"><span class="ln"> 249</span>	<span class="kw">for</span> scanner.Scan() {</span>
+<span class="line"><span class="ln"> 250</span>		line := scanner.Text()</span>
+<span class="line"><span class="ln"> 251</span>		fields := strings.Fields(line)</span>
+<span class="line"><span class="ln"> 252</span>		<span class="kw">if</span> len(fields) &lt; <span class="num">2</span> {</span>
+<span class="line"><span class="ln"> 253</span>			<span class="kw">continue</span></span>
+<span class="line"><span class="ln"> 254</span>		}</span>
+<span class="line"><span class="ln"> 255</span></span>
+<span class="line"><span class="ln"> 256</span>		key := strings.TrimSuffix(fields[<span class="num">0</span>], <span class="str">":"</span>)</span>
+<span class="line"><span class="ln"> 257</span>		value, _ := strconv.ParseUint(fields[<span class="num">1</span>], <span class="num">10</span>, <span class="num">64</span>)</span>
+<span class="line"><span class="ln"> 258</span>		value *= <span class="num">1024</span></span>
+<span class="line"><span class="ln"> 259</span></span>
+<span class="line"><span class="ln"> 260</span>		<span class="kw">switch</span> key {</span>
+<span class="line"><span class="ln"> 261</span>		<span class="kw">case</span> <span class="str">"VmRSS"</span>:</span>
+<span class="line"><span class="ln"> 262</span>			mem.RSS = value</span>
+<span class="line"><span class="ln"> 263</span>		<span class="kw">case</span> <span class="str">"VmSize"</span>:</span>
+<span class="line"><span class="ln"> 264</span>			mem.VMS = value</span>
+<span class="line"><span class="ln"> 265</span>		<span class="kw">case</span> <span class="str">"VmData"</span>:</span>
+<span class="line"><span class="ln"> 266</span>			mem.Data = value</span>
+<span class="line"><span class="ln"> 267</span>		<span class="kw">case</span> <span class="str">"VmSwap"</span>:</span>
+<span class="line"><span class="ln"> 268</span>			mem.Swap = value</span>
+<span class="line"><span class="ln"> 269</span>		<span class="kw">case</span> <span class="str">"VmExe"</span>:</span>
+<span class="line"><span class="ln"> 270</span>			mem.Text = value</span>
+<span class="line"><span class="ln"> 271</span>		<span class="kw">case</span> <span class="str">"RssShmem"</span>:</span>
+<span class="line"><span class="ln"> 272</span>			mem.Shared = value</span>
+<span class="line"><span class="ln"> 273</span>		<span class="kw">case</span> <span class="str">"VmHWM"</span>:</span>
+<span class="line"><span class="ln"> 274</span>			mem.HWM = value</span>
+<span class="line"><span class="ln"> 275</span>		<span class="kw">case</span> <span class="str">"VmStk"</span>:</span>
+<span class="line"><span class="ln"> 276</span>			mem.Stack = value</span>
+<span class="line"><span class="ln"> 277</span>		<span class="kw">case</span> <span class="str">"VmLck"</span>:</span>
+<span class="line"><span class="ln"> 278</span>			mem.Locked = value</span>
+<span class="line"><span class="ln"> 279</span>		}</span>
+<span class="line"><span class="ln"> 280</span>	}</span>
+<span class="line"><span class="ln"> 281</span></span>
+<span class="line"><span class="ln"> 282</span>	<span class="kw">return</span> scanner.Err()</span>
+<span class="line"><span class="ln"> 283</span>}</span>
+<span class="line"><span class="ln"> 284</span></span>
+<span class="line"><span class="ln"> 285</span><span class="kw">func</span> readSmapsRollup(pid <span class="ty">int32</span>, mem *MemoryDetail) <span class="ty">error</span> {</span>
+<span class="line"><span class="ln"> 286</span>	filePath := fmt.Sprintf(<span class="str">"/proc/%d/smaps_rollup"</span>, pid)</span>
+<span class="line"><span class="ln"> 287</span>	file, err := os.Open(filePath)</span>
+<span class="line"><span class="ln"> 288</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 289</span>		<span class="kw">return</span> err</span>
+<span class="line"><span class="ln"> 290</span>	}</span>
+<span class="line"><span class="ln"> 291</span>	<span class="kw">defer</span> file.Close()</span>
+<span class="line"><span class="ln"> 292</span></span>
+<span class="line"><span class="ln"> 293</span>	scanner := bufio.NewScanner(file)</span>
+<span class="line"><span class="ln"> 294</span></span>
+<span class="line"><span class="ln"> 295</span>	<span class="kw">for</span> scanner.Scan() {</span>
+<span class="line"><span class="ln"> 296</span>		line := scanner.Text()</span>
+<span class="line"><span class="ln"> 297</span>		fields := strings.Fields(line)</span>
+<span class="line"><span class="ln"> 298</span>		<span class="kw">if</span> len(fields) &lt; <span class="num">2</span> {</span>
+<span class="line"><span class="ln"> 299</span>			<span class="kw">continue</span></span>
+<span class="line"><span class="ln"> 300</span>		}</span>
+<span class="line"><span class="ln"> 301</span></span>
+<span class="line"><span class="ln"> 302</span>		key := strings.TrimSuffix(fields[<span class="num">0</span>], <span class="str">":"</span>)</span>
+<span class="line"><span class="ln"> 303</span>		value, _ := strconv.ParseUint(fields[<span class="num">1</span>], <span class="num">10</span>, <span class="num">64</span>)</span>
+<span class="line"><span class="ln"> 304</span>		value *= <span class="num">1024</span></span>
+<span class="line"><span class="ln"> 305</span></span>
+<span class="line"><span class="ln"> 306</span>		<span class="kw">switch</span> key {</span>
+<span class="line"><span class="ln"> 307</span>		<span class="kw">case</span> <span class="str">"Pss"</span>:</span>
+<span class="line"><span class="ln"> 308</span>			mem.PSS = value</span>
+<span class="line"><span class="ln"> 309</span>		<span class="kw">case</span> <span class="str">"Private_Clean"</span>, <span class="str">"Private_Dirty"</span>:</span>
+<span class="line"><span class="ln"> 310</span>			mem.USS += value</span>
+<span class="line"><span class="ln"> 311</span>		<span class="kw">case</span> <span class="str">"Shared_Clean"</span>, <span class="str">"Shared_Dirty"</span>:</span>
+<span class="line"><span class="ln"> 312</span>			<span class="kw">if</span> mem.Shared == <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 313</span>				mem.Shared = value</span>
+<span class="line"><span class="ln"> 314</span>			}</span>
+<span class="line"><span class="ln"> 315</span>		}</span>
+<span class="line"><span class="ln"> 316</span>	}</span>
+<span class="line"><span class="ln"> 317</span></span>
+<span class="line"><span class="ln"> 318</span>	<span class="kw">return</span> scanner.Err()</span>
+<span class="line"><span class="ln"> 319</span>}</span>
+<span class="line"><span class="ln"> 320</span></span>
+<span class="line"><span class="ln"> 321</span><span class="kw">func</span> readSmaps(pid <span class="ty">int32</span>, mem *MemoryDetail) <span class="ty">error</span> {</span>
+<span class="line"><span class="ln"> 322</span>	filePath := fmt.Sprintf(<span class="str">"/proc/%d/smaps"</span>, pid)</span>
+<span class="line"><span class="ln"> 323</span>	file, err := os.Open(filePath)</span>
+<span class="line"><span class="ln"> 324</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 325</span>		<span class="kw">return</span> err</span>
+<span class="line"><span class="ln"> 326</span>	}</span>
+<span class="line"><span class="ln"> 327</span>	<span class="kw">defer</span> file.Close()</span>
+<span class="line"><span class="ln"> 328</span></span>
+<span class="line"><span class="ln"> 329</span>	scanner := bufio.NewScanner(file)</span>
+<span class="line"><span class="ln"> 330</span></span>
+<span class="line"><span class="ln"> 331</span>	<span class="kw">for</span> scanner.Scan() {</span>
+<span class="line"><span class="ln"> 332</span>		line := scanner.Text()</span>
+<span class="line"><span class="ln"> 333</span>		fields := strings.Fields(line)</span>
+<span class="line"><span class="ln"> 334</span>		<span class="kw">if</span> len(fields) &lt; <span class="num">2</span> {</span>
+<span class="line"><span class="ln"> 335</span>			<span class="kw">continue</span></span>
+<span class="line"><span class="ln"> 336</span>		}</span>
+<span class="line"><span class="ln"> 337</span></span>
+<span class="line"><span class="ln"> 338</span>		key := strings.TrimSuffix(fields[<span class="num">0</span>], <span class="str">":"</span>)</span>
+<span class="line"><span class="ln"> 339</span>		value, _ := strconv.ParseUint(fields[<span class="num">1</span>], <span class="num">10</span>, <span class="num">64</span>)</span>
+<span class="line"><span class="ln"> 340</span>		value *= <span class="num">1024</span></span>
+<span class="line"><span class="ln"> 341</span></span>
+<span class="line"><span class="ln"> 342</span>		<span class="kw">switch</span> key {</span>
+<span class="line"><span class="ln"> 343</span>		<span class="kw">case</span> <span class="str">"Pss"</span>:</span>
+<span class="line"><span class="ln"> 344</span>			mem.PSS += value</span>
+<span class="line"><span class="ln"> 345</span>		<span class="kw">case</span> <span class="str">"Private_Clean"</span>, <span class="str">"Private_Dirty"</span>:</span>
+<span class="line"><span class="ln"> 346</span>			mem.USS += value</span>
+<span class="line"><span class="ln"> 347</span>		<span class="kw">case</span> <span class="str">"Shared_Clean"</span>, <span class="str">"Shared_Dirty"</span>:</span>
+<span class="line"><span class="ln"> 348</span>			<span class="kw">if</span> mem.Shared == <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 349</span>				mem.Shared += value</span>
+<span class="line"><span class="ln"> 350</span>			}</span>
+<span class="line"><span class="ln"> 351</span>		}</span>
+<span class="line"><span class="ln"> 352</span>	}</span>
+<span class="line"><span class="ln"> 353</span></span>
+<span class="line"><span class="ln"> 354</span>	<span class="kw">return</span> scanner.Err()</span>
+<span class="line"><span class="ln"> 355</span>}</span>
+<span class="line"><span class="ln"> 356</span></span></pre>
+</div>
+    <div class="file-section" id="f-ro_process.go">
+  <h2>📄 ro_process.go <span class="path">agent/router/ro_process.go</span></h2>
+  <pre class="code"><span class="line"><span class="ln">   1</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   2</span><span class=<span class="str">"cmt"</span>>// 模块: Terminal 终端 (agent/router/ro_process.<span class="kw">go</span>)</span></span>
+<span class="line"><span class="ln">   3</span><span class=<span class="str">"cmt"</span>>// 文件: ro_process.<span class="kw">go</span> — 路由注册 (process 模块)</span></span>
+<span class="line"><span class="ln">   4</span><span class=<span class="str">"cmt"</span>>// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2</span></span>
+<span class="line"><span class="ln">   5</span><span class=<span class="str">"cmt"</span>>//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 <span class="kw">go</span> build 编译</span></span>
+<span class="line"><span class="ln">   6</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   7</span></span>
+<span class="line"><span class="ln">   8</span><span class="kw">package</span> router</span>
+<span class="line"><span class="ln">   9</span></span>
+<span class="line"><span class="ln">  10</span><span class="kw">import</span> (</span>
+<span class="line"><span class="ln">  11</span>	v2 <span class="str">"github.com/1Panel-dev/1Panel/agent/app/api/v2"</span></span>
+<span class="line"><span class="ln">  12</span>	<span class="str">"github.com/gin-gonic/gin"</span></span>
+<span class="line"><span class="ln">  13</span>)</span>
+<span class="line"><span class="ln">  14</span></span>
+<span class="line"><span class="ln">  15</span><span class=<span class="str">"cmt"</span>>// ProcessRouter (<span class="kw">struct</span>)</span></span>
+<span class="line"><span class="ln">  16</span><span class="kw">type</span> ProcessRouter <span class="kw">struct</span> {</span>
+<span class="line"><span class="ln">  17</span>}</span>
+<span class="line"><span class="ln">  18</span></span>
+<span class="line"><span class="ln">  19</span><span class="kw">func</span> (f *ProcessRouter) InitRouter(Router *gin.RouterGroup) {</span>
+<span class="line"><span class="ln">  20</span>	processRouter := Router.Group(<span class="str">"process"</span>)</span>
+<span class="line"><span class="ln">  21</span>	baseApi := v2.ApiGroupApp.BaseApi</span>
+<span class="line"><span class="ln">  22</span>	{</span>
+<span class="line"><span class="ln">  23</span>		processRouter.GET(<span class="str">"/ws"</span>, baseApi.ProcessWs)</span>
+<span class="line"><span class="ln">  24</span>		processRouter.POST(<span class="str">"/stop"</span>, baseApi.StopProcess)</span>
+<span class="line"><span class="ln">  25</span>		processRouter.POST(<span class="str">"/listening"</span>, baseApi.GetListeningProcess)</span>
+<span class="line"><span class="ln">  26</span>		processRouter.GET(<span class="str">"/:pid"</span>, baseApi.GetProcessInfoByPID)</span>
+<span class="line"><span class="ln">  27</span>	}</span>
+<span class="line"><span class="ln">  28</span>}</span>
+<span class="line"><span class="ln">  29</span></span></pre>
+</div>
+    <div class="file-section" id="f-ro_toolbox.go">
+  <h2>📄 ro_toolbox.go <span class="path">agent/router/ro_toolbox.go</span></h2>
+  <pre class="code"><span class="line"><span class="ln">   1</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   2</span><span class=<span class="str">"cmt"</span>>// 模块: Terminal 终端 (agent/router/ro_toolbox.<span class="kw">go</span>)</span></span>
+<span class="line"><span class="ln">   3</span><span class=<span class="str">"cmt"</span>>// 文件: ro_toolbox.<span class="kw">go</span> — 路由注册 (toolbox 模块)</span></span>
+<span class="line"><span class="ln">   4</span><span class=<span class="str">"cmt"</span>>// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2</span></span>
+<span class="line"><span class="ln">   5</span><span class=<span class="str">"cmt"</span>>//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 <span class="kw">go</span> build 编译</span></span>
+<span class="line"><span class="ln">   6</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   7</span></span>
+<span class="line"><span class="ln">   8</span><span class="kw">package</span> router</span>
+<span class="line"><span class="ln">   9</span></span>
+<span class="line"><span class="ln">  10</span><span class="kw">import</span> (</span>
+<span class="line"><span class="ln">  11</span>	v2 <span class="str">"github.com/1Panel-dev/1Panel/agent/app/api/v2"</span></span>
+<span class="line"><span class="ln">  12</span>	<span class="str">"github.com/gin-gonic/gin"</span></span>
+<span class="line"><span class="ln">  13</span>)</span>
+<span class="line"><span class="ln">  14</span></span>
+<span class="line"><span class="ln">  15</span><span class=<span class="str">"cmt"</span>>// ToolboxRouter (<span class="kw">struct</span>)</span></span>
+<span class="line"><span class="ln">  16</span><span class="kw">type</span> ToolboxRouter <span class="kw">struct</span>{}</span>
+<span class="line"><span class="ln">  17</span></span>
+<span class="line"><span class="ln">  18</span><span class="kw">func</span> (s *ToolboxRouter) InitRouter(Router *gin.RouterGroup) {</span>
+<span class="line"><span class="ln">  19</span>	toolboxRouter := Router.Group(<span class="str">"toolbox"</span>)</span>
+<span class="line"><span class="ln">  20</span>	baseApi := v2.ApiGroupApp.BaseApi</span>
+<span class="line"><span class="ln">  21</span>	{</span>
+<span class="line"><span class="ln">  22</span>		toolboxRouter.POST(<span class="str">"/device/base"</span>, baseApi.LoadDeviceBaseInfo)</span>
+<span class="line"><span class="ln">  23</span>		toolboxRouter.GET(<span class="str">"/device/users"</span>, baseApi.LoadUsers)</span>
+<span class="line"><span class="ln">  24</span>		toolboxRouter.GET(<span class="str">"/device/zone/options"</span>, baseApi.LoadTimeOption)</span>
+<span class="line"><span class="ln">  25</span>		toolboxRouter.POST(<span class="str">"/device/update/conf"</span>, baseApi.UpdateDeviceConf)</span>
+<span class="line"><span class="ln">  26</span>		toolboxRouter.POST(<span class="str">"/device/update/host"</span>, baseApi.UpdateDeviceHost)</span>
+<span class="line"><span class="ln">  27</span>		toolboxRouter.POST(<span class="str">"/device/update/passwd"</span>, baseApi.UpdateDevicePasswd)</span>
+<span class="line"><span class="ln">  28</span>		toolboxRouter.POST(<span class="str">"/device/update/swap"</span>, baseApi.UpdateDeviceSwap)</span>
+<span class="line"><span class="ln">  29</span>		toolboxRouter.POST(<span class="str">"/device/update/byconf"</span>, baseApi.UpdateDeviceByFile)</span>
+<span class="line"><span class="ln">  30</span>		toolboxRouter.POST(<span class="str">"/device/check/dns"</span>, baseApi.CheckDNS)</span>
+<span class="line"><span class="ln">  31</span>		toolboxRouter.POST(<span class="str">"/device/conf"</span>, baseApi.LoadDeviceConf)</span>
+<span class="line"><span class="ln">  32</span></span>
+<span class="line"><span class="ln">  33</span>		toolboxRouter.POST(<span class="str">"/scan"</span>, baseApi.ScanSystem)</span>
+<span class="line"><span class="ln">  34</span>		toolboxRouter.POST(<span class="str">"/clean"</span>, baseApi.SystemClean)</span>
+<span class="line"><span class="ln">  35</span></span>
+<span class="line"><span class="ln">  36</span>		toolboxRouter.GET(<span class="str">"/fail2ban/base"</span>, baseApi.LoadFail2BanBaseInfo)</span>
+<span class="line"><span class="ln">  37</span>		toolboxRouter.GET(<span class="str">"/fail2ban/load/conf"</span>, baseApi.LoadFail2BanConf)</span>
+<span class="line"><span class="ln">  38</span>		toolboxRouter.POST(<span class="str">"/fail2ban/search"</span>, baseApi.SearchFail2Ban)</span>
+<span class="line"><span class="ln">  39</span>		toolboxRouter.POST(<span class="str">"/fail2ban/operate"</span>, baseApi.OperateFail2Ban)</span>
+<span class="line"><span class="ln">  40</span>		toolboxRouter.POST(<span class="str">"/fail2ban/operate/sshd"</span>, baseApi.OperateSSHD)</span>
+<span class="line"><span class="ln">  41</span>		toolboxRouter.POST(<span class="str">"/fail2ban/update"</span>, baseApi.UpdateFail2BanConf)</span>
+<span class="line"><span class="ln">  42</span>		toolboxRouter.POST(<span class="str">"/fail2ban/update/byconf"</span>, baseApi.UpdateFail2BanConfByFile)</span>
+<span class="line"><span class="ln">  43</span></span>
+<span class="line"><span class="ln">  44</span>		toolboxRouter.GET(<span class="str">"/ftp/base"</span>, baseApi.LoadFtpBaseInfo)</span>
+<span class="line"><span class="ln">  45</span>		toolboxRouter.POST(<span class="str">"/ftp/log/search"</span>, baseApi.LoadFtpLogInfo)</span>
+<span class="line"><span class="ln">  46</span>		toolboxRouter.POST(<span class="str">"/ftp/operate"</span>, baseApi.OperateFtp)</span>
+<span class="line"><span class="ln">  47</span>		toolboxRouter.POST(<span class="str">"/ftp/search"</span>, baseApi.SearchFtp)</span>
+<span class="line"><span class="ln">  48</span>		toolboxRouter.POST(<span class="str">"/ftp"</span>, baseApi.CreateFtp)</span>
+<span class="line"><span class="ln">  49</span>		toolboxRouter.POST(<span class="str">"/ftp/update"</span>, baseApi.UpdateFtp)</span>
+<span class="line"><span class="ln">  50</span>		toolboxRouter.POST(<span class="str">"/ftp/del"</span>, baseApi.DeleteFtp)</span>
+<span class="line"><span class="ln">  51</span>		toolboxRouter.POST(<span class="str">"/ftp/sync"</span>, baseApi.SyncFtp)</span>
+<span class="line"><span class="ln">  52</span></span>
+<span class="line"><span class="ln">  53</span>		toolboxRouter.POST(<span class="str">"/clam/search"</span>, baseApi.SearchClam)</span>
+<span class="line"><span class="ln">  54</span>		toolboxRouter.POST(<span class="str">"/clam/record/search"</span>, baseApi.SearchClamRecord)</span>
+<span class="line"><span class="ln">  55</span>		toolboxRouter.POST(<span class="str">"/clam/record/clean"</span>, baseApi.CleanClamRecord)</span>
+<span class="line"><span class="ln">  56</span>		toolboxRouter.POST(<span class="str">"/clam/file/search"</span>, baseApi.SearchClamFile)</span>
+<span class="line"><span class="ln">  57</span>		toolboxRouter.POST(<span class="str">"/clam/file/update"</span>, baseApi.UpdateFile)</span>
+<span class="line"><span class="ln">  58</span>		toolboxRouter.POST(<span class="str">"/clam"</span>, baseApi.CreateClam)</span>
+<span class="line"><span class="ln">  59</span>		toolboxRouter.POST(<span class="str">"/clam/base"</span>, baseApi.LoadClamBaseInfo)</span>
+<span class="line"><span class="ln">  60</span>		toolboxRouter.POST(<span class="str">"/clam/operate"</span>, baseApi.OperateClam)</span>
+<span class="line"><span class="ln">  61</span>		toolboxRouter.POST(<span class="str">"/clam/update"</span>, baseApi.UpdateClam)</span>
+<span class="line"><span class="ln">  62</span>		toolboxRouter.POST(<span class="str">"/clam/status/update"</span>, baseApi.UpdateClamStatus)</span>
+<span class="line"><span class="ln">  63</span>		toolboxRouter.POST(<span class="str">"/clam/del"</span>, baseApi.DeleteClam)</span>
+<span class="line"><span class="ln">  64</span>		toolboxRouter.POST(<span class="str">"/clam/handle"</span>, baseApi.HandleClamScan)</span>
+<span class="line"><span class="ln">  65</span>	}</span>
+<span class="line"><span class="ln">  66</span>}</span>
+<span class="line"><span class="ln">  67</span></span></pre>
+</div>
+    <div class="file-section" id="f-process.go">
+  <h2>📄 process.go <span class="path">agent/utils/psutil/process.go</span></h2>
+  <pre class="code"><span class="line"><span class="ln">   1</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   2</span><span class=<span class="str">"cmt"</span>>// 模块: Terminal 终端 (agent/utils/psutil/process.<span class="kw">go</span>)</span></span>
+<span class="line"><span class="ln">   3</span><span class=<span class="str">"cmt"</span>>// 文件: process.<span class="kw">go</span> — 主代码</span></span>
+<span class="line"><span class="ln">   4</span><span class=<span class="str">"cmt"</span>>// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2</span></span>
+<span class="line"><span class="ln">   5</span><span class=<span class="str">"cmt"</span>>//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 <span class="kw">go</span> build 编译</span></span>
+<span class="line"><span class="ln">   6</span><span class=<span class="str">"cmt"</span>>// =============================================================================</span></span>
+<span class="line"><span class="ln">   7</span></span>
+<span class="line"><span class="ln">   8</span><span class="kw">package</span> psutil</span>
+<span class="line"><span class="ln">   9</span></span>
+<span class="line"><span class="ln">  10</span><span class="kw">import</span> (</span>
+<span class="line"><span class="ln">  11</span>	<span class="str">"bufio"</span></span>
+<span class="line"><span class="ln">  12</span>	<span class="str">"errors"</span></span>
+<span class="line"><span class="ln">  13</span>	<span class="str">"fmt"</span></span>
+<span class="line"><span class="ln">  14</span>	<span class="str">"os"</span></span>
+<span class="line"><span class="ln">  15</span>	<span class="str">"path/filepath"</span></span>
+<span class="line"><span class="ln">  16</span>	<span class="str">"strconv"</span></span>
+<span class="line"><span class="ln">  17</span>	<span class="str">"strings"</span></span>
+<span class="line"><span class="ln">  18</span>	<span class="str">"time"</span></span>
+<span class="line"><span class="ln">  19</span></span>
+<span class="line"><span class="ln">  20</span>	<span class="str">"github.com/shirou/gopsutil/v4/process"</span></span>
+<span class="line"><span class="ln">  21</span>	<span class="str">"github.com/tklauser/<span class="kw">go</span>-sysconf"</span></span>
+<span class="line"><span class="ln">  22</span>)</span>
+<span class="line"><span class="ln">  23</span></span>
+<span class="line"><span class="ln">  24</span><span class="kw">const</span> defaultClockTicks = <span class="num">100</span></span>
+<span class="line"><span class="ln">  25</span><span class="kw">const</span> maxProcessCreateTimeSkew = time.Minute</span>
+<span class="line"><span class="ln">  26</span></span>
+<span class="line"><span class="ln">  27</span><span class=<span class="str">"cmt"</span>>// ProcessCreateTimeResolver (<span class="kw">struct</span>)</span></span>
+<span class="line"><span class="ln">  28</span><span class="kw">type</span> ProcessCreateTimeResolver <span class="kw">struct</span> {</span>
+<span class="line"><span class="ln">  29</span>	procRoot   <span class="ty">string</span></span>
+<span class="line"><span class="ln">  30</span>	bootTime   <span class="ty">int64</span></span>
+<span class="line"><span class="ln">  31</span>	clockTicks <span class="ty">uint64</span></span>
+<span class="line"><span class="ln">  32</span>}</span>
+<span class="line"><span class="ln">  33</span></span>
+<span class="line"><span class="ln">  34</span><span class="kw">func</span> NewProcessCreateTimeResolver() *ProcessCreateTimeResolver {</span>
+<span class="line"><span class="ln">  35</span>	procRoot := os.Getenv(<span class="str">"HOST_PROC"</span>)</span>
+<span class="line"><span class="ln">  36</span>	<span class="kw">if</span> procRoot == <span class="str">""</span> {</span>
+<span class="line"><span class="ln">  37</span>		procRoot = <span class="str">"/proc"</span></span>
+<span class="line"><span class="ln">  38</span>	}</span>
+<span class="line"><span class="ln">  39</span></span>
+<span class="line"><span class="ln">  40</span>	resolver := &amp;ProcessCreateTimeResolver{</span>
+<span class="line"><span class="ln">  41</span>		procRoot:   procRoot,</span>
+<span class="line"><span class="ln">  42</span>		clockTicks: defaultClockTicks,</span>
+<span class="line"><span class="ln">  43</span>	}</span>
+<span class="line"><span class="ln">  44</span>	<span class="kw">if</span> clockTicks, err := sysconf.Sysconf(sysconf.SC_CLK_TCK); err == nil &amp;&amp; clockTicks &gt; <span class="num">0</span> {</span>
+<span class="line"><span class="ln">  45</span>		resolver.clockTicks = <span class="ty">uint64</span>(clockTicks)</span>
+<span class="line"><span class="ln">  46</span>	}</span>
+<span class="line"><span class="ln">  47</span>	<span class="kw">if</span> bootTime, err := readBootTime(filepath.Join(procRoot, <span class="str">"stat"</span>)); err == nil {</span>
+<span class="line"><span class="ln">  48</span>		resolver.bootTime = bootTime</span>
+<span class="line"><span class="ln">  49</span>	}</span>
+<span class="line"><span class="ln">  50</span>	<span class="kw">return</span> resolver</span>
+<span class="line"><span class="ln">  51</span>}</span>
+<span class="line"><span class="ln">  52</span></span>
+<span class="line"><span class="ln">  53</span><span class=<span class="str">"cmt"</span>>// CreateTime returns the process start time in milliseconds since Unix epoch.</span></span>
+<span class="line"><span class="ln">  54</span><span class=<span class="str">"cmt"</span>>//</span></span>
+<span class="line"><span class="ln">  55</span><span class=<span class="str">"cmt"</span>>// On some LXC systems, gopsutil combines a container-relative /proc/uptime with</span></span>
+<span class="line"><span class="ln">  56</span><span class=<span class="str">"cmt"</span>>// the host-relative starttime from /proc/&lt;pid&gt;/stat, which can place the start</span></span>
+<span class="line"><span class="ln">  57</span><span class=<span class="str">"cmt"</span>>// time in the future. In that <span class="kw">case</span>, reading btime and starttime from /proc keeps</span></span>
+<span class="line"><span class="ln">  58</span><span class=<span class="str">"cmt"</span>>// both values on the same clock base, matching the calculation used by ps.</span></span>
+<span class="line"><span class="ln">  59</span><span class="kw">func</span> (r *ProcessCreateTimeResolver) CreateTime(proc *process.Process) (<span class="ty">int64</span>, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln">  60</span>	now := time.Now()</span>
+<span class="line"><span class="ln">  61</span>	createTime, createTimeErr := proc.CreateTime()</span>
+<span class="line"><span class="ln">  62</span>	<span class="kw">if</span> createTimeErr == nil &amp;&amp; isValidProcessCreateTime(createTime, now) {</span>
+<span class="line"><span class="ln">  63</span>		<span class="kw">return</span> createTime, nil</span>
+<span class="line"><span class="ln">  64</span>	}</span>
+<span class="line"><span class="ln">  65</span></span>
+<span class="line"><span class="ln">  66</span>	<span class="kw">if</span> r.bootTime &gt; <span class="num">0</span> &amp;&amp; r.clockTicks &gt; <span class="num">0</span> {</span>
+<span class="line"><span class="ln">  67</span>		statPath := filepath.Join(r.procRoot, strconv.Itoa(<span class="ty">int</span>(proc.Pid)), <span class="str">"stat"</span>)</span>
+<span class="line"><span class="ln">  68</span>		<span class="kw">if</span> content, err := os.ReadFile(statPath); err == nil {</span>
+<span class="line"><span class="ln">  69</span>			<span class="kw">if</span> startTicks, err := parseProcessStartTicks(<span class="ty">string</span>(content)); err == nil {</span>
+<span class="line"><span class="ln">  70</span>				startMillis := startTicks * <span class="num">1000</span> / r.clockTicks</span>
+<span class="line"><span class="ln">  71</span>				fallbackTime := r.bootTime*<span class="num">1000</span> + <span class="ty">int64</span>(startMillis)</span>
+<span class="line"><span class="ln">  72</span>				<span class="kw">if</span> isValidProcessCreateTime(fallbackTime, now) {</span>
+<span class="line"><span class="ln">  73</span>					<span class="kw">return</span> fallbackTime, nil</span>
+<span class="line"><span class="ln">  74</span>				}</span>
+<span class="line"><span class="ln">  75</span>			}</span>
+<span class="line"><span class="ln">  76</span>		}</span>
+<span class="line"><span class="ln">  77</span>	}</span>
+<span class="line"><span class="ln">  78</span>	<span class="kw">if</span> createTimeErr != nil {</span>
+<span class="line"><span class="ln">  79</span>		<span class="kw">return</span> <span class="num">0</span>, fmt.Errorf(<span class="str">"resolve process create time: %w"</span>, createTimeErr)</span>
+<span class="line"><span class="ln">  80</span>	}</span>
+<span class="line"><span class="ln">  81</span>	<span class="kw">return</span> <span class="num">0</span>, fmt.Errorf(<span class="str">"invalid process create time: %d"</span>, createTime)</span>
+<span class="line"><span class="ln">  82</span>}</span>
+<span class="line"><span class="ln">  83</span></span>
+<span class="line"><span class="ln">  84</span><span class="kw">func</span> isValidProcessCreateTime(createTime <span class="ty">int64</span>, now time.Time) <span class="ty">bool</span> {</span>
+<span class="line"><span class="ln">  85</span>	<span class="kw">return</span> createTime &gt; <span class="num">0</span> &amp;&amp; createTime &lt;= now.Add(maxProcessCreateTimeSkew).UnixMilli()</span>
+<span class="line"><span class="ln">  86</span>}</span>
+<span class="line"><span class="ln">  87</span></span>
+<span class="line"><span class="ln">  88</span><span class="kw">func</span> readBootTime(path <span class="ty">string</span>) (<span class="ty">int64</span>, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln">  89</span>	file, err := os.Open(path)</span>
+<span class="line"><span class="ln">  90</span>	<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln">  91</span>		<span class="kw">return</span> <span class="num">0</span>, err</span>
+<span class="line"><span class="ln">  92</span>	}</span>
+<span class="line"><span class="ln">  93</span>	<span class="kw">defer</span> file.Close()</span>
+<span class="line"><span class="ln">  94</span></span>
+<span class="line"><span class="ln">  95</span>	scanner := bufio.NewScanner(file)</span>
+<span class="line"><span class="ln">  96</span>	<span class="kw">for</span> scanner.Scan() {</span>
+<span class="line"><span class="ln">  97</span>		fields := strings.Fields(scanner.Text())</span>
+<span class="line"><span class="ln">  98</span>		<span class="kw">if</span> len(fields) != <span class="num">2</span> || fields[<span class="num">0</span>] != <span class="str">"btime"</span> {</span>
+<span class="line"><span class="ln">  99</span>			<span class="kw">continue</span></span>
+<span class="line"><span class="ln"> 100</span>		}</span>
+<span class="line"><span class="ln"> 101</span>		bootTime, err := strconv.ParseInt(fields[<span class="num">1</span>], <span class="num">10</span>, <span class="num">64</span>)</span>
+<span class="line"><span class="ln"> 102</span>		<span class="kw">if</span> err != nil {</span>
+<span class="line"><span class="ln"> 103</span>			<span class="kw">return</span> <span class="num">0</span>, fmt.Errorf(<span class="str">"parse btime: %w"</span>, err)</span>
+<span class="line"><span class="ln"> 104</span>		}</span>
+<span class="line"><span class="ln"> 105</span>		<span class="kw">if</span> bootTime &lt;= <span class="num">0</span> {</span>
+<span class="line"><span class="ln"> 106</span>			<span class="kw">return</span> <span class="num">0</span>, errors.New(<span class="str">"invalid btime"</span>)</span>
+<span class="line"><span class="ln"> 107</span>		}</span>
+<span class="line"><span class="ln"> 108</span>		<span class="kw">return</span> bootTime, nil</span>
+<span class="line"><span class="ln"> 109</span>	}</span>
+<span class="line"><span class="ln"> 110</span>	<span class="kw">if</span> err := scanner.Err(); err != nil {</span>
+<span class="line"><span class="ln"> 111</span>		<span class="kw">return</span> <span class="num">0</span>, err</span>
+<span class="line"><span class="ln"> 112</span>	}</span>
+<span class="line"><span class="ln"> 113</span>	<span class="kw">return</span> <span class="num">0</span>, errors.New(<span class="str">"btime not found"</span>)</span>
+<span class="line"><span class="ln"> 114</span>}</span>
+<span class="line"><span class="ln"> 115</span></span>
+<span class="line"><span class="ln"> 116</span><span class="kw">func</span> parseProcessStartTicks(stat <span class="ty">string</span>) (<span class="ty">uint64</span>, <span class="ty">error</span>) {</span>
+<span class="line"><span class="ln"> 117</span>	<span class=<span class="str">"cmt"</span>>// The second field (comm) is wrapped in parentheses and may contain spaces</span></span>
+<span class="line"><span class="ln"> 118</span>	<span class=<span class="str">"cmt"</span>>// or parentheses, so split only after its closing parenthesis. The remaining</span></span>
+<span class="line"><span class="ln"> 119</span>	<span class=<span class="str">"cmt"</span>>// fields begin at field <span class="num">3</span> (state), making starttime (field <span class="num">22</span>) index <span class="num">19</span>.</span></span>
+<span class="line"><span class="ln"> 120</span>	commEnd := strings.LastIndex(stat, <span class="str">")"</span>)</span>
+<span class="line"><span class="ln"> 121</span>	<span class="kw">if</span> commEnd == -<span class="num">1</span> || commEnd+<span class="num">1</span> &gt;= len(stat) {</span>
+<span class="line"><span class="ln"> 122</span>		<span class="kw">return</span> <span class="num">0</span>, errors.New(<span class="str">"invalid process stat"</span>)</span>
+<span class="line"><span class="ln"> 123</span>	}</span>
+<span class="line"><span class="ln"> 124</span>	fields := strings.Fields(stat[commEnd+<span class="num">1</span>:])</span>
+<span class="line"><span class="ln"> 125</span>	<span class="kw">const</span> startTimeIndex = <span class="num">19</span></span>
+<span class="line"><span class="ln"> 126</span>	<span class="kw">if</span> len(fields) &lt;= startTimeIndex {</span>
+<span class="line"><span class="ln"> 127</span>		<span class="kw">return</span> <span class="num">0</span>, errors.New(<span class="str">"process stat has too few fields"</span>)</span>
+<span class="line"><span class="ln"> 128</span>	}</span>
+<span class="line"><span class="ln"> 129</span>	<span class="kw">return</span> strconv.ParseUint(fields[startTimeIndex], <span class="num">10</span>, <span class="num">64</span>)</span>
+<span class="line"><span class="ln"> 130</span>}</span>
+<span class="line"><span class="ln"> 131</span></span></pre>
+</div>
+  </main>
+</div>
+</body>
+</html>
