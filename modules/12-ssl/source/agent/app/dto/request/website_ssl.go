@@ -1,7 +1,15 @@
+// =============================================================================
+// 模块: SSL 证书管理 (agent/app/dto/request/website_ssl.go)
+// 文件: website_ssl.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package request
 
 import "github.com/1Panel-dev/1Panel/agent/app/dto"
 
+// WebsiteSSLSearch (struct)
 type WebsiteSSLSearch struct {
 	dto.PageInfo
 	AcmeAccountID string `json:"acmeAccountID"`
@@ -38,6 +46,7 @@ type WebsiteSSLCreate struct {
 	IsIp          bool   `json:"isIp"`
 }
 
+// WebsiteDNSReq (struct)
 type WebsiteDNSReq struct {
 	AcmeAccountID uint `json:"acmeAccountId"  validate:"required"`
 	WebsiteSSLID  uint `json:"websiteSSLId"  validate:"required"`
@@ -74,6 +83,7 @@ type WebsiteAcmeAccountUpdate struct {
 	UseProxy bool `json:"useProxy"`
 }
 
+// WebsiteDnsAccountCreate (struct)
 type WebsiteDnsAccountCreate struct {
 	Name          string            `json:"name" validate:"required"`
 	Type          string            `json:"type" validate:"required"`
@@ -118,6 +128,7 @@ type WebsiteSSLUpdate struct {
 	Nodes         string `json:"nodes"`
 }
 
+// WebsiteSSLUpload (struct)
 type WebsiteSSLUpload struct {
 	PrivateKey      string `json:"privateKey"`
 	Certificate     string `json:"certificate"`
@@ -153,6 +164,7 @@ type WebsiteCACreate struct {
 	City             string `json:"city"`
 }
 
+// WebsiteCAObtain (struct)
 type WebsiteCAObtain struct {
 	ID          uint   `json:"id" validate:"required"`
 	Domains     string `json:"domains" validate:"required"`

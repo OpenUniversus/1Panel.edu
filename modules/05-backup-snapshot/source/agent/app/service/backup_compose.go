@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Backup 备份 (agent/app/service/backup_compose.go)
+// 文件: backup_compose.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -29,6 +36,7 @@ import (
 	"github.com/docker/docker/client"
 )
 
+// composeBackupFile (struct)
 type composeBackupFile struct {
 	OriginalPath string `json:"originalPath"`
 	FileName     string `json:"fileName"`

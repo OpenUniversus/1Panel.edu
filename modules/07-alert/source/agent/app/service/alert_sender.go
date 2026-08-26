@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Alert 告警 (agent/app/service/alert_sender.go)
+// 文件: alert_sender.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -13,6 +20,7 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/utils/xpack"
 )
 
+// AlertSender (struct)
 type AlertSender struct {
 	alert     dto.AlertDTO
 	quotaType string

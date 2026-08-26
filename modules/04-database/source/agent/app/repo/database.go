@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Database 数据库 (agent/app/repo/database.go)
+// 文件: database.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -11,8 +18,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// DatabaseRepo (struct)
 type DatabaseRepo struct{}
 
+// IDatabaseRepo (interface)
 type IDatabaseRepo interface {
 	GetList(opts ...DBOption) ([]model.Database, error)
 	Page(limit, offset int, opts ...DBOption) (int64, []model.Database, error)

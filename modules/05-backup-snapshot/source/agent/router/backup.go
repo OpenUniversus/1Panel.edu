@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Backup 备份 (agent/router/backup.go)
+// 文件: backup.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package router
 
 import (
@@ -5,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// BackupRouter (struct)
 type BackupRouter struct{}
 
 func (s *BackupRouter) InitRouter(Router *gin.RouterGroup) {

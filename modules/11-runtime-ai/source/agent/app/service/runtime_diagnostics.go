@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Runtime AI 运行时 (agent/app/service/runtime_diagnostics.go)
+// 文件: runtime_diagnostics.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -36,6 +43,7 @@ var (
 	errProfileSizeLimit        = errors.New("runtime profile exceeds the 64 MiB size limit")
 )
 
+// cappedWriter (struct)
 type cappedWriter struct {
 	writer    io.Writer
 	remaining int64
@@ -72,6 +80,7 @@ type RuntimeProfileResult struct {
 	Name string
 }
 
+// RuntimeDiagnosticsService (struct)
 type RuntimeDiagnosticsService struct {
 	captureMu sync.Mutex
 	processMu sync.Mutex
@@ -362,6 +371,7 @@ func compactGoroutineSnapshot(initialSize int) ([]dto.RuntimeGoroutineGroup, boo
 		truncated = true
 	}
 	records = records[:count]
+// compactGroup (struct)
 	type compactGroup struct {
 		top   string
 		stack []string

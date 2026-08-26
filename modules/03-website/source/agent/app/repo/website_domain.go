@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Website 网站管理 (agent/app/repo/website_domain.go)
+// 文件: website_domain.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -8,9 +15,11 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// WebsiteDomainRepo (struct)
 type WebsiteDomainRepo struct {
 }
 
+// IWebsiteDomainRepo (interface)
 type IWebsiteDomainRepo interface {
 	WithWebsiteId(websiteId uint) DBOption
 	WithWebsiteIds(websiteIds []uint) DBOption

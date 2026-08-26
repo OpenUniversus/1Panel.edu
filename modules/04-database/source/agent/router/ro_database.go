@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Database 数据库 (agent/router/ro_database.go)
+// 文件: ro_database.go — 路由注册 (database 模块)
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package router
 
 import (
@@ -5,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// DatabaseRouter (struct)
 type DatabaseRouter struct{}
 
 func (s *DatabaseRouter) InitRouter(Router *gin.RouterGroup) {

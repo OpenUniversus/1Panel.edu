@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Database 数据库 (agent/app/service/database_postgresql.go)
+// 文件: database_postgresql.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -23,8 +30,10 @@ import (
 	"github.com/jinzhu/copier"
 )
 
+// PostgresqlService (struct)
 type PostgresqlService struct{}
 
+// IPostgresqlService (interface)
 type IPostgresqlService interface {
 	SearchWithPage(search dto.PostgresqlDBSearch) (int64, interface{}, error)
 	ListDBOption() ([]dto.PostgresqlOption, error)

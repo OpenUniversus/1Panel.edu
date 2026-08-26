@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Database 数据库 (agent/app/service/database_mongodb.go)
+// 文件: database_mongodb.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -20,8 +27,10 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+// MongodbService (struct)
 type MongodbService struct{}
 
+// IMongodbService (interface)
 type IMongodbService interface {
 	SearchWithPage(search dto.MongodbDBSearch) (int64, interface{}, error)
 	Create(ctx context.Context, req dto.MongodbDBCreate) (*model.DatabaseMongodb, error)
@@ -522,6 +531,7 @@ if (!result || result.ok !== 1) {
 `, dbNameJSON, usernameJSON, passwordJSON)), nil
 }
 
+// mongodbSyncItem (struct)
 type mongodbSyncItem struct {
 	Name     string `json:"name"`
 	Username string `json:"username"`

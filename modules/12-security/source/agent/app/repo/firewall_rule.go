@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Firewall 防火墙 (agent/app/repo/firewall_rule.go)
+// 文件: firewall_rule.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -17,6 +24,7 @@ var (
 	ErrFirewallPersistenceInvalid   = errors.New("invalid firewall persistence record")
 )
 
+// IFirewallRuleRepo (interface)
 type IFirewallRuleRepo interface {
 	Create(context.Context, *model.FirewallRule) error
 	GetByUUID(context.Context, string) (model.FirewallRule, error)

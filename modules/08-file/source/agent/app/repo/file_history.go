@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: File 文件管理 (agent/app/repo/file_history.go)
+// 文件: file_history.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -6,8 +13,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// FileHistoryRepo (struct)
 type FileHistoryRepo struct{}
 
+// IFileHistoryRepo (interface)
 type IFileHistoryRepo interface {
 	Get(opts ...DBOption) (model.FileHistory, error)
 	Page(limit, offset int, opts ...DBOption) (int64, []model.FileHistory, error)

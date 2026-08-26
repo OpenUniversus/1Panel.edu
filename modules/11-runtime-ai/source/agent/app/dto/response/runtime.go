@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Runtime AI 运行时 (agent/app/dto/response/runtime.go)
+// 文件: runtime.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package response
 
 import (
@@ -7,6 +14,7 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/app/model"
 )
 
+// RuntimeDTO (struct)
 type RuntimeDTO struct {
 	ID              uint                   `json:"id"`
 	Name            string                 `json:"name"`
@@ -59,6 +67,7 @@ func NewRuntimeDTO(runtime model.Runtime) RuntimeDTO {
 	}
 }
 
+// NodeModule (struct)
 type NodeModule struct {
 	Name        string `json:"name"`
 	Version     string `json:"version"`

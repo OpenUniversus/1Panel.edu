@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: SSL 证书管理 (agent/utils/ssl/acme.go)
+// 文件: acme.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package ssl
 
 import (
@@ -57,6 +64,7 @@ func parsePrivateKeyPEM(pemBytes []byte) (crypto.Signer, error) {
 	return nil, fmt.Errorf("unsupported private key format")
 }
 
+// zeroSSLRes (struct)
 type zeroSSLRes struct {
 	Success    bool   `json:"success"`
 	EabKid     string `json:"eab_kid"`

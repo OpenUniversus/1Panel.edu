@@ -1,5 +1,13 @@
+// =============================================================================
+// 模块: File 文件管理 (agent/app/model/file_history.go)
+// 文件: file_history.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package model
 
+// FileHistory (struct)
 type FileHistory struct {
 	BaseModel
 	FileID      string `json:"fileId" gorm:"not null;index:idx_file_history_file_id_created_at,priority:1;index:idx_file_history_file_id_deleted_created_at,priority:1"`

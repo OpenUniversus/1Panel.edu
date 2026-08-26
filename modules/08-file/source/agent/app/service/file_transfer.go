@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: File 文件管理 (agent/app/service/file_transfer.go)
+// 文件: file_transfer.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -9,6 +16,7 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/app/dto/request"
 )
 
+// fileTransferLockSet (struct)
 type fileTransferLockSet struct {
 	mu    sync.Mutex
 	paths map[string][]string

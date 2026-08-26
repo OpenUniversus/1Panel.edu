@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Website 网站管理 (agent/app/service/nginx_module.go)
+// 文件: nginx_module.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -70,6 +77,7 @@ const (
 
 var errNginxModuleBuilderMissing = errors.New("dynamic module builder not found")
 
+// nginxModuleBuildSpec (struct)
 type nginxModuleBuildSpec struct {
 	Install   model.AppInstall
 	Module    dto.NginxModule
@@ -89,6 +97,7 @@ type nginxModuleArtifactProvider interface {
 
 type localNginxModuleProvider struct{}
 
+// nginxModuleState (struct)
 type nginxModuleState struct {
 	Name      string                 `json:"name"`
 	Custom    bool                   `json:"custom,omitempty"`
@@ -505,8 +514,10 @@ func validateNginxModuleLoadConfig(install model.AppInstall, target dto.NginxMod
 	return cmd.NewCommandMgr(cmd.WithTimeout(5*time.Minute)).Run("docker", args...)
 }
 
+// nginxModuleConfigSnapshot (map)
 type nginxModuleConfigSnapshot map[string][]byte
 
+// openrestyUpgradeSnapshot (struct)
 type openrestyUpgradeSnapshot struct {
 	installPath string
 	backupPath  string

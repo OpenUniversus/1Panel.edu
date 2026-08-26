@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Backup 备份 (agent/app/service/backup_container.go)
+// 文件: backup_container.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -29,6 +36,7 @@ import (
 	"github.com/docker/docker/client"
 )
 
+// containerBackupMeta (struct)
 type containerBackupMeta struct {
 	ContainerName string                 `json:"containerName"`
 	ContainerID   string                 `json:"containerID"`
@@ -67,6 +75,7 @@ type containerBackupContext struct {
 	meta          containerBackupMeta
 }
 
+// containerRecoverContext (struct)
 type containerRecoverContext struct {
 	req                dto.CommonRecover
 	targetName         string

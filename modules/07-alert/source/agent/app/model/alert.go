@@ -1,5 +1,13 @@
+// =============================================================================
+// 模块: Alert 告警 (agent/app/model/alert.go)
+// 文件: alert.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package model
 
+// Alert (struct)
 type Alert struct {
 	BaseModel
 
@@ -39,6 +47,7 @@ type AlertLog struct {
 	Method      string `gorm:"type:varchar(128);not null;default:'sms'" json:"method"`
 }
 
+// AlertConfig (struct)
 type AlertConfig struct {
 	BaseModel
 	Type       string `gorm:"type:varchar(64);not null" json:"type"`

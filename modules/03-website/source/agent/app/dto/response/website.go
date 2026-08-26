@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Website 网站管理 (agent/app/dto/response/website.go)
+// 文件: website.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package response
 
 import (
@@ -7,6 +14,7 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/app/model"
 )
 
+// WebsiteDTO (struct)
 type WebsiteDTO struct {
 	model.Website
 	ErrorLogPath  string `json:"errorLogPath"`
@@ -46,6 +54,7 @@ type WebsiteRes struct {
 	IPV6          bool      `json:"IPV6"`
 }
 
+// WebsiteOption (struct)
 type WebsiteOption struct {
 	ID            uint   `json:"id"`
 	PrimaryDomain string `json:"primaryDomain"`
@@ -84,6 +93,7 @@ type WebsiteLog struct {
 	Path    string `json:"path"`
 }
 
+// PHPConfig (struct)
 type PHPConfig struct {
 	Params           map[string]string `json:"params"`
 	DisableFunctions []string          `json:"disableFunctions"`
@@ -121,6 +131,7 @@ type Resource struct {
 	Detail     interface{} `json:"detail"`
 }
 
+// Database (struct)
 type Database struct {
 	Name         string `json:"name"`
 	DatabaseName string `json:"databaseName"`

@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: App 应用商店 (agent/app/dto/response/app.go)
+// 文件: app.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package response
 
 import (
@@ -9,6 +16,7 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/app/model"
 )
 
+// AppRes (struct)
 type AppRes struct {
 	Items []*AppItem `json:"items"`
 	Total int64      `json:"total"`
@@ -43,6 +51,7 @@ type AppItem struct {
 	BatchInstallSupport bool     `json:"batchInstallSupport"`
 }
 
+// TagDTO (struct)
 type TagDTO struct {
 	ID   uint   `json:"id"`
 	Key  string `json:"key"`
@@ -76,6 +85,7 @@ type AppDetailDTO struct {
 	GpuSupport     bool        `json:"gpuSupport"`
 }
 
+// AppDetailSimpleDTO (struct)
 type AppDetailSimpleDTO struct {
 	ID uint `json:"id"`
 }
@@ -136,6 +146,7 @@ type AppInstallDTO struct {
 	Env           map[string]interface{} `json:"env"`
 }
 
+// AppInstallInfo (struct)
 type AppInstallInfo struct {
 	ID          uint   `json:"id"`
 	Name        string `json:"name"`
@@ -168,6 +179,7 @@ type AppService struct {
 	Status string      `json:"status"`
 }
 
+// AppParam (struct)
 type AppParam struct {
 	Value     interface{} `json:"value"`
 	Edit      bool        `json:"edit"`

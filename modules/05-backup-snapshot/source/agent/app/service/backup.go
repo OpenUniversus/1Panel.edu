@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Backup 备份 (agent/app/service/backup.go)
+// 文件: backup.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -27,8 +34,10 @@ import (
 	"github.com/jinzhu/copier"
 )
 
+// BackupService (struct)
 type BackupService struct{}
 
+// IBackupService (interface)
 type IBackupService interface {
 	CheckUsed(name string, isPublic bool) error
 
@@ -425,6 +434,7 @@ func NewBackupClientWithID(id uint) (*model.BackupAccount, cloud_storage.CloudSt
 	return &account, backClient, nil
 }
 
+// backupClientHelper (struct)
 type backupClientHelper struct {
 	id          uint
 	accountType string

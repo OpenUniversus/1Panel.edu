@@ -1,9 +1,17 @@
+// =============================================================================
+// 模块: Website 网站管理 (agent/app/dto/request/website.go)
+// 文件: website.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package request
 
 import (
 	"github.com/1Panel-dev/1Panel/agent/app/dto"
 )
 
+// WebsiteSearch (struct)
 type WebsiteSearch struct {
 	dto.PageInfo
 	Name           string `json:"name"`
@@ -43,6 +51,7 @@ type WebsiteCreate struct {
 	StreamConfig
 }
 
+// StreamConfig (struct)
 type StreamConfig struct {
 	StreamPorts string `json:"streamPorts"`
 	Name        string `json:"name"`
@@ -81,6 +90,7 @@ type DataBaseConfig struct {
 	DBFormat   string `json:"dbFormat"`
 }
 
+// SSLConfig (struct)
 type SSLConfig struct {
 	EnableSSL    bool `json:"enableSSL"`
 	WebsiteSSLID uint `json:"websiteSSLID"`
@@ -116,6 +126,7 @@ type WebsiteDelete struct {
 	DeleteDB     bool `json:"deleteDB"`
 }
 
+// WebsiteOp (struct)
 type WebsiteOp struct {
 	ID      uint   `json:"id" validate:"required"`
 	Operate string `json:"operate"`
@@ -151,6 +162,7 @@ type BatchWebsiteHttps struct {
 	Http3                 bool     `json:"http3"`
 }
 
+// WebsiteRedirectUpdate (struct)
 type WebsiteRedirectUpdate struct {
 	WebsiteID uint   `json:"websiteId" validate:"required"`
 	Key       string `json:"key" validate:"required"`
@@ -185,6 +197,7 @@ type WebsiteDomainCreate struct {
 	Domains   []WebsiteDomain `json:"domains" validate:"required"`
 }
 
+// WebsiteDomainUpdate (struct)
 type WebsiteDomainUpdate struct {
 	ID  uint `json:"id" validate:"required"`
 	SSL bool `json:"ssl"`
@@ -219,6 +232,7 @@ type WebsiteHTTPSOp struct {
 	Http3                 bool     `json:"http3"`
 }
 
+// WebsiteNginxUpdate (struct)
 type WebsiteNginxUpdate struct {
 	ID      uint   `json:"id" validate:"required"`
 	Content string `json:"content" validate:"required"`
@@ -251,6 +265,7 @@ type WebsiteUpdateDir struct {
 	SiteDir string `json:"siteDir" validate:"required"`
 }
 
+// WebsiteUpdateDirPermission (struct)
 type WebsiteUpdateDirPermission struct {
 	ID    uint   `json:"id" validate:"required"`
 	User  string `json:"user" validate:"required"`
@@ -285,6 +300,7 @@ type WebsiteProxyDelete struct {
 	Name string `json:"name" validate:"required"`
 }
 
+// WebsiteProxyStatusUpdate (struct)
 type WebsiteProxyStatusUpdate struct {
 	ID     uint   `json:"id" validate:"required"`
 	Name   string `json:"name" validate:"required"`
@@ -317,6 +333,7 @@ type WebsiteCommonReq struct {
 	ID uint `json:"id" validate:"required"`
 }
 
+// WafWebsite (struct)
 type WafWebsite struct {
 	Key     string   `json:"key"`
 	Domains []string `json:"domains"`
@@ -352,6 +369,7 @@ type WebsiteLBDelete struct {
 	Name      string `json:"name" validate:"required"`
 }
 
+// WebsiteLBUpdateFile (struct)
 type WebsiteLBUpdateFile struct {
 	WebsiteID uint   `json:"websiteID" validate:"required"`
 	Name      string `json:"name" validate:"required"`

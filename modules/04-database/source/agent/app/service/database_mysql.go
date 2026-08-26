@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Database 数据库 (agent/app/service/database_mysql.go)
+// 文件: database_mysql.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -32,8 +39,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// MysqlService (struct)
 type MysqlService struct{}
 
+// IMysqlService (interface)
 type IMysqlService interface {
 	SearchWithPage(search dto.MysqlDBSearch) (int64, interface{}, error)
 	ListDBOption() ([]dto.MysqlOption, error)
@@ -166,6 +175,7 @@ func saveDatabaseUserCredentials(dbType, database, username, permission, passwor
 	return nil
 }
 
+// mysqlUserAppTarget (struct)
 type mysqlUserAppTarget struct {
 	Key  string
 	Name string

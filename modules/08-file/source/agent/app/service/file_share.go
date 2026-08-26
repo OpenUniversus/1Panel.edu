@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: File 文件管理 (agent/app/service/file_share.go)
+// 文件: file_share.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -24,6 +31,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// FileShareService (struct)
 type FileShareService struct{}
 
 const (
@@ -35,6 +43,7 @@ const (
 
 var fileShareCodeRegexp = regexp.MustCompile(`^[A-Za-z0-9]{10,16}$`)
 
+// IFileShareService (interface)
 type IFileShareService interface {
 	Create(req request.FileShareCreate) (*response.FileShareInfo, error)
 	Page(req dto.PageInfo) (int64, []response.FileShareInfo, error)

@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: File 文件管理 (agent/app/dto/request/file.go)
+// 文件: file.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package request
 
 import (
@@ -5,6 +12,7 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/utils/files"
 )
 
+// FileOption (struct)
 type FileOption struct {
 	files.FileOption
 }
@@ -41,6 +49,7 @@ type SearchUploadWithPage struct {
 	Path string `json:"path" validate:"required"`
 }
 
+// FileCreate (struct)
 type FileCreate struct {
 	Path      string `json:"path" validate:"required"`
 	Content   string `json:"content"`
@@ -81,6 +90,7 @@ type FileCompress struct {
 	TaskID  string   `json:"taskID"`
 }
 
+// FileCompressStopReq (struct)
 type FileCompressStopReq struct {
 	TaskID string `json:"taskID" validate:"required"`
 }
@@ -116,6 +126,7 @@ type FilePathsCheck struct {
 	Paths []string `json:"paths" validate:"required"`
 }
 
+// FileWget (struct)
 type FileWget struct {
 	Url               string `json:"url" validate:"required"`
 	Path              string `json:"path" validate:"required"`
@@ -150,6 +161,7 @@ type FileChunkDownload struct {
 	Name string `json:"name" validate:"required"`
 }
 
+// DirSizeReq (struct)
 type DirSizeReq struct {
 	Path string `json:"path" validate:"required"`
 }
@@ -182,6 +194,7 @@ type TaskLogReadReq struct {
 	TaskReq
 }
 
+// TaskReq (struct)
 type TaskReq struct {
 	TaskID      string `json:"taskID"`
 	TaskType    string `json:"taskType"`
@@ -214,6 +227,7 @@ type FileRemarkBatch struct {
 	Paths []string `json:"paths" validate:"required"`
 }
 
+// FileRemarkUpdate (struct)
 type FileRemarkUpdate struct {
 	Path   string `json:"path" validate:"required"`
 	Remark string `json:"remark"`

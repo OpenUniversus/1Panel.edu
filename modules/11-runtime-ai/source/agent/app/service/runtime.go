@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Runtime AI 运行时 (agent/app/service/runtime.go)
+// 文件: runtime.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -40,9 +47,11 @@ import (
 	"github.com/subosito/gotenv"
 )
 
+// RuntimeService (struct)
 type RuntimeService struct {
 }
 
+// IRuntimeService (interface)
 type IRuntimeService interface {
 	Page(req request.RuntimeSearch) (int64, []response.RuntimeDTO, error)
 	Create(create request.RuntimeCreate) (*model.Runtime, error)
@@ -86,6 +95,7 @@ func NewRuntimeService() IRuntimeService {
 var pullRuntimeComposeImages = compose.PullComposeImages
 var downRuntimeCompose = compose.Down
 
+// runtimeTaskMeta (struct)
 type runtimeTaskMeta struct {
 	resourceName string
 	operate      string

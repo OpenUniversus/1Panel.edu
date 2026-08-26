@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Firewall 防火墙 (agent/app/service/firewall_service.go)
+// 文件: firewall_service.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -33,6 +40,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// FirewallService (struct)
 type FirewallService struct {
 	rules            repo.IFirewallRuleRepo
 	adapters         firewallRuleRuntimeRegistry
@@ -465,6 +473,7 @@ func (s *FirewallService) checkRule(
 	return response.Items[0], nil
 }
 
+// preparedFirewallRuleCreate (struct)
 type preparedFirewallRuleCreate struct {
 	request       dto.FirewallRuleCreateItem
 	runtime       *firewallRuleRuntime
@@ -644,6 +653,7 @@ func nativeCreateBatchEnd(prepared []preparedFirewallRuleCreate, start int) int 
 	return len(prepared)
 }
 
+// createdFirewallBatchRule (struct)
 type createdFirewallBatchRule struct {
 	record   model.FirewallRule
 	rule     filter.FirewallRule
@@ -789,6 +799,7 @@ func firewallCreateExecutionFailure(
 	return result
 }
 
+// preparedFirewallRuleDelete (struct)
 type preparedFirewallRuleDelete struct {
 	index   int
 	stored  model.FirewallRule
@@ -910,6 +921,7 @@ func (s *FirewallService) deleteNativeRuleBatch(ctx context.Context, prepared []
 	if err != nil {
 		return err
 	}
+// positionedDelete (struct)
 	type positionedDelete struct {
 		position int
 		change   filter.DesiredChange
@@ -1332,6 +1344,7 @@ func snapshotMaxPosition(snapshot filter.Snapshot) int64 {
 	return maxPosition
 }
 
+// managedMutationRequest (struct)
 type managedMutationRequest struct {
 	Stored           model.FirewallRule
 	Before           filter.FirewallRule
@@ -1960,8 +1973,10 @@ func rollbackFirewallPlan(ctx context.Context, runtime *firewallRuleRuntime, pla
 	return cause
 }
 
+// firewallSnapshotPolicy (func)
 type firewallSnapshotPolicy func(context.Context, filter.Snapshot) (filter.Snapshot, error)
 
+// firewallRuleRuntime (struct)
 type firewallRuleRuntime struct {
 	adapter filter.Adapter
 	policy  firewallSnapshotPolicy
@@ -2100,6 +2115,7 @@ func selectedRuleProvider() (filter.Provider, error) {
 	return filter.Provider(provider), nil
 }
 
+// firewallRuleCheckClaims (struct)
 type firewallRuleCheckClaims struct {
 	Version            int                         `json:"version"`
 	Provider           filter.Provider             `json:"provider"`

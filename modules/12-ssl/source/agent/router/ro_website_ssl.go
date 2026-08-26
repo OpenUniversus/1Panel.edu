@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: SSL 证书管理 (agent/router/ro_website_ssl.go)
+// 文件: ro_website_ssl.go — 路由注册 (website_ssl 模块)
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package router
 
 import (
@@ -5,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// WebsiteSSLRouter (struct)
 type WebsiteSSLRouter struct {
 }
 

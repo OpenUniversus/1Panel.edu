@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: App 应用商店 (agent/app/repo/app_install.go)
+// 文件: app_install.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -13,8 +20,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// AppInstallRepo (struct)
 type AppInstallRepo struct{}
 
+// IAppInstallRepo (interface)
 type IAppInstallRepo interface {
 	WithDetailIdsIn(detailIds []uint) DBOption
 	WithDetailIdNotIn(detailIds []uint) DBOption
@@ -166,6 +175,7 @@ func (a *AppInstallRepo) BatchUpdateBy(maps map[string]interface{}, opts ...DBOp
 	return db.Updates(&maps).Error
 }
 
+// RootInfo (struct)
 type RootInfo struct {
 	ID            uint   `json:"id"`
 	Name          string `json:"name"`

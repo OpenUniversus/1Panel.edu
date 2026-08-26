@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Database 数据库 (agent/app/repo/database_postgresql.go)
+// 文件: database_postgresql.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -10,8 +17,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// PostgresqlRepo (struct)
 type PostgresqlRepo struct{}
 
+// IPostgresqlRepo (interface)
 type IPostgresqlRepo interface {
 	Get(opts ...DBOption) (model.DatabasePostgresql, error)
 	WithByPostgresqlName(postgresqlName string) DBOption

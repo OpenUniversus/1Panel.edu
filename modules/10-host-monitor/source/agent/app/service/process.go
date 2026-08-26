@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Monitor 主机监控 (agent/app/service/process.go)
+// 文件: process.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -18,8 +25,10 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 )
 
+// ProcessService (struct)
 type ProcessService struct{}
 
+// IProcessService (interface)
 type IProcessService interface {
 	StopProcess(req request.ProcessReq) error
 	GetProcessInfoByPID(pid int32) (*websocket.PsProcessData, error)
@@ -195,6 +204,7 @@ func (ps *ProcessService) GetProcessInfoByPID(pid int32) (*websocket.PsProcessDa
 	return data, nil
 }
 
+// MemoryDetail (struct)
 type MemoryDetail struct {
 	RSS    uint64
 	VMS    uint64

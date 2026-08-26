@@ -1,7 +1,15 @@
+// =============================================================================
+// 模块: Website 网站管理 (agent/app/dto/request/nginx.go)
+// 文件: nginx.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package request
 
 import "github.com/1Panel-dev/1Panel/agent/app/dto"
 
+// NginxConfigFileUpdate (struct)
 type NginxConfigFileUpdate struct {
 	Content string `json:"content" validate:"required"`
 	Backup  bool   `json:"backup"`
@@ -36,6 +44,7 @@ type NginxRewriteUpdate struct {
 	Content   string `json:"content"`
 }
 
+// NginxProxyUpdate (struct)
 type NginxProxyUpdate struct {
 	WebsiteID uint   `json:"websiteID" validate:"required"`
 	Content   string `json:"content" validate:"required"`
@@ -71,6 +80,7 @@ type NginxPathAuthUpdate struct {
 	Remark    string `json:"remark"`
 }
 
+// NginxAuthReq (struct)
 type NginxAuthReq struct {
 	WebsiteID uint `json:"websiteID" validate:"required"`
 }
@@ -107,6 +117,7 @@ type NginxRedirectReq struct {
 	RedirectRoot bool     `json:"redirectRoot"`
 }
 
+// NginxRedirectUpdate (struct)
 type NginxRedirectUpdate struct {
 	WebsiteID uint   `json:"websiteID" validate:"required"`
 	Content   string `json:"content" validate:"required"`

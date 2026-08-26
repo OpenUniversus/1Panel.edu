@@ -1,7 +1,15 @@
+// =============================================================================
+// 模块: Website 网站管理 (agent/app/dto/response/nginx.go)
+// 文件: nginx.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package response
 
 import "github.com/1Panel-dev/1Panel/agent/app/dto"
 
+// NginxStatus (struct)
 type NginxStatus struct {
 	Active   int `json:"active"`
 	Accepts  int `json:"accepts"`
@@ -39,6 +47,7 @@ type NginxAntiLeechRes struct {
 	Blocked     bool     `json:"blocked"`
 }
 
+// NginxRedirectConfig (struct)
 type NginxRedirectConfig struct {
 	WebsiteID    uint     `json:"websiteID"`
 	Name         string   `json:"name"`
@@ -84,6 +93,7 @@ type NginxModule struct {
 	LastError   string                    `json:"lastError"`
 }
 
+// NginxBuildConfig (struct)
 type NginxBuildConfig struct {
 	Mirror           string        `json:"mirror"`
 	DynamicSupported bool          `json:"dynamicSupported"`

@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: AI Agent 智能体 (agent/router/ro_container.go)
+// 文件: ro_container.go — 路由注册 (container 模块)
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package router
 
 import (
@@ -5,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ContainerRouter (struct)
 type ContainerRouter struct{}
 
 func (s *ContainerRouter) InitRouter(Router *gin.RouterGroup) {

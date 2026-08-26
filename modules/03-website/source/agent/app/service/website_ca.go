@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Website 网站管理 (agent/app/service/website_ca.go)
+// 文件: website_ca.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -33,9 +40,11 @@ import (
 	"github.com/go-acme/lego/v5/certcrypto"
 )
 
+// WebsiteCAService (struct)
 type WebsiteCAService struct {
 }
 
+// IWebsiteCAService (interface)
 type IWebsiteCAService interface {
 	Page(search request.WebsiteCASearch) (int64, []response.WebsiteCADTO, error)
 	Create(create request.WebsiteCACreate) (*request.WebsiteCACreate, error)

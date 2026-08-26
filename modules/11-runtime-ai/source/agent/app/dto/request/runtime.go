@@ -1,9 +1,17 @@
+// =============================================================================
+// 模块: Runtime AI 运行时 (agent/app/dto/request/runtime.go)
+// 文件: runtime.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package request
 
 import (
 	"github.com/1Panel-dev/1Panel/agent/app/dto"
 )
 
+// RuntimeSearch (struct)
 type RuntimeSearch struct {
 	dto.PageInfo
 	Type   string `json:"type"`
@@ -36,6 +44,7 @@ type NodeConfig struct {
 	ExtraHosts   []ExtraHost   `json:"extraHosts"`
 }
 
+// Environment (struct)
 type Environment struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
@@ -79,6 +88,7 @@ type RuntimeUpdate struct {
 	NodeConfig
 }
 
+// NodePackageReq (struct)
 type NodePackageReq struct {
 	CodeDir string `json:"codeDir"`
 }
@@ -114,6 +124,7 @@ type PHPConfigUpdate struct {
 	MaxExecutionTime string            `json:"maxExecutionTime"`
 }
 
+// PHPFileUpdate (struct)
 type PHPFileUpdate struct {
 	ID      uint   `json:"id" validate:"required"`
 	Type    string `json:"type" validate:"required"`
@@ -149,6 +160,7 @@ type PHPContainerConfig struct {
 	ExtraHosts    []ExtraHost   `json:"extraHosts"`
 }
 
+// RuntimeRemark (struct)
 type RuntimeRemark struct {
 	ID     uint   `json:"id" validate:"required"`
 	Remark string `json:"remark"`

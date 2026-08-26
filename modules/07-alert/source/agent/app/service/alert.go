@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Alert 告警 (agent/app/service/alert.go)
+// 文件: alert.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -24,6 +31,7 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 )
 
+// AlertService (struct)
 type AlertService struct{}
 
 var eeHiddenAlertTypes = []string{"licenseException", "panelUpdate", "panelPwdEndTime"}
@@ -34,6 +42,7 @@ var communityAlertMethodTypeNames = map[string]string{
 	constant.SMS:      "SMS",
 }
 
+// IAlertService (interface)
 type IAlertService interface {
 	PageAlert(req dto.AlertSearch) (int64, []dto.AlertDTO, error)
 	GetAlerts() ([]dto.AlertDTO, error)

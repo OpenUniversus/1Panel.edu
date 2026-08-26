@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Monitor 主机监控 (agent/app/service/ssh.go)
+// 文件: ssh.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -41,8 +48,10 @@ const sshPath = "/etc/ssh/sshd_config"
 const defaultSSHPort = "22"
 const sshManagedMarker = "# config by 1panel"
 
+// SSHService (struct)
 type SSHService struct{}
 
+// ISSHService (interface)
 type ISSHService interface {
 	GetSSHInfo() (*dto.SSHInfo, error)
 	OperateSSH(operation string) error
@@ -78,6 +87,7 @@ type sshConfigFile struct {
 	Priority int    `json:"priority"`
 }
 
+// sshManagedBlock (struct)
 type sshManagedBlock struct {
 	Start int
 	End   int
@@ -654,6 +664,7 @@ func (u *SSHService) DeleteRootCerts(req dto.ForceDelete) error {
 	return nil
 }
 
+// sshFileItem (struct)
 type sshFileItem struct {
 	Name string
 	Year int
@@ -1259,6 +1270,7 @@ func isSSHConfigPathAllowed(fileName string) bool {
 	return false
 }
 
+// sshLogHeader (struct)
 type sshLogHeader struct {
 	DateStr string
 	Process string

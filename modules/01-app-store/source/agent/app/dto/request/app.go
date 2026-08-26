@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: App 应用商店 (agent/app/dto/request/app.go)
+// 文件: app.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package request
 
 import (
@@ -6,6 +13,7 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/constant"
 )
 
+// AppSearch (struct)
 type AppSearch struct {
 	dto.PageInfo
 	Name            string   `json:"name"`
@@ -52,6 +60,7 @@ type AppContainerConfig struct {
 	RestartPolicy string  `json:"restartPolicy" validate:"omitempty,oneof=always unless-stopped no on-failure"`
 }
 
+// AppInstalledSearch (struct)
 type AppInstalledSearch struct {
 	dto.PageInfo
 	Type        string   `json:"type"`
@@ -94,6 +103,7 @@ type AppInstalledOperate struct {
 	Favorite      bool                `json:"favorite"`
 }
 
+// AppInstallUpgrade (struct)
 type AppInstallUpgrade struct {
 	InstallID     uint   `json:"installId"`
 	DetailID      uint   `json:"detailId"`
@@ -129,6 +139,7 @@ type AppInstalledIgnoreUpgrade struct {
 	Operate  string `json:"operate"   validate:"required,oneof=cancel ignore"`
 }
 
+// PortUpdate (struct)
 type PortUpdate struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`

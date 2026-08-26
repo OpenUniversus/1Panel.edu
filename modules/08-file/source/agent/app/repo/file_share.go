@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: File 文件管理 (agent/app/repo/file_share.go)
+// 文件: file_share.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -6,8 +13,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// FileShareRepo (struct)
 type FileShareRepo struct{}
 
+// IFileShareRepo (interface)
 type IFileShareRepo interface {
 	Page(page, size int, opts ...DBOption) (int64, []model.FileShare, error)
 	Create(fileShare *model.FileShare) error

@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: App 应用商店 (agent/app/repo/app_launcher.go)
+// 文件: app_launcher.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -5,8 +12,10 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/global"
 )
 
+// LauncherRepo (struct)
 type LauncherRepo struct{}
 
+// ILauncherRepo (interface)
 type ILauncherRepo interface {
 	Get(opts ...DBOption) (model.AppLauncher, error)
 	ListName(opts ...DBOption) ([]string, error)

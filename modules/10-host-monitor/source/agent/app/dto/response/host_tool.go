@@ -1,5 +1,13 @@
+// =============================================================================
+// 模块: Monitor 主机监控 (agent/app/dto/response/host_tool.go)
+// 文件: host_tool.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package response
 
+// HostToolRes (struct)
 type HostToolRes struct {
 	Type   string      `json:"type"`
 	Config interface{} `json:"config"`
@@ -35,6 +43,7 @@ type SupervisorProcessConfig struct {
 	Environment string          `json:"environment"`
 }
 
+// ProcessStatus (struct)
 type ProcessStatus struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`

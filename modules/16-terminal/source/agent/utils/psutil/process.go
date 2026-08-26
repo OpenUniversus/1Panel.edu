@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Terminal 终端 (agent/utils/psutil/process.go)
+// 文件: process.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package psutil
 
 import (
@@ -17,6 +24,7 @@ import (
 const defaultClockTicks = 100
 const maxProcessCreateTimeSkew = time.Minute
 
+// ProcessCreateTimeResolver (struct)
 type ProcessCreateTimeResolver struct {
 	procRoot   string
 	bootTime   int64

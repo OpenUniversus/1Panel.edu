@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: File 文件管理 (agent/app/service/file.go)
+// 文件: file.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -47,6 +54,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// FileService (struct)
 type FileService struct {
 }
 
@@ -54,6 +62,7 @@ const fileHistorySnapshotMaxSize = 10 * 1024 * 1024
 
 var fileTransferLocks = newFileTransferLocks()
 
+// IFileService (interface)
 type IFileService interface {
 	GetFileList(op request.FileOption) (response.FileInfo, error)
 	SearchUploadWithPage(req request.SearchUploadWithPage) (int64, interface{}, error)
@@ -571,6 +580,7 @@ func copyDecompressTree(ctx context.Context, srcDir, dstDir string) error {
 	return nil
 }
 
+// decompressFileIdentity (struct)
 type decompressFileIdentity struct {
 	device uint64
 	inode  uint64

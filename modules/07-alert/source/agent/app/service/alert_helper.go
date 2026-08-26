@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Alert 告警 (agent/app/service/alert_helper.go)
+// 文件: alert_helper.go — 辅助函数集 (alert)
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package service
 
 import (
@@ -34,6 +41,7 @@ const (
 	LoadCheckIntervalMin  = 5
 )
 
+// AlertTaskHelper (struct)
 type AlertTaskHelper struct {
 	DiskIO chan []disk.IOCountersStat
 	NetIO  chan []gnet.IOCountersStat

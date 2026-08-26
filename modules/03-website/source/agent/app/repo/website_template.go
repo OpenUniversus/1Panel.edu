@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Website 网站管理 (agent/app/repo/website_template.go)
+// 文件: website_template.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -5,6 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// IWebsiteTemplateRepo (interface)
 type IWebsiteTemplateRepo interface {
 	Page(page, size int, opts ...DBOption) (int64, []model.WebsiteTemplate, error)
 	GetFirst(opts ...DBOption) (*model.WebsiteTemplate, error)
@@ -71,6 +79,7 @@ func (w *WebsiteTemplateRepo) DeleteBy(opts ...DBOption) error {
 	return getDb(opts...).Delete(&model.WebsiteTemplate{}).Error
 }
 
+// IWebsiteTemplateOutputRepo (interface)
 type IWebsiteTemplateOutputRepo interface {
 	Page(page, size int, opts ...DBOption) (int64, []model.WebsiteTemplateOutput, error)
 	GetFirst(opts ...DBOption) (*model.WebsiteTemplateOutput, error)

@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: File 文件管理 (agent/app/api/v2/file.go)
+// 文件: file.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package v2
 
 import (
@@ -35,6 +42,7 @@ var cancelledChunkUploads = struct {
 	ids map[string]struct{}
 }{ids: make(map[string]struct{})}
 
+// chunkUploadLock (struct)
 type chunkUploadLock struct {
 	mutex sync.Mutex
 	refs  int
@@ -45,6 +53,7 @@ var chunkUploadLocks = struct {
 	items map[string]*chunkUploadLock
 }{items: make(map[string]*chunkUploadLock)}
 
+// completedChunkUpload (struct)
 type completedChunkUpload struct {
 	dstDir   string
 	filename string
@@ -63,6 +72,7 @@ var (
 	errInvalidChunkUpload   = errors.New("invalid chunk upload")
 )
 
+// activeChunkUpload (struct)
 type activeChunkUpload struct {
 	upload    completedChunkUpload
 	expiresAt time.Time
@@ -74,6 +84,7 @@ var activeChunkUploads = struct {
 	items map[string]activeChunkUpload
 }{items: make(map[string]activeChunkUpload)}
 
+// resumableUploadChunk (struct)
 type resumableUploadChunk struct {
 	UploadID   string
 	Filename   string

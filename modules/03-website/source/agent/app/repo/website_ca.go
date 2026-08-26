@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Website 网站管理 (agent/app/repo/website_ca.go)
+// 文件: website_ca.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -6,6 +13,7 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/app/model"
 )
 
+// WebsiteCARepo (struct)
 type WebsiteCARepo struct {
 }
 
@@ -13,6 +21,7 @@ func NewIWebsiteCARepo() IWebsiteCARepo {
 	return &WebsiteCARepo{}
 }
 
+// IWebsiteCARepo (interface)
 type IWebsiteCARepo interface {
 	Page(page, size int, opts ...DBOption) (int64, []model.WebsiteCA, error)
 	GetFirst(opts ...DBOption) (model.WebsiteCA, error)

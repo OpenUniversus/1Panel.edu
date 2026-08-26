@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: File 文件管理 (agent/app/dto/response/file.go)
+// 文件: file.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package response
 
 import (
@@ -6,6 +13,7 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/utils/files"
 )
 
+// FileInfo (struct)
 type FileInfo struct {
 	files.FileInfo
 }
@@ -47,6 +55,7 @@ type FileLineContent struct {
 	TotalLines int      `json:"totalLines"`
 }
 
+// FileExist (struct)
 type FileExist struct {
 	Exist bool `json:"exist"`
 }
@@ -82,6 +91,7 @@ type FileConvertLog struct {
 	Message string `json:"message"`
 }
 
+// FileRemarksRes (struct)
 type FileRemarksRes struct {
 	Remarks map[string]string `json:"remarks"`
 }

@@ -1,3 +1,10 @@
+// =============================================================================
+// 模块: Alert 告警 (agent/app/repo/alert.go)
+// 文件: alert.go — 主代码
+// 说明: 本文件为 1Panel 上游源码拷贝 + 中文注解, 源码 commit: dev-v2
+//       注解只增加 // 注释, 不改变 Go 语义, 文件仍可直接用 go build 编译
+// =============================================================================
+
 package repo
 
 import (
@@ -13,8 +20,10 @@ import (
 	"time"
 )
 
+// AlertRepo (struct)
 type AlertRepo struct{}
 
+// IAlertRepo (interface)
 type IAlertRepo interface {
 	WithByType(alertType string) DBOption
 	WithByStatusIn(status []string) DBOption
