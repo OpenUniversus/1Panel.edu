@@ -65,10 +65,10 @@ footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line);
 <div class="diagram">
 <pre class="mermaid">
 flowchart TB
-    UI[Web UI 下拉框] --> A[抽象层<br/>每周日凌晨 3 点]
-    A --> B[翻译层<br/>0 3 * * 0]
-    B --> C[robfig/cron 库<br/>解析 + 调度]
-    C --> D[Go runtime timer<br/>实际触发]
+    UI[Web UI 下拉框] --> A[抽象层 / 每周日凌晨 3 点]
+    A --> B[翻译层 / 0 3 * * 0]
+    B --> C[robfig/cron 库 / 解析 + 调度]
+    C --> D[Go runtime timer / 实际触发]
     D --> E[执行 callback]
     style A fill:#c97b3f,color:#fff
     style C fill:#2f6f5e,color:#fff
@@ -110,10 +110,10 @@ sequenceDiagram
 <div class="diagram">
 <pre class="mermaid">
 flowchart LR
-    H[Hourly<br/>每小时] -->|"0 * * * *"| CR[cron 表达式]
-    D[Daily<br/>每天 03:00] -->|"0 3 * * *"| CR
-    W[Weekly<br/>周日 03:00] -->|"0 3 * * 0"| CR
-    M[Monthly<br/>每月 1 号 03:00] -->|"0 3 1 * *"| CR
+    H[Hourly / 每小时] -->|"0 * * * *"| CR[cron 表达式]
+    D[Daily / 每天 03:00] -->|"0 3 * * *"| CR
+    W[Weekly / 周日 03:00] -->|"0 3 * * 0"| CR
+    M[Monthly / 每月 1 号 03:00] -->|"0 3 1 * *"| CR
     style CR fill:#2f6f5e,color:#fff
 </pre>
 <div class="caption">图 3：4 个下拉框选项 → 4 种 cron 表达式</div>
@@ -126,11 +126,11 @@ flowchart LR
 <div class="diagram">
 <pre class="mermaid">
 flowchart TB
-    Job[CronJob.Type] --> B[backup<br/>自动备份]
-    Job --> S[shell<br/>执行命令]
-    Job --> H[http<br/>HTTP 调用]
-    Job --> CR[container_restart<br/>容器重启]
-    Job --> CB[custom_callback<br/>Python 函数]
+    Job[CronJob.Type] --> B[backup / 自动备份]
+    Job --> S[shell / 执行命令]
+    Job --> H[http / HTTP 调用]
+    Job --> CR[container_restart / 容器重启]
+    Job --> CB[custom_callback / Python 函数]
     style Job fill:#2f6f5e,color:#fff
 </pre>
 <div class="caption">图 4：Type 字段预留扩展。Sirius Cloud 加新类型只写 switch case</div>

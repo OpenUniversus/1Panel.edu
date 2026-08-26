@@ -435,10 +435,10 @@ flowchart TB
     A --> R[SettingRepo]
     A --> S[PSession]
     A --> I[IPTracker]
-    R --> C[(go-cache<br/>5min TTL)]
+    R --> C[(go-cache / 5min TTL)]
     R --> DB[(SQLite settings)]
-    S --> Sess[(Memory Map<br/>map sessionID=&gt;item)]
-    I --> Rec[(Memory Map<br/>map ip=&gt;record)]
+    S --> Sess[(Memory Map / map sessionID=&gt;item)]
+    I --> Rec[(Memory Map / map ip=&gt;record)]
     style MW fill:#2f6f5e,color:#fff
     style H fill:#c97b3f,color:#fff
     style A fill:#2f6f5e,color:#fff
@@ -487,8 +487,8 @@ flowchart TB
     <div class="diagram">
       <div class="mermaid">
 flowchart TB
-    Prefix["/api/v2/core/auth"] --> BR[baseRouter<br/>no middleware]
-    Prefix --> AR[authRouter<br/>+ SessionAuth<br/>+ PasswordExpired]
+    Prefix["/api/v2/core/auth"] --> BR[baseRouter / no middleware]
+    Prefix --> AR[authRouter / + SessionAuth / + PasswordExpired]
 
     BR --> R1["GET /captcha"]
     BR --> R2["POST /login"]
@@ -578,7 +578,7 @@ sequenceDiagram
     MW-->>Browser: captchaID + image
 
     Browser->>Gin: POST /api/v2/core/auth/login
-    Note over Browser,Gin: Header: EntranceCode (base64)<br/>Body: dto.Login{Name, Password(RSA 加密), Captcha, Language}
+    Note over Browser,Gin: Header: EntranceCode (base64) / Body: dto.Login{Name, Password(RSA 加密), Captcha, Language}
 
     Gin->>MW: CSRF skip (公开路由) + SessionAuth skip
     MW->>H: 路由命中
@@ -739,11 +739,11 @@ const (
     <div class="diagram">
       <div class="mermaid">
 flowchart LR
-    A[User 进入设置] --> B[POST /auth/mfa<br/>生成二维码]
+    A[User 进入设置] --> B[POST /auth/mfa / 生成二维码]
     B --> C[mfa.GetOtp username, title, interval]
     C --> D[返回 Otp secret + QR URL]
     D --> E[用户扫码+输 code]
-    E --> F[POST /auth/mfa/bind<br/>dto.MfaCredential]
+    E --> F[POST /auth/mfa/bind / dto.MfaCredential]
     F --> G["mfa.ValidCode 校验 code"]
     G --> H[Update settings: MFAInterval, MFAStatus=Enable, MFASecret]
     H --> I[绑定成功]
@@ -864,18 +864,18 @@ sequenceDiagram
     Note over User: 1. 用户在面板生成 API Key
     User->>Browser: POST /auth/api/generate
     Browser->>Master: 调 GenerateApiKey
-    Note over Master: 检查 1Panel-Token header<br/>若已用 API 模式,返回 ErrApiConfigDisable
+    Note over Master: 检查 1Panel-Token header / 若已用 API 模式,返回 ErrApiConfigDisable
     Master->>Repo: Update("ApiKey", RandStr(32))
     Master-->>User: 返回 32 字符 key
 
     Note over User: 2. 外部系统用 API Key 调接口
     User->>User: ts = unix() now
     User->>User: token = md5("1panel" + apiKey + ts)
-    User->>Master: GET /api/v2/xxx<br/>1Panel-Token: token<br/>1Panel-Timestamp: ts
+    User->>Master: GET /api/v2/xxx / 1Panel-Token: token / 1Panel-Timestamp: ts
     Master->>Auth: APIAuthMiddleware
     Auth->>Repo: Get(ApiInterfaceStatus, ApiKey, IpWhiteList, ApiKeyValidityTime)
     Auth->>Auth: isValid1PanelTimestamp (ts, ttl)
-    Note over Auth: 默认 60s 容忍<br/>+ ttl 分钟 (ApiKeyValidityTime)
+    Note over Auth: 默认 60s 容忍 / + ttl 分钟 (ApiKeyValidityTime)
     Auth->>Auth: isValid1PanelToken (md5 / hmac-sha256)
     Auth->>Auth: isIPInWhiteList (clientIP, whiteList)
     alt 校验失败
@@ -931,20 +931,20 @@ sequenceDiagram
       <div class="mermaid">
 flowchart TB
     Req[HTTP Request] --> M1[i18n.UseI18n]
-    M1 --> M2[WhiteAllow<br/>IP 白名单]
+    M1 --> M2[WhiteAllow / IP 白名单]
     M2 --> M3[BindDomain]
     M3 --> M4[FrontendFallback]
     M4 --> M5[OperationLog]
     M5 --> M6[GlobalLoading]
-    M6 --> M7[CoreAPIAuthMiddleware<br/>1Panel-Token 验签]
+    M6 --> M7[CoreAPIAuthMiddleware / 1Panel-Token 验签]
     M7 --> M8[PasswordExpired]
     M8 --> M9[CSRFTokenGuard]
     M9 --> M10[CoreRBACMiddlewares]
     M10 --> M11[Proxy]
 
     M11 --> P1{URL 路径分支}
-    P1 -->|/api/v2/core/auth/login<br/>等 8 个公开路由| P2[baseRouter<br/>不挂中间件]
-    P1 -->|/api/v2/core/auth/mfa<br/>等 11 个受保护路由| P3[authRouter<br/>+ SessionAuth + PasswordExpired]
+    P1 -->|/api/v2/core/auth/login / 等 8 个公开路由| P2[baseRouter / 不挂中间件]
+    P1 -->|/api/v2/core/auth/mfa / 等 11 个受保护路由| P3[authRouter / + SessionAuth + PasswordExpired]
     P1 -->|其他业务| P4[对应 Router]
 
     P2 --> H1[Handler 业务]
@@ -1028,9 +1028,9 @@ stateDiagram-v2
     [*] --> Clean: 新 IP
     Clean --> Failed: 登录失败 1 次
     Failed --> Failed: 失败计数 +1
-    Failed --> NeedCaptcha: ErrAuth / ErrMFA 触发<br/>SetNeedCaptcha
+    Failed --> NeedCaptcha: ErrAuth / ErrMFA 触发 / SetNeedCaptcha
     NeedCaptcha --> Failed: 继续失败计数
-    Failed --> Locked: FailedCount >= 10<br/>LockedUntil = now + 5min
+    Failed --> Locked: FailedCount >= 10 / LockedUntil = now + 5min
     Locked --> Clean: 5 分钟后自动解锁
     Clean --> Clean: 登录成功 IPTracker.Clear
     NeedCaptcha --> Clean: 登录成功 (同时清 captcha 标记)
@@ -1223,7 +1223,7 @@ helper.SuccessWithData(c, user)
 
   <footer>
     1Panel Auth 模块 · 可视化图集 · 9 张 Mermaid 真实图 · 1 套完整调用链
-    <br/>
+     / 
     创建于 2026-08-25 · 源码来自 dev-v2 @ 2dea44a · 本图集仅供学习参考
   </footer>
 

@@ -63,15 +63,15 @@ footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line);
 <div class="diagram">
 <pre class="mermaid">
 flowchart TB
-    A[Web 端文件管理器] --> B[List<br/>树形目录]
-    A --> C[Upload<br/>分片上传]
-    A --> D[Download<br/>分片下载]
-    A --> E[Edit<br/>monaco-editor]
-    A --> F[Delete<br/>回收站]
-    C --> G[file_transfer.go<br/>分片 66 行]
-    F --> H[file_history.go<br/>快照 688 行]
-    A --> I[Share<br/>临时 URL]
-    I --> J[file_share.go<br/>350 行]
+    A[Web 端文件管理器] --> B[List / 树形目录]
+    A --> C[Upload / 分片上传]
+    A --> D[Download / 分片下载]
+    A --> E[Edit / monaco-editor]
+    A --> F[Delete / 回收站]
+    C --> G[file_transfer.go / 分片 66 行]
+    F --> H[file_history.go / 快照 688 行]
+    A --> I[Share / 临时 URL]
+    I --> J[file_share.go / 350 行]
     style G fill:#c97b3f,color:#fff
     style H fill:#2f6f5e,color:#fff
 </pre>
@@ -90,12 +90,12 @@ sequenceDiagram
     participant API as file API 1761 行
     participant SVC as file.go 1587 行
     participant FS as 文件系统
-    U->>API: POST /file/upload/init<br/>{filename, size, chunkSize: 5MB}
+    U->>API: POST /file/upload/init / {filename, size, chunkSize: 5MB}
     API->>SVC: initUpload(req)
     SVC->>FS: 创建 /tmp/upload-{uploadID}/
     SVC-->>U: {uploadID, chunkSize: 5MB}
     loop 每个分片（并发 3-5）
-        U->>API: POST /file/upload/chunk<br/>{uploadID, index, data}
+        U->>API: POST /file/upload/chunk / {uploadID, index, data}
         API->>SVC: uploadChunk(req)
         SVC->>FS: 写 /tmp/upload-{uploadID}/{index}
     end
@@ -118,8 +118,8 @@ flowchart LR
     A[用户点保存] --> B[读当前内容]
     B --> C[算 SHA-256]
     C --> D{同 hash 存过?}
-    D -->|是| E[跳过<br/>不重复存]
-    D -->|否| F[存快照<br/>file_id + hash + content]
+    D -->|是| E[跳过 / 不重复存]
+    D -->|否| F[存快照 / file_id + hash + content]
     F --> G[更新 file_history 表]
     E --> G
     style C fill:#2f6f5e,color:#fff

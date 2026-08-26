@@ -63,13 +63,13 @@ footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line);
 <div class="diagram">
 <pre class="mermaid">
 flowchart TB
-    A[views/ 488 个文件<br/>14 业务域] --> B[routers/<br/>路由 + 权限守卫]
-    B --> C[components/ 97 个<br/>可复用 UI 组件]
-    C --> D[api/ 51 个 .ts<br/>HTTP 客户端 + 类型]
+    A[views/ 488 个文件 / 14 业务域] --> B[routers/ / 路由 + 权限守卫]
+    B --> C[components/ 97 个 / 可复用 UI 组件]
+    C --> D[api/ 51 个 .ts / HTTP 客户端 + 类型]
     D --> E[后端 /api/v2/*]
-    A --> F[store/ Pinia<br/>用户 / 全局状态 / 主题]
-    A --> G[utils/ 42 个 .ts<br/>工具函数]
-    A --> H[lang/ 14 个<br/>i18n 多语言]
+    A --> F[store/ Pinia / 用户 / 全局状态 / 主题]
+    A --> G[utils/ 42 个 .ts / 工具函数]
+    A --> H[lang/ 14 个 / i18n 多语言]
     style B fill:#2f6f5e,color:#fff
     style D fill:#c97b3f,color:#fff
 </pre>
@@ -127,7 +127,7 @@ flowchart TB
     U[用户访问 /database/mysql] --> G[全局路由守卫]
     G --> A{requiresAuth?}
     A -->|否| Z[放行]
-    A -->|是| B{userStore.hasPermission<br/>'database:mysql:read'?}
+    A -->|是| B{userStore.hasPermission / 'database:mysql:read'?}
     B -->|否| X[跳转 /403]
     B -->|是| Z
     style G fill:#2f6f5e,color:#fff

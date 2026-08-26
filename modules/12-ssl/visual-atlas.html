@@ -293,11 +293,11 @@
 sequenceDiagram
     autonumber
     participant U as User Browser
-    participant H as Handler<br/>api/v2/website_ssl.go
-    participant S as Service<br/>service/website_ssl.go
+    participant H as Handler / api/v2/website_ssl.go
+    participant S as Service / service/website_ssl.go
     participant AR as Acme Repo
     participant SR as SSL Repo
-    participant L as lego AcmeClient<br/>utils/ssl/client.go
+    participant L as lego AcmeClient / utils/ssl/client.go
     participant CA as Let's Encrypt CA
     participant OR as OpenResty
     participant FS as 本地文件
@@ -351,10 +351,10 @@ sequenceDiagram
       <p class="lead">HTTP-01 原理：CA 服务器主动 GET <code>http://你的域名/.well-known/acme-challenge/&lt;token&gt;</code>，你的 OpenResty 必须能返回正确的 <code>keyAuthorization</code> 才能证明域名是你的。简单但要求 80 端口对外可达 + 不支持通配符。</p>
       <div class="mermaid">
 flowchart TD
-    Start([用户申请 HTTP-01 证书]) --> Req[lego 向 CA 发起 new-order<br/>identifiers: example.com]
+    Start([用户申请 HTTP-01 证书]) --> Req[lego 向 CA 发起 new-order / identifiers: example.com]
     Req --> Auth[CA 返回 authorizations URL]
-    Auth --> Chal[CA 返回 http-01 challenge<br/>token=abc123]
-    Chal --> Write[lego 在 OpenResty root 目录写<br/>.well-known/acme-challenge/abc123<br/>内容 = keyAuthorization]
+    Auth --> Chal[CA 返回 http-01 challenge / token=abc123]
+    Chal --> Write[lego 在 OpenResty root 目录写 / .well-known/acme-challenge/abc123 / 内容 = keyAuthorization]
     Write --> Notify[lego 通知 CA: 已就绪]
     Notify --> Probe{CA 主动 HTTP GET}
     Probe -->|80 端口可达| Ok[OpenResty 返回 keyAuthorization]
@@ -387,18 +387,18 @@ sequenceDiagram
     participant U as User
     participant S as Service.obtainSSL
     participant L as lego AcmeClient
-    participant DP as DNS Provider<br/>(阿里云/腾讯云/华为...)
+    participant DP as DNS Provider / (阿里云/腾讯云/华为...)
     participant CA as Let's Encrypt
     participant PDNS as 公共 DNS 解析
 
     U->>S: Create(provider=dnsAccount)
     S->>L: UseDns(dnsType="Aliyun", auth, ssl)
-    Note over L: 构造 challenge.Provider<br/>+ 设 custom nameservers
+    Note over L: 构造 challenge.Provider / + 设 custom nameservers
     L->>CA: new-order {*.example.com}
     CA-->>L: dns-01 challenge token
     L->>DP: AddTXT _acme-challenge.example.com
     DP-->>PDNS: 同步 TXT 记录
-    Note over L,PDNS: lego 轮询等待 propagation<br/>(默认 60s 间隔, 最长 5min)
+    Note over L,PDNS: lego 轮询等待 propagation / (默认 60s 间隔, 最长 5min)
     L->>PDNS: 查询 TXT 记录
     PDNS-->>L: 返回 challenge 值
     L->>CA: POST challenge {keyAuth}
@@ -439,13 +439,13 @@ sequenceDiagram
       <div class="mermaid">
 sequenceDiagram
     autonumber
-    participant CT as Scheduler<br/>(每天 00:00)
+    participant CT as Scheduler / (每天 00:00)
     participant J as cron/job/ssl.go
     participant SR as SSL Repo
     participant SY as service.SyncSystemSSL
     participant SS as WebsiteSSLService
     participant FS as Disk + OpenResty
-    participant NODES as Worker 节点<br/>(XPack)
+    participant NODES as Worker 节点 / (XPack)
 
     CT->>J: Run()
     J->>SR: List() 拿所有证书
@@ -469,7 +469,7 @@ sequenceDiagram
             else ACME
                 J->>SS: AutoRenewSSL(id)
                 SS->>SS: obtainSSL(id, autoRenew=true)
-                Note over SS: 日志 O_APPEND 追加<br/>+ banner "==== auto renew ===="
+                Note over SS: 日志 O_APPEND 追加 / + banner "==== auto renew ===="
                 SS->>FS: ACME 申请 + 写 OpenResty
                 SS->>FS: nginx -s reload
             end
@@ -498,15 +498,15 @@ sequenceDiagram
       <div class="mermaid">
 flowchart LR
     subgraph cert[一张 SSL 证书]
-        CN[Primary Domain<br/>example.com]
+        CN[Primary Domain / example.com]
         SAN1[example.com]
         SAN2[www.example.com]
         SAN3[api.example.com]
         SAN4[cdn.example.com]
     end
-    User[用户填表:<br/>主域名 = example.com<br/>其他域名 = www/api/cdn 各一行] --> Parse[Create: 分割 OtherDomains]
+    User[用户填表: / 主域名 = example.com / 其他域名 = www/api/cdn 各一行] --> Parse[Create: 分割 OtherDomains]
     Parse --> Validate[common.IsValidDomain 校验]
-    Validate --> Save[存 DB:<br/>primary_domain=example.com<br/>domains=www.example.com,api.example.com,cdn.example.com]
+    Validate --> Save[存 DB: / primary_domain=example.com / domains=www.example.com,api.example.com,cdn.example.com]
     Save --> Apply[obtainSSL 时合并成列表]
     Apply --> ACME[lego ObtainSSL: domains 参数]
     ACME --> CSR[生成 CSR 时全部塞进 SAN]
@@ -529,8 +529,8 @@ flowchart LR
       <div class="mermaid">
 flowchart TD
     Start([用户进入证书管理页]) --> Choice{选择方式}
-    Choice -->|申请新证书| Create[POST /websites/ssl<br/>Create handler]
-    Choice -->|上传已有证书| Up[POST /websites/ssl/upload<br/>或 /upload/file]
+    Choice -->|申请新证书| Create[POST /websites/ssl / Create handler]
+    Choice -->|上传已有证书| Up[POST /websites/ssl/upload / 或 /upload/file]
     Create --> CreateSvc[Service.Create]
     CreateSvc --> Init[SSLInit + 写库]
     Init --> Goroutine[goroutine 调 obtainSSL]
@@ -539,8 +539,8 @@ flowchart TD
     Ready1 --> Reload1[nginx -s reload]
     Up --> Type{Type?}
     Type -->|paste| Paste[拿 body.privateKey + certificate]
-    Type -->|local| Local[files.GetContent 读<br/>PrivateKeyPath + CertificatePath]
-    Paste --> Parse[parseCertificatePEM<br/>提取主域名/SAN/ExpireDate]
+    Type -->|local| Local[files.GetContent 读 / PrivateKeyPath + CertificatePath]
+    Paste --> Parse[parseCertificatePEM / 提取主域名/SAN/ExpireDate]
     Local --> Parse
     Parse --> Valid{pem 格式 OK?}
     Valid -->|否| Err1[ErrSSLKeyFormat / ErrSSLCertificateFormat]
@@ -565,16 +565,16 @@ flowchart TD
       <p class="lead">删除证书不只是从 DB 删记录——如果是 ACME 签发的，还会在后台 goroutine 调 lego 的 <code>RevokeSSL</code> 告诉 CA 吊销证书（让浏览器立刻不信任）。但有 3 种情况会被拦截：①有网站正在用 ②是面板证书 ③正在申请中。</p>
       <div class="mermaid">
 flowchart TD
-    Start([DELETE /websites/ssl/del<br/>ids: 1,2,3]) --> Loop[遍历每个 id]
-    Loop --> WebCheck{查 websites<br/>表 website_ssl_id = id?}
+    Start([DELETE /websites/ssl/del / ids: 1,2,3]) --> Loop[遍历每个 id]
+    Loop --> WebCheck{查 websites / 表 website_ssl_id = id?}
     WebCheck -->|有网站在用| MarkUsed[加进 websiteSSLS 列表]
-    WebCheck -->|无网站| SysCheck{是面板证书?<br/>SSL=enable && SSLID==id}
-    SysCheck -->|是| Block[ErrDeleteWithPanelSSL<br/>拦截]
+    WebCheck -->|无网站| SysCheck{是面板证书? / SSL=enable && SSLID==id}
+    SysCheck -->|是| Block[ErrDeleteWithPanelSSL / 拦截]
     SysCheck -->|否| Load[websiteSSLRepo.GetFirst]
     Load --> StatusCheck{Status == SSLApply?}
     StatusCheck -->|是| MarkApplying[加进 applySSLS 列表]
-    StatusCheck -->|否| ProviderCheck{Provider 是<br/>ACME 类型?}
-    ProviderCheck -->|是 ACME| Revoke[goroutine: lego RevokeSSL<br/>通知 CA 吊销]
+    StatusCheck -->|否| ProviderCheck{Provider 是 / ACME 类型?}
+    ProviderCheck -->|是 ACME| Revoke[goroutine: lego RevokeSSL / 通知 CA 吊销]
     ProviderCheck -->|是 Manual / SelfSigned| Skip[跳过吊销]
     Revoke --> Del
     Skip --> Del[websiteSSLRepo.DeleteBy]
@@ -583,8 +583,8 @@ flowchart TD
     MarkApplying --> Continue
     Block --> Return[返回错误]
     Continue --> Loop
-    Loop -->|遍历完| FinalCheck{websiteSSLS<br/>或 applySSLS<br/>非空?}
-    FinalCheck -->|是| ErrReturn[返回国际化错误<br/>ErrSSLCannotDelete /<br/>ErrApplySSLCanNotDelete]
+    Loop -->|遍历完| FinalCheck{websiteSSLS / 或 applySSLS / 非空?}
+    FinalCheck -->|是| ErrReturn[返回国际化错误 / ErrSSLCannotDelete / / ErrApplySSLCanNotDelete]
     FinalCheck -->|否| Ok[返回 nil - 删除成功]
     style Block fill:#1e293b,stroke:#f87171
     style MarkUsed fill:#1e293b,stroke:#fbbf24
@@ -604,27 +604,27 @@ flowchart TD
 flowchart TB
     subgraph entry[入口层]
         BROWSER[Browser / Frontend]
-        CRONJOB[cron/job/ssl.go<br/>每天 00:00]
+        CRONJOB[cron/job/ssl.go / 每天 00:00]
     end
 
     subgraph router[Router 层]
-        R1[ro_website_ssl.go<br/>13 routes]
-        R2[ro_website_acme_account.go<br/>4 routes]
+        R1[ro_website_ssl.go / 13 routes]
+        R2[ro_website_acme_account.go / 4 routes]
     end
 
     subgraph middleware[Middleware 层]
-        M1[certificate.go<br/>XPack 节点证书校验]
+        M1[certificate.go / XPack 节点证书校验]
     end
 
     subgraph handler[Handler 层 api/v2]
-        H1[website_ssl.go<br/>14 handlers]
-        H2[website_acme_account.go<br/>4 handlers]
+        H1[website_ssl.go / 14 handlers]
+        H2[website_acme_account.go / 4 handlers]
     end
 
     subgraph service[Service 层]
-        S1[WebsiteSSLService<br/>1090 行<br/>14 methods]
-        S2[WebsiteAcmeAccountService<br/>100 行]
-        SH[共享函数:<br/>obtainSSL / SyncSystemSSL /<br/>pushSSLToNode / handleError]
+        S1[WebsiteSSLService / 1090 行 / 14 methods]
+        S2[WebsiteAcmeAccountService / 100 行]
+        SH[共享函数: / obtainSSL / SyncSystemSSL / / pushSSLToNode / handleError]
     end
 
     subgraph repo[Repository 层]
@@ -635,23 +635,23 @@ flowchart TB
     end
 
     subgraph model[Model 层 GORM]
-        DB1[(website_ssls<br/>网站证书主表)]
-        DB2[(website_acme_accounts<br/>ACME 账户表)]
-        DB3[(website_dns_accounts<br/>DNS 厂商凭据)]
+        DB1[(website_ssls / 网站证书主表)]
+        DB2[(website_acme_accounts / ACME 账户表)]
+        DB3[(website_dns_accounts / DNS 厂商凭据)]
     end
 
     subgraph utility[Utility 层 utils/ssl]
-        U1[acme.go<br/>ACME 客户端工厂]
-        U2[client.go<br/>AcmeClient UseDns/UseHTTP/ObtainSSL]
-        U3[dns_provider.go<br/>10+ DNS 厂商]
-        U4[manual_client.go<br/>手动 DNS 申请]
+        U1[acme.go / ACME 客户端工厂]
+        U2[client.go / AcmeClient UseDns/UseHTTP/ObtainSSL]
+        U3[dns_provider.go / 10+ DNS 厂商]
+        U4[manual_client.go / 手动 DNS 申请]
     end
 
     subgraph ext[外部依赖]
-        CA[Let's Encrypt<br/>ZeroSSL<br/>Google Trust<br/>Buypass]
-        OR[OpenResty<br/>HTTP-01 challenge<br/>conf.d/ssl/]
-        CORE[1Panel Core<br/>/core/settings/ssl/reload]
-        NPM[10+ DNS 厂商 API<br/>阿里云/腾讯云/...]
+        CA[Let's Encrypt / ZeroSSL / Google Trust / Buypass]
+        OR[OpenResty / HTTP-01 challenge / conf.d/ssl/]
+        CORE[1Panel Core / /core/settings/ssl/reload]
+        NPM[10+ DNS 厂商 API / 阿里云/腾讯云/...]
     end
 
     BROWSER --> R1 & R2
@@ -697,20 +697,20 @@ sequenceDiagram
     participant L as ssl.NewRegisterClient
     participant CA as CA (Let's Encrypt/ZeroSSL)
 
-    U->>H: POST /websites/acme<br/>{email, type: letsencrypt, keyType: EC256}
+    U->>H: POST /websites/acme / {email, type: letsencrypt, keyType: EC256}
     H->>S: Create(req)
     S->>S: 检查邮箱+类型是否已存在
     S->>L: NewRegisterClient(acme, proxy)
-    L->>L: newAcmeClient<br/>生成账户私钥
-    L->>L: NewConfigWithProxy<br/>+ getCaDirURL
-    L->>CA: POST /acme/new-acct<br/>{termsOfServiceAgreed:true}
+    L->>L: newAcmeClient / 生成账户私钥
+    L->>L: NewConfigWithProxy / + getCaDirURL
+    L->>CA: POST /acme/new-acct / {termsOfServiceAgreed:true}
     CA-->>L: {account URL, status:valid}
     L-->>S: AcmeClient.User.Registration = reg
     S->>S: acmeAccount.URL = reg.Location
     S->>S: acmeAccount.PrivateKey = PEM
     S->>S: websiteAcmeRepo.Create()
     S->>U: 200 OK {id, email, type}
-    Note over U,CA: 此后所有 ACME 请求用 URL 标识身份<br/>用 PrivateKey 签名
+    Note over U,CA: 此后所有 ACME 请求用 URL 标识身份 / 用 PrivateKey 签名
       </div>
       <p class="caption">图 9.1 · ACME 账户注册流程（CA 类型 + EAB 处理）</p>
 

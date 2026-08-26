@@ -63,13 +63,13 @@ footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line);
 <div class="diagram">
 <pre class="mermaid">
 flowchart TB
-    A[被管机器 Agent] --> B[host.go 320<br/>机器信息]
-    A --> C[monitor.go 642<br/>指标采集]
-    A --> D[host_tool.go 625<br/>远程操作]
-    A --> E[device.go 433<br/>设备信息]
-    A --> F[device_clean.go 1118<br/>磁盘清理]
-    A --> G[process.go 80<br/>进程列表]
-    A --> H[gpu.go<br/>GPU 信息]
+    A[被管机器 Agent] --> B[host.go 320 / 机器信息]
+    A --> C[monitor.go 642 / 指标采集]
+    A --> D[host_tool.go 625 / 远程操作]
+    A --> E[device.go 433 / 设备信息]
+    A --> F[device_clean.go 1118 / 磁盘清理]
+    A --> G[process.go 80 / 进程列表]
+    A --> H[gpu.go / GPU 信息]
     style C fill:#2f6f5e,color:#fff
     style D fill:#c97b3f,color:#fff
     style F fill:#b06367,color:#fff
@@ -84,10 +84,10 @@ flowchart TB
 <div class="diagram">
 <pre class="mermaid">
 flowchart LR
-    A[采集器<br/>1 分钟] --> B[内存 ring buffer<br/>最近 60 个点]
-    B --> C[持久化<br/>可选 SQLite]
-    C --> D[推送给 Core<br/>WebSocket / SSE]
-    D --> E[前端<br/>ECharts 实时图]
+    A[采集器 / 1 分钟] --> B[内存 ring buffer / 最近 60 个点]
+    B --> C[持久化 / 可选 SQLite]
+    C --> D[推送给 Core / WebSocket / SSE]
+    D --> E[前端 / ECharts 实时图]
     style A fill:#2f6f5e,color:#fff
     style D fill:#c97b3f,color:#fff
 </pre>
@@ -99,10 +99,10 @@ flowchart LR
 <div class="diagram">
 <pre class="mermaid">
 flowchart TB
-    P[psutil 库 / /proc 文件] --> C[CPU<br/>psutil.CPUPercent]
-    P --> M[内存<br/>psutil.VirtualMemory]
-    P --> D[磁盘<br/>psutil.DiskUsage]
-    P --> N[网络<br/>psutil.NetIOStats]
+    P[psutil 库 / /proc 文件] --> C[CPU / psutil.CPUPercent]
+    P --> M[内存 / psutil.VirtualMemory]
+    P --> D[磁盘 / psutil.DiskUsage]
+    P --> N[网络 / psutil.NetIOStats]
     C --> All[Metrics 结构体]
     M --> All
     D --> All

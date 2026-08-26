@@ -106,15 +106,15 @@ flowchart LR
         UI[1Panel 前端]
     end
     subgraph 路由层
-        RO[router/ro_app.go<br/>26 routes]
+        RO[router/ro_app.go / 26 routes]
     end
     subgraph Handler 层
-        H1[api/v2/app.go<br/>★ 11 handler]
-        H2[api/v2/app_install.go<br/>已装应用 20 handler]
+        H1[api/v2/app.go / ★ 11 handler]
+        H2[api/v2/app_install.go / 已装应用 20 handler]
     end
     subgraph Service 层
-        S1[service/app.go<br/>★ 1055 lines<br/>8 key funcs]
-        S2[service/app_install.go<br/>已装 CRUD]
+        S1[service/app.go / ★ 1055 lines / 8 key funcs]
+        S2[service/app_install.go / 已装 CRUD]
     end
     subgraph 数据来源
         D1[远端 1panel.json.zip]
@@ -128,7 +128,7 @@ flowchart LR
         R4[repo/app_tag.go]
     end
     subgraph 存储
-        DB[(SQLite<br/>apps / app_details<br/>app_installs / app_tags)]
+        DB[(SQLite / apps / app_details / app_installs / app_tags)]
     end
     UI -->|POST/GET| RO
     RO --> H1
@@ -171,12 +171,12 @@ flowchart TB
         H6[GetAppTags GET /apps/tags] --> F6[GetAppTags:174]
     end
     subgraph B[安装核心]
-        H7[InstallApp POST /apps/install] --> F7[Install:350<br/>★ 250 行核心]
+        H7[InstallApp POST /apps/install] --> F7[Install:350 / ★ 250 行核心]
     end
     subgraph C[同步]
         H8[SyncApp POST /apps/sync/remote] --> F8a[GetAppUpdate:836]
         F8a -->|CanUpdate| F8b[SyncAppListFromRemote:976]
-        H9[SyncLocalApp POST /apps/sync/local] --> F9[SyncAppListFromLocal:604<br/>★ 230 行]
+        H9[SyncLocalApp POST /apps/sync/local] --> F9[SyncAppListFromLocal:604 / ★ 230 行]
     end
     subgraph D[检测 & 资源]
         H10[GetAppListUpdate GET /apps/checkupdate] --> F8a
@@ -212,14 +212,14 @@ sequenceDiagram
     autonumber
     participant FE as 前端
     participant MW as Middleware
-    participant H as InstallApp<br/>(api/v2/app.go:162)
-    participant S1 as Install<br/>(app.go:350 壳)
-    participant S2 as installWithHooks<br/>(app.go:354 ★ 250行)
+    participant H as InstallApp / (api/v2/app.go:162)
+    participant S1 as Install / (app.go:350 壳)
+    participant S2 as installWithHooks / (app.go:354 ★ 250行)
     participant R as Repo (GORM)
     participant TK as task
     participant DK as Docker
 
-    FE->>MW: POST /api/v2/apps/install<br/>{appDetailId, name, params, ...}
+    FE->>MW: POST /api/v2/apps/install / {appDetailId, name, params, ...}
     MW->>H: CheckBindAndValidate(req)
     H->>S1: appService.Install(req, true)
     S1->>S2: installWithHooks(req, true, nil)
@@ -272,16 +272,16 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant FE as 前端
-    participant H as SyncApp<br/>(api/v2/app.go:42)
-    participant CK as GetAppUpdate<br/>(app.go:836)
-    participant SR as SyncAppListFromRemote<br/>(app.go:976)
+    participant H as SyncApp / (api/v2/app.go:42)
+    participant CK as GetAppUpdate / (app.go:836)
+    participant SR as SyncAppListFromRemote / (app.go:976)
     participant S1 as createSyncAppStoreTask
     participant S2 as createSyncAppStoreMetaTask
     participant TK as task
     participant NET as HTTP
     participant R as Repo
 
-    FE->>H: POST /api/v2/apps/sync/remote<br/>{taskID}
+    FE->>H: POST /api/v2/apps/sync/remote / {taskID}
     H->>CK: appService.GetAppUpdate()
     CK->>NET: GET 1panel.json.version.txt
     NET-->>CK: lastModified=1717829300
@@ -333,7 +333,7 @@ sequenceDiagram
 
 <div class="mermaid">
 flowchart TD
-    Start[PageApp 入口<br/>service/app.go:69] --> A[拼装 DBOption 链]
+    Start[PageApp 入口 / service/app.go:69] --> A[拼装 DBOption 链]
     A --> B{req.Name?}
     B -->|有| B1[WithByLikeName 模糊]
     B -->|无| C{req.Type?}
@@ -350,13 +350,13 @@ flowchart TD
     F -->|true| F1[LoadOsInfo→WithArch]
     F -->|false| G{req.Tags?}
     F1 --> G
-    G -->|非空| G1[tagRepo.GetByKeys<br/>→appTagRepo.GetByTagIds<br/>→WithByIDs]
+    G -->|非空| G1[tagRepo.GetByKeys / →appTagRepo.GetByTagIds / →WithByIDs]
     G -->|空| H[appRepo.Page req.Page, req.PageSize]
     G1 --> H
     H --> I[遍历 apps 构造 AppItem]
     I --> J{app.Type?}
-    J -->|Runtime*| J1[runtimeRepo.List<br/>判断 Installed]
-    J -->|其他| J2[appInstallRepo.ListBy<br/>判断 Installed]
+    J -->|Runtime*| J1[runtimeRepo.List / 判断 Installed]
+    J -->|其他| J2[appInstallRepo.ListBy / 判断 Installed]
     J1 --> K[i18n GetDescription + getAppTags]
     J2 --> K
     K --> L[返回 response.AppRes]
@@ -459,21 +459,21 @@ erDiagram
 
 <div class="mermaid">
 stateDiagram-v2
-    [*] --> Installing : installWithHooks<br/>L417 Status=Installing
-    Installing --> Running : upApp() 成功<br/>appInstallRepo.Save
-    Installing --> InstallErr : task.Execute 失败<br/>L592
-    Installing --> UpErr : 子任务错误<br/>L583
+    [*] --> Installing : installWithHooks / L417 Status=Installing
+    Installing --> Running : upApp() 成功 / appInstallRepo.Save
+    Installing --> InstallErr : task.Execute 失败 / L592
+    Installing --> UpErr : 子任务错误 / L583
 
     Running --> Stopped : Operate(Stop)
     Running --> UpErr : 容器挂掉 / 健康检查失败
     UpErr --> Running : Operate(Restart) 成功
     UpErr --> InstallErr : 手动标记失败
 
-    Running --> Upgrading : AppInstallUpgrade<br/>(app_upgrade.go)
+    Running --> Upgrading : AppInstallUpgrade / (app_upgrade.go)
     Upgrading --> Running : upgrade 成功
     Upgrading --> InstallErr : upgrade 失败
 
-    Running --> [*] : Operate(Uninstall)<br/>delete containers + DB
+    Running --> [*] : Operate(Uninstall) / delete containers + DB
     Stopped --> [*] : Operate(Uninstall)
     UpErr --> [*] : Operate(Uninstall) + ForceDelete
     InstallErr --> [*] : Operate(Uninstall) + ForceDelete
@@ -500,14 +500,14 @@ stateDiagram-v2
 flowchart TB
     subgraph HOST[1Panel 宿主机]
         subgraph NET[1panel-network (bridge)]
-            A1[App: WordPress<br/>1Panel-wordpress-abcd<br/>:80]
-            A2[App: MySQL<br/>1Panel-mysql-efgh<br/>:3306]
-            A3[App: phpMyAdmin<br/>1Panel-phpmyadmin-xyzw<br/>:8080]
+            A1[App: WordPress / 1Panel-wordpress-abcd / :80]
+            A2[App: MySQL / 1Panel-mysql-efgh / :3306]
+            A3[App: phpMyAdmin / 1Panel-phpmyadmin-xyzw / :8080]
             A1 <-->|同网络互通| A2
             A1 <-->|PANEL_DB_HOST| A3
         end
-        HOST_NET[host network<br/>(仅 OpenResty 等)]
-        OP[App: OpenResty<br/>network_mode: host<br/>:80/:443 直通]
+        HOST_NET[host network / (仅 OpenResty 等)]
+        OP[App: OpenResty / network_mode: host / :80/:443 直通]
     end
     USER[用户浏览器] -->|:80| A1
     USER -->|:8080| A3

@@ -65,10 +65,10 @@ footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line);
 <div class="diagram">
 <pre class="mermaid">
 flowchart LR
-    UI[Web UI] --> API[container.go API 层<br/>891 行]
-    API --> SVC[container.go Service 层<br/>1961 行]
-    SVC --> SDK[moby/moby/client<br/>Go SDK]
-    SDK --> Socket[/var/run/docker.sock<br/>unix socket]
+    UI[Web UI] --> API[container.go API 层 / 891 行]
+    API --> SVC[container.go Service 层 / 1961 行]
+    SVC --> SDK[moby/moby/client / Go SDK]
+    SDK --> Socket[/var/run/docker.sock / unix socket]
     Socket --> Docker[Docker daemon]
     Docker --> Containers[真实容器]
     style SVC fill:#2f6f5e,color:#fff
@@ -107,11 +107,11 @@ sequenceDiagram
 <div class="diagram">
 <pre class="mermaid">
 flowchart TB
-    A[用户点更新] --> B[inspect 老容器<br/>拿 env/volume/port/network]
+    A[用户点更新] --> B[inspect 老容器 / 拿 env/volume/port/network]
     B --> C[ImagePull 新镜像]
     C --> D[ContainerStop 老容器]
-    D --> E[ContainerRemove 老容器<br/>保留 volume/network]
-    E --> F[ContainerCreate<br/>老配置 + 新镜像]
+    D --> E[ContainerRemove 老容器 / 保留 volume/network]
+    E --> F[ContainerCreate / 老配置 + 新镜像]
     F --> G[ContainerStart]
     G --> H[写 metadata]
     style B fill:#c97b3f,color:#fff

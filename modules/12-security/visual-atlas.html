@@ -66,12 +66,12 @@ footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line);
 <pre class="mermaid">
 flowchart TB
     User[用户/浏览器] --> WebUI[1Panel Web UI]
-    WebUI --> SSH[ssh.go<br/>1603 行]
-    WebUI --> F2B[fail2ban.go<br/>230 行]
-    WebUI --> AV[clam.go<br/>477 行]
-    WebUI --> FW[forward_service.go<br/>473 行]
+    WebUI --> SSH[ssh.go / 1603 行]
+    WebUI --> F2B[fail2ban.go / 230 行]
+    WebUI --> AV[clam.go / 477 行]
+    WebUI --> FW[forward_service.go / 473 行]
     SSH --> WSS[WebSocket]
-    WSS --> SSHConn[SSH 客户端<br/>连接池]
+    WSS --> SSHConn[SSH 客户端 / 连接池]
     SSHConn --> RealServer[真实机器 :22]
     F2B --> F2Bsvc[fail2ban 服务]
     F2Bsvc --> Logs[监控 /var/log/secure]
@@ -118,10 +118,10 @@ sequenceDiagram
 <pre class="mermaid">
 flowchart TB
     subgraph SSHService ["ssh.go (1603 行)"]
-        Pool[连接池<br/>300-400 行<br/>map[string]*ssh.Client]
-        WS[WebSocket 适配<br/>500-600 行<br/>双向桥 + xterm.js]
-        Cred[凭据管理<br/>400-500 行<br/>AES-GCM 加密存盘]
-        KH[known_hosts<br/>200-300 行<br/>防中间人白名单]
+        Pool[连接池 / 300-400 行 / map[string]*ssh.Client]
+        WS[WebSocket 适配 / 500-600 行 / 双向桥 + xterm.js]
+        Cred[凭据管理 / 400-500 行 / AES-GCM 加密存盘]
+        KH[known_hosts / 200-300 行 / 防中间人白名单]
     end
     Pool --> WS
     Cred --> Pool
@@ -138,8 +138,8 @@ flowchart TB
 <pre class="mermaid">
 flowchart LR
     A[SSH / 1Panel 登录] --> B[写日志 /var/log/secure]
-    B --> C[fail2ban 服务<br/>正则匹配]
-    C -->|5 分钟内 5 次失败| D[iptables 封禁<br/>该 IP 1 小时]
+    B --> C[fail2ban 服务 / 正则匹配]
+    C -->|5 分钟内 5 次失败| D[iptables 封禁 / 该 IP 1 小时]
     C -->|白名单| E[放行]
     D --> F[到期自动解封]
     style C fill:#c97b3f,color:#fff

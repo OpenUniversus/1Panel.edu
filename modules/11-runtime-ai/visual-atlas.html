@@ -63,7 +63,7 @@ footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line);
 <div class="diagram">
 <pre class="mermaid">
 flowchart TB
-    A[用户 Web UI] --> B[runtime.go 1382<br/>进程管理]
+    A[用户 Web UI] --> B[runtime.go 1382 / 进程管理]
     B --> C{选择 runtime}
     C -->|vLLM| D[vLLM 进程]
     C -->|TensorRT-LLM| E[TensorRT-LLM 进程]
@@ -114,8 +114,8 @@ sequenceDiagram
 <div class="diagram">
 <pre class="mermaid">
 flowchart LR
-    A[runtime A<br/>需要 40GB] --> P[GPU 池]
-    B[runtime B<br/>需要 80GB] --> P
+    A[runtime A / 需要 40GB] --> P[GPU 池]
+    B[runtime B / 需要 80GB] --> P
     P -->|0: 24GB| A
     P -->|0: 24GB| A
     P -->|1: 40GB| A

@@ -67,17 +67,17 @@ footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line);
 flowchart TB
     subgraph 公共 "公共层 (backup.go 662 行)"
         A[任务编排 / 调度 / CRUD]
-        R[backup_record.go<br/>273 行记录]
+        R[backup_record.go / 273 行记录]
     end
     subgraph 对象层 "对象层 (每个对象一个文件)"
-        M[backup_mysql.go<br/>mysqldump]
-        P[backup_postgresql.go<br/>pg_dump]
-        RE[backup_redis.go<br/>BGSAVE]
-        MG[backup_mongodb.go<br/>mongodump]
-        C[backup_container.go<br/>docker commit + save]
-        CP[backup_compose.go<br/>yaml 打包]
-        W[backup_website.go<br/>tar /var/www]
-        AP[backup_app.go<br/>停服 + 打包]
+        M[backup_mysql.go / mysqldump]
+        P[backup_postgresql.go / pg_dump]
+        RE[backup_redis.go / BGSAVE]
+        MG[backup_mongodb.go / mongodump]
+        C[backup_container.go / docker commit + save]
+        CP[backup_compose.go / yaml 打包]
+        W[backup_website.go / tar /var/www]
+        AP[backup_app.go / 停服 + 打包]
     end
     公共 --> 对象层
     style A fill:#2f6f5e,color:#fff
@@ -114,8 +114,8 @@ sequenceDiagram
 <div class="diagram">
 <pre class="mermaid">
 flowchart LR
-    A[MySQL 主容器] -->|网络共享| B[临时 mysql:8.0 容器<br/>--rm]
-    B -->|mysqldump| C[--single-transaction<br/>--routines --triggers]
+    A[MySQL 主容器] -->|网络共享| B[临时 mysql:8.0 容器 / --rm]
+    B -->|mysqldump| C[--single-transaction / --routines --triggers]
     C -->|gzip| D[/backup/db-xxx.sql.gz]
     B -.跑完即删.-> E[docker rm]
     style B fill:#c97b3f,color:#fff

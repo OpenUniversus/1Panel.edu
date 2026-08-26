@@ -687,8 +687,8 @@ footer {
 flowchart LR
     A[service.MysqlService.Create] --> B[LoadMysqlClientByFrom]
     B --> C{From = ?}
-    C -->|local| D[Local Client<br/>docker exec<br/>mysql -e 'SQL']
-    C -->|remote| E[Remote Client<br/>database/sql<br/>TCP 直连]
+    C -->|local| D[Local Client / docker exec / mysql -e 'SQL']
+    C -->|remote| E[Remote Client / database/sql / TCP 直连]
     D --> F[真实 MySQL]
     E --> F
     style B fill:#2f6f5e,color:#fff
@@ -826,8 +826,8 @@ flowchart TB
     end
     U1 --> S1[service.LoadFromRemote]
     S1 --> Q1{From 字段}
-    Q1 -->|local| L1[Local.SyncDB<br/>docker exec + tab 解析]
-    Q1 -->|remote| R1[Remote.SyncDB<br/>SQL query]
+    Q1 -->|local| L1[Local.SyncDB / docker exec + tab 解析]
+    Q1 -->|remote| R1[Remote.SyncDB / SQL query]
     L1 --> D1[datas: 真实 DB 列表]
     R1 --> D1
     D1 --> S2[与 1Panel SQLite diff]

@@ -255,24 +255,24 @@ agent/
   <div class="mermaid">
 graph TB
     subgraph Frontend["1Panel 前端 (Vue 3)"]
-        UI["Web UI<br/>Element Plus"]
+        UI["Web UI / Element Plus"]
     end
 
     subgraph Backend["1Panel Backend (Go)"]
-        Router["Gin Router<br/>ro_website*.go"]
-        Handler["Handler<br/>api/v2/website*.go"]
-        Service["Service<br/>service/website*.go"]
-        Repo["Repository<br/>repo/website*.go"]
-        Model["GORM Model<br/>model/website*.go"]
-        Util["utils/nginx/*<br/>AST 解析/生成"]
+        Router["Gin Router / ro_website*.go"]
+        Handler["Handler / api/v2/website*.go"]
+        Service["Service / service/website*.go"]
+        Repo["Repository / repo/website*.go"]
+        Model["GORM Model / model/website*.go"]
+        Util["utils/nginx/* / AST 解析/生成"]
     end
 
     subgraph External["外部依赖"]
         MySQL[("MySQL/SQLite")]
-        OpenResty["OpenResty 容器<br/>1panel/openresty"]
+        OpenResty["OpenResty 容器 / 1panel/openresty"]
         Docker["Docker Engine"]
-        LetsEncrypt["Let's Encrypt<br/>ZeroSSL"]
-        DNSAPI["DNS API<br/>Aliyun/Tencent/CF"]
+        LetsEncrypt["Let's Encrypt / ZeroSSL"]
+        DNSAPI["DNS API / Aliyun/Tencent/CF"]
     end
 
     UI -->|HTTPS REST| Router
@@ -302,10 +302,10 @@ sequenceDiagram
     autonumber
     participant U as 用户 (浏览器)
     participant R as Gin Router
-    participant H as BaseApi<br/>(handler)
-    participant Sv as IWebsiteService<br/>(service)
-    participant R2 as Repo<br/>(GORM)
-    participant M as Model<br/>(MySQL 表)
+    participant H as BaseApi / (handler)
+    participant Sv as IWebsiteService / (service)
+    participant R2 as Repo / (GORM)
+    participant M as Model / (MySQL 表)
     participant N as OpenResty
     participant L as Lego (ACME)
     participant D as Docker
@@ -436,16 +436,16 @@ sequenceDiagram
   <h2>7. 5 种业态 (Website.Type) 统一抽象</h2>
   <div class="mermaid">
 graph LR
-    Website["Website<br/>(主表)"]
-    Website -->|Type=Static| S["Static<br/>直接 serve 目录"]
-    Website -->|Type=Runtime| R["Runtime<br/>PHP/Node/Java/Go/Python/.NET<br/>反代 127.0.0.1:port"]
-    Website -->|Type=Deployment| D["Deployment<br/>1Panel App<br/>反代 App 容器端口"]
-    Website -->|Type=Stream| St["Stream<br/>TCP/UDP 转发<br/>stream 块"]
-    Website -->|Type=Subsite| Su["Subsite<br/>父站子目录<br/>root 路径调整"]
+    Website["Website / (主表)"]
+    Website -->|Type=Static| S["Static / 直接 serve 目录"]
+    Website -->|Type=Runtime| R["Runtime / PHP/Node/Java/Go/Python/.NET / 反代 127.0.0.1:port"]
+    Website -->|Type=Deployment| D["Deployment / 1Panel App / 反代 App 容器端口"]
+    Website -->|Type=Stream| St["Stream / TCP/UDP 转发 / stream 块"]
+    Website -->|Type=Subsite| Su["Subsite / 父站子目录 / root 路径调整"]
 
-    R --> RP[("proxy = 127.0.0.1:9000<br/>或 unix:/path")]
+    R --> RP[("proxy = 127.0.0.1:9000 / 或 unix:/path")]
     D --> DP[("proxy = 容器端口")]
-    St --> STP[("listen 端口 udp/tcp<br/>upstream 负载")]
+    St --> STP[("listen 端口 udp/tcp / upstream 负载")]
 
     style S fill:#e8f5e9
     style R fill:#e3f2fd
@@ -577,13 +577,13 @@ stateDiagram-v2
   <p>1Panel 自己实现 <code>utils/nginx/parser</code> + <code>components</code>, 把 OpenResty conf 解析成 AST, 再序列化回文本。</p>
   <div class="mermaid">
 graph LR
-    A[".conf 文本"] -->|"parser.NewParser"| B["AST 树<br/>Config → Server → Location<br/>+ Directive (Name + Params + Block)"]
-    B -->|"FindServers[0]<br/>FindDirectives(ssl_protocols)"| C["精确获取节点"]
-    C -->|"UpdateDirective(name, params)<br/>RemoveDirective / AddCorsOption"| D["修改后 AST"]
+    A[".conf 文本"] -->|"parser.NewParser"| B["AST 树 / Config → Server → Location / + Directive (Name + Params + Block)"]
+    B -->|"FindServers[0] / FindDirectives(ssl_protocols)"| C["精确获取节点"]
+    C -->|"UpdateDirective(name, params) / RemoveDirective / AddCorsOption"| D["修改后 AST"]
     D -->|"WriteConfig + IndentedStyle"| E[".conf 文本 (新)"]
-    E -->|"nginxCheckAndReload"| F["nginx -t<br/>nginx -s reload"]
+    E -->|"nginxCheckAndReload"| F["nginx -t / nginx -s reload"]
     F -->|成功| G["OpenResty 容器已更新"]
-    F -->|失败| H["回滚旧 conf<br/>事务不提交"]
+    F -->|失败| H["回滚旧 conf / 事务不提交"]
 
     style B fill:#fff9c4
     style G fill:#c8e6c9
@@ -596,13 +596,13 @@ graph LR
   <h2>11. 任务编排 (Task Pipeline)</h2>
   <div class="mermaid">
 graph TB
-    Root["task.NewTaskWithOps<br/>(TaskCreate)"]
-    Root --> S1["AddSubTask<br/>创库 (可选)"]
-    Root --> S2["AddSubTask<br/>ConfigApp / Runtime"]
-    Root --> S3["AddSubTask<br/>ConfigOpenresty<br/>(核心 + WAF)"]
+    Root["task.NewTaskWithOps / (TaskCreate)"]
+    Root --> S1["AddSubTask / 创库 (可选)"]
+    Root --> S2["AddSubTask / ConfigApp / Runtime"]
+    Root --> S3["AddSubTask / ConfigOpenresty / (核心 + WAF)"]
     S3 -.回滚.-> R3["deleteWebsite"]
-    Root --> S4["AddSubTaskWithIgnoreErr<br/>EnableSSL"]
-    Root --> S5["AddSubTaskWithIgnoreErr<br/>ConfigFTP"]
+    Root --> S4["AddSubTaskWithIgnoreErr / EnableSSL"]
+    Root --> S5["AddSubTaskWithIgnoreErr / ConfigFTP"]
     Root --> Ex["task.Execute"]
 
     S1 --> Ex
@@ -611,7 +611,7 @@ graph TB
     S4 --> Ex
     S5 --> Ex
     Ex --> OK["全部成功"]
-    Ex --> Fail["任一失败<br/>→ 触发 rollback"]
+    Ex --> Fail["任一失败 / → 触发 rollback"]
 
     style Root fill:#bbdefb
     style Ex fill:#fff9c4
@@ -625,66 +625,66 @@ graph TB
   <h2>12. API 端点地图 (10+ 类, 100+ 端点)</h2>
   <div class="grid">
     <div class="card"><h4>📋 CRUD</h4>
-      <code>POST /websites/search</code><br/>
-      <code>GET /websites/list</code><br/>
-      <code>POST /websites</code> 创<br/>
-      <code>POST /websites/del</code> 删<br/>
-      <code>POST /websites/update</code><br/>
-      <code>GET /websites/:id</code><br/>
+      <code>POST /websites/search</code> / 
+      <code>GET /websites/list</code> / 
+      <code>POST /websites</code> 创 / 
+      <code>POST /websites/del</code> 删 / 
+      <code>POST /websites/update</code> / 
+      <code>GET /websites/:id</code> / 
       <code>POST /websites/operate</code> 启停
     </div>
     <div class="card"><h4>🌐 多域名</h4>
-      <code>POST /websites/domains</code><br/>
-      <code>GET /websites/domains/:websiteId</code><br/>
-      <code>POST /websites/domains/del</code><br/>
+      <code>POST /websites/domains</code> / 
+      <code>GET /websites/domains/:websiteId</code> / 
+      <code>POST /websites/domains/del</code> / 
       <code>POST /websites/domains/update</code>
     </div>
     <div class="card"><h4>🔒 HTTPS</h4>
-      <code>GET /websites/:id/https</code><br/>
-      <code>POST /websites/:id/https</code><br/>
-      <code>POST /websites/ssl/obtain</code><br/>
-      <code>POST /websites/ssl/upload</code><br/>
+      <code>GET /websites/:id/https</code> / 
+      <code>POST /websites/:id/https</code> / 
+      <code>POST /websites/ssl/obtain</code> / 
+      <code>POST /websites/ssl/upload</code> / 
       <code>POST /websites/ssl/import</code>
     </div>
     <div class="card"><h4>⚙️ Nginx</h4>
-      <code>GET /websites/:id/config/:type</code><br/>
-      <code>POST /websites/config</code><br/>
-      <code>POST /websites/config/update</code><br/>
+      <code>GET /websites/:id/config/:type</code> / 
+      <code>POST /websites/config</code> / 
+      <code>POST /websites/config/update</code> / 
       <code>POST /websites/nginx/update</code>
     </div>
     <div class="card"><h4>🛡️ 防护</h4>
-      <code>POST /websites/cors/update</code><br/>
-      <code>POST /websites/leech/update</code><br/>
-      <code>POST /websites/auths/update</code><br/>
+      <code>POST /websites/cors/update</code> / 
+      <code>POST /websites/leech/update</code> / 
+      <code>POST /websites/auths/update</code> / 
       <code>POST /websites/crosssite</code>
     </div>
     <div class="card"><h4>🔁 反代 / LB</h4>
-      <code>POST /websites/proxies</code><br/>
-      <code>POST /websites/proxies/update</code><br/>
-      <code>POST /websites/lbs/create</code><br/>
+      <code>POST /websites/proxies</code> / 
+      <code>POST /websites/proxies/update</code> / 
+      <code>POST /websites/lbs/create</code> / 
       <code>POST /websites/proxy/clear</code>
     </div>
     <div class="card"><h4>📝 重写 / 重定向</h4>
-      <code>POST /websites/rewrite</code><br/>
-      <code>POST /websites/rewrite/update</code><br/>
+      <code>POST /websites/rewrite</code> / 
+      <code>POST /websites/rewrite/update</code> / 
       <code>POST /websites/redirect/update</code>
     </div>
     <div class="card"><h4>📊 资源</h4>
-      <code>GET /websites/resource/:id</code><br/>
-      <code>GET /websites/databases</code><br/>
-      <code>POST /websites/databases</code><br/>
+      <code>GET /websites/resource/:id</code> / 
+      <code>GET /websites/databases</code> / 
+      <code>POST /websites/databases</code> / 
       <code>POST /websites/realip/config</code>
     </div>
     <div class="card"><h4>📁 模板 / DNS / ACME</h4>
-      <code>POST /websites/templates/upload</code><br/>
-      <code>POST /websites/dns</code><br/>
-      <code>POST /websites/acme</code><br/>
+      <code>POST /websites/templates/upload</code> / 
+      <code>POST /websites/dns</code> / 
+      <code>POST /websites/acme</code> / 
       <code>POST /websites/ca/obtain</code>
     </div>
     <div class="card"><h4>🐘 PHP / 日志</h4>
-      <code>POST /websites/php/version</code><br/>
-      <code>POST /websites/log/search</code><br/>
-      <code>POST /websites/log/operate</code><br/>
+      <code>POST /websites/php/version</code> / 
+      <code>POST /websites/log/search</code> / 
+      <code>POST /websites/log/operate</code> / 
       <code>POST /websites/exec/composer</code>
     </div>
   </div>
@@ -695,22 +695,22 @@ graph TB
   <h2>13. 数据流 (创建站 1 次写入的内容)</h2>
   <div class="mermaid">
 graph TB
-    A["POST /websites<br/>(JSON)"] --> B["handler.CreateWebsite<br/>绑定 + 校验"]
-    B --> C["service.CreateWebsite<br/>编排 5 子任务"]
+    A["POST /websites / (JSON)"] --> B["handler.CreateWebsite / 绑定 + 校验"]
+    B --> C["service.CreateWebsite / 编排 5 子任务"]
 
     C -->|子任务 1| T1["task: 创库 (MySQL/PG)"]
     C -->|子任务 2| T2["task: 装 App / Runtime"]
-    C -->|子任务 3| T3["task: configNginx<br/>(含 WAF)"]
+    C -->|子任务 3| T3["task: configNginx / (含 WAF)"]
     C -->|子任务 4| T4["task: enableSSL"]
     C -->|子任务 5| T5["task: createFtpUser"]
 
-    T3 --> W1["写入 OpenResty:<br/>/www/server/openresty/conf/vhost/{alias}.conf"]
-    T3 --> W2["写入 WAF:<br/>/www/server/openresty/conf/waf/{alias}.conf"]
-    T3 --> W3["创建目录:<br/>/www/sites/{alias}/{index,log,ssl}"]
-    T3 --> D1["INSERT websites<br/>+ INSERT website_domains"]
-    T4 --> W4["写入 SSL 文件:<br/>/www/sites/{alias}/ssl/{cert,key}"]
-    T4 --> D2["UPDATE websites<br/>SET protocol=https, ssl_id=?"]
-    T4 --> W5["修改 .conf:<br/>listen 443 ssl, ssl_certificate ..."]
+    T3 --> W1["写入 OpenResty: / /www/server/openresty/conf/vhost/{alias}.conf"]
+    T3 --> W2["写入 WAF: / /www/server/openresty/conf/waf/{alias}.conf"]
+    T3 --> W3["创建目录: / /www/sites/{alias}/{index,log,ssl}"]
+    T3 --> D1["INSERT websites / + INSERT website_domains"]
+    T4 --> W4["写入 SSL 文件: / /www/sites/{alias}/ssl/{cert,key}"]
+    T4 --> D2["UPDATE websites / SET protocol=https, ssl_id=?"]
+    T4 --> W5["修改 .conf: / listen 443 ssl, ssl_certificate ..."]
     T4 --> R["nginx -t + nginx -s reload"]
 
     style C fill:#ffe0b2
@@ -806,14 +806,14 @@ graph TB
         Web[Website Service]
     end
     subgraph Container["OpenResty 容器 (1panel/openresty)"]
-        Conf["/www/server/openresty/conf/<br/>vhost/{alias}.conf + waf/"]
-        Site["/www/sites/{alias}/<br/>index, log, ssl, uploads"]
+        Conf["/www/server/openresty/conf/ / vhost/{alias}.conf + waf/"]
+        Site["/www/sites/{alias}/ / index, log, ssl, uploads"]
     end
     subgraph External["外部"]
-        Docker["Docker Engine<br/>(容器管理)"]
-        LE["Let's Encrypt<br/>(ACME)"]
-        DNS["DNS API<br/>(DNS-01)"]
-        Lego["Lego<br/>(ACME 客户端)"]
+        Docker["Docker Engine / (容器管理)"]
+        LE["Let's Encrypt / (ACME)"]
+        DNS["DNS API / (DNS-01)"]
+        Lego["Lego / (ACME 客户端)"]
     end
 
     Web -->|exec docker| Docker
@@ -969,9 +969,9 @@ Model:
   <h2>20. 总结</h2>
   <p style="font-size:16px; line-height:1.8;">
     1Panel Website 模块 ≈ <strong>cPanel + OpenResty + Let's Encrypt + 1Panel App + WAF</strong> 的高度自动化合体。
-    <br/>6 个 router 文件 + 1342 行 handler + 2502 行 service + 7 个 GORM 表 + 8 个子文件 (utils / ssl / proxy / lb / op / domain / auth_basic / template)。
-    <br/>核心三招: <span class="badge badge-green">Nginx AST 解析</span> <span class="badge badge-blue">Task Pipeline 编排</span> <span class="badge badge-purple">5 业态统一抽象</span>。
-    <br/>通过任务编排 + 5 种业态统一抽象 + 自研 AST 解析, 实现了"一站式开网店"。
+     / 6 个 router 文件 + 1342 行 handler + 2502 行 service + 7 个 GORM 表 + 8 个子文件 (utils / ssl / proxy / lb / op / domain / auth_basic / template)。
+     / 核心三招: <span class="badge badge-green">Nginx AST 解析</span> <span class="badge badge-blue">Task Pipeline 编排</span> <span class="badge badge-purple">5 业态统一抽象</span>。
+     / 通过任务编排 + 5 种业态统一抽象 + 自研 AST 解析, 实现了"一站式开网店"。
   </p>
   <p style="margin-top:16px;">
     <strong>主入口</strong>: <code>service/website.go::CreateWebsite</code> (line 268), 一次编排 5+ 子任务, 失败自动回滚。

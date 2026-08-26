@@ -65,15 +65,15 @@ footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--line);
 <div class="diagram">
 <pre class="mermaid">
 flowchart TB
-    A[定时采集<br/>每 10 秒] --> B[指标值<br/>CPU 85%]
-    B --> C[遍历规则<br/>匹配阈值]
+    A[定时采集 / 每 10 秒] --> B[指标值 / CPU 85%]
+    B --> C[遍历规则 / 匹配阈值]
     C --> D{超阈值?}
     D -->|否| E[状态 inactive]
     D -->|是| F{持续 N 分钟?}
     F -->|否| G[状态 pending]
     F -->|是| H[状态 firing]
-    H --> I[抑制检查<br/>同规则 1 小时内不重复]
-    I -->|没抑制| J[触发 sender<br/>钉钉/飞书/...]
+    H --> I[抑制检查 / 同规则 1 小时内不重复]
+    I -->|没抑制| J[触发 sender / 钉钉/飞书/...]
     I -->|已抑制| K[跳过]
     J --> L[写 alert_history]
     style C fill:#2f6f5e,color:#fff
@@ -95,7 +95,7 @@ sequenceDiagram
     participant S as 状态
     participant Sn as Sender
     M->>H: t=0  CPU=85%
-    H->>S: inactive → pending<br/>FirstTriggeredAt=now
+    H->>S: inactive → pending / FirstTriggeredAt=now
     M->>H: t=30s CPU=82%
     H->>S: 仍 pending (没到 5min)
     M->>H: t=4m CPU=78%
@@ -116,7 +116,7 @@ sequenceDiagram
 <div class="diagram">
 <pre class="mermaid">
 flowchart TB
-    Alert[告警触发] --> Route[路由器<br/>查 channel 配置]
+    Alert[告警触发] --> Route[路由器 / 查 channel 配置]
     Route -->|1| DT[钉钉 Sender]
     Route -->|2| FS[飞书 Sender]
     Route -->|3| WC[企微 Sender]
@@ -136,7 +136,7 @@ flowchart TB
 <pre class="mermaid">
 flowchart TB
     A[Firing 状态] --> B{抑制检查}
-    B -->|在 1h 窗口内| C[跳过<br/>不再发]
+    B -->|在 1h 窗口内| C[跳过 / 不再发]
     B -->|已过 1h| D{静默期检查}
     D -->|用户在维护窗口| E[跳过]
     D -->|无静默| F[发通知]
