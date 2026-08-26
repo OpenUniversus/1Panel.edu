@@ -12,9 +12,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ToolboxRouter (struct)
+// ============================================================
+// ToolboxRouter  工具箱路由（设备、Fail2Ban、FTP、ClamAV）
+// ============================================================
+// 方法:
+//   - InitRouter(Router) — 注册 /toolbox/* 路由
+// ============================================================
 type ToolboxRouter struct{}
 
+// ============================================================
+// InitRouter  注册 /toolbox 路由组下的工具类接口
+// ============================================================
+// 参数:
+//   - Router (*gin.RouterGroup) — 父路由组
+// 分组:
+//   - /device/*  — 设备基础信息/用户/时区/配置更新
+//   - /scan, /clean — 系统扫描/清理
+//   - /fail2ban/*  — Fail2Ban 防护
+//   - /ftp/*     — FTP 服务
+//   - /clam/*    — ClamAV 病毒扫描
+// ============================================================
 func (s *ToolboxRouter) InitRouter(Router *gin.RouterGroup) {
 	toolboxRouter := Router.Group("toolbox")
 	baseApi := v2.ApiGroupApp.BaseApi

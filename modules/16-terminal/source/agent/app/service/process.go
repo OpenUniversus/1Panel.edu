@@ -25,20 +25,52 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 )
 
-// ProcessService (struct)
+// ============================================================
+// ProcessService  进程服务（杀进程 / 查监听 / 查详情）
+// ============================================================
+// 方法:
+//   - StopProcess — 杀进程
+//   - GetProcessInfoByPID — 查单个进程详情
+//   - GetListeningProcess — 查监听端口的进程
+// ============================================================
 type ProcessService struct{}
 
-// IProcessService (interface)
+// ============================================================
+// IProcessService  进程服务的接口（方便注入和测试）
+// ============================================================
+// 方法:
+//   - StopProcess(req) — 杀进程
+//   - GetProcessInfoByPID(pid) — 查进程详情
+//   - GetListeningProcess(c) — 查监听端口进程
+// ============================================================
 type IProcessService interface {
 	StopProcess(req request.ProcessReq) error
 	GetProcessInfoByPID(pid int32) (*websocket.PsProcessData, error)
 	GetListeningProcess(c context.Context) ([]ListeningProcess, error)
 }
 
+// ============================================================
+// NewIProcessService  构造一个 IProcessService 实例
+// ============================================================
+// 返回:
+//   - IProcessService — 进程服务接口实现
+// ============================================================
 func NewIProcessService() IProcessService {
 	return &ProcessService{}
 }
 
+// ============================================================
+// StopProcess  根据 PID 杀进程（用 gopsutil 的 Kill）
+// ============================================================
+// 参数:
+//   - req (request.ProcessReq) — 含 PID
+// 返回:
+//   - error — 失败原因
+// 流程:
+//   1. 拿到进程对象
+//   2. 调 proc.Kill()
+// 调用: api/v2.StopProcess -> this
+// ============================================================
 func (ps *ProcessService) StopProcess(req request.ProcessReq) error {
 	proc, err := process.NewProcess(req.PID)
 	if err != nil {
@@ -50,6 +82,15 @@ func (ps *ProcessService) StopProcess(req request.ProcessReq) error {
 	return nil
 }
 
+// ============================================================
+// ListeningProcess  正在监听端口的进程聚合信息
+// ============================================================
+// 字段:
+//   - PID (int32) — 进程 ID
+//   - Port (map[uint32]struct{}) — 这个进程占用的所有端口（去重）
+//   - Protocol (uint32) — 协议（TCP/UDP）
+//   - Name (string) — 进程名
+// ============================================================
 type ListeningProcess struct {
 	PID      int32
 	Port     map[uint32]struct{}
@@ -57,6 +98,20 @@ type ListeningProcess struct {
 	Name     string
 }
 
+// ============================================================
+// GetListeningProcess  列出所有"正在监听端口"的进程
+// ============================================================
+// 参数:
+//   - c (context.Context) — 上下文（用于取消和超时）
+// 返回:
+//   - ([]ListeningProcess, error) — 监听进程列表
+// 流程:
+//   1. 用 gopsutil 拉全部网络连接
+//   2. 过滤出 LISTEN 状态的 TCP / UDP 端口
+//   3. 按 (PID, 协议) 聚合去重
+//   4. 读进程名并打包
+// 调用: api/v2.GetListeningProcess -> this
+// ============================================================
 func (ps *ProcessService) GetListeningProcess(c context.Context) ([]ListeningProcess, error) {
 	conn, err := net.ConnectionsMaxWithContext(c, "inet", 32768)
 	if err != nil {
@@ -105,6 +160,21 @@ func (ps *ProcessService) GetListeningProcess(c context.Context) ([]ListeningPro
 	return procs, nil
 }
 
+// ============================================================
+// GetProcessInfoByPID  按 PID 查进程的完整快照（CPU/内存/连接/IO/环境变量等）
+// ============================================================
+// 参数:
+//   - pid (int32) — 进程 ID
+// 返回:
+//   - (*websocket.PsProcessData, error) — 完整进程信息
+// 流程:
+//   1. 拿到进程对象，确认在跑
+//   2. 依次读名字、父 PID、用户、状态、启动时间、线程数
+//   3. 读网络连接、CPU、IO、命令行
+//   4. 读 /proc 拿详细内存
+//   5. 读环境变量、打开的文件
+// 调用: api/v2.GetProcessInfoByPID -> this
+// ============================================================
 func (ps *ProcessService) GetProcessInfoByPID(pid int32) (*websocket.PsProcessData, error) {
 	p, err := process.NewProcess(pid)
 	if err != nil {
@@ -204,7 +274,23 @@ func (ps *ProcessService) GetProcessInfoByPID(pid int32) (*websocket.PsProcessDa
 	return data, nil
 }
 
-// MemoryDetail (struct)
+// ============================================================
+// MemoryDetail  从 /proc 读出的进程内存细分
+// ============================================================
+// 字段:
+//   - RSS (uint64) — 实际占用的物理内存
+//   - VMS (uint64) — 虚拟内存大小
+//   - HWM (uint64) — 进程历史峰值物理内存
+//   - Data (uint64) — 数据段
+//   - Stack (uint64) — 栈
+//   - Locked (uint64) — 被锁住的内存
+//   - Swap (uint64) — 换出到磁盘的部分
+//   - PSS (uint64) — 按比例分摊的物理内存
+//   - USS (uint64) — 进程独占的物理内存
+//   - Shared (uint64) — 共享内存
+//   - Text (uint64) — 代码段
+//   - Dirty (uint64) — 脏页
+// ============================================================
 type MemoryDetail struct {
 	RSS    uint64
 	VMS    uint64
@@ -221,6 +307,18 @@ type MemoryDetail struct {
 	Dirty  uint64
 }
 
+// ============================================================
+// getMemoryDetail  从 /proc 读进程的内存细分（PSS/USS 等）
+// ============================================================
+// 参数:
+//   - pid (int32) — 进程 ID
+// 返回:
+//   - (*MemoryDetail, error) — 内存细节
+// 流程:
+//   1. 先试 /proc/<pid>/smaps_rollup（汇总，开销小）
+//   2. 拿不到再降级到 /proc/<pid>/smaps（逐段加总）
+// 调用: GetProcessInfoByPID -> this
+// ============================================================
 func getMemoryDetail(pid int32) (*MemoryDetail, error) {
 	mem := &MemoryDetail{}
 
@@ -236,6 +334,19 @@ func getMemoryDetail(pid int32) (*MemoryDetail, error) {
 	return mem, nil
 }
 
+// ============================================================
+// readStatus  解析 /proc/<pid>/status 拿 VmRSS / VmSize 等基础内存字段
+// ============================================================
+// 参数:
+//   - pid (int32) — 进程 ID
+//   - mem (*MemoryDetail) — 写入的目标结构
+// 返回:
+//   - error — 读/解析失败
+// 流程:
+//   1. 打开 /proc/<pid>/status
+//   2. 逐行扫描，把 VmRSS / VmSize 等映射到 mem 字段
+// 调用: getMemoryDetail -> this
+// ============================================================
 func readStatus(pid int32, mem *MemoryDetail) error {
 	filePath := fmt.Sprintf("/proc/%d/status", pid)
 	file, err := os.Open(filePath)
@@ -282,6 +393,19 @@ func readStatus(pid int32, mem *MemoryDetail) error {
 	return scanner.Err()
 }
 
+// ============================================================
+// readSmapsRollup  解析 /proc/<pid>/smaps_rollup 拿 PSS/USS 汇总
+// ============================================================
+// 参数:
+//   - pid (int32) — 进程 ID
+//   - mem (*MemoryDetail) — 写入目标
+// 返回:
+//   - error — 读/解析失败
+// 流程:
+//   1. 打开 smaps_rollup
+//   2. 逐行扫描，提取 Pss / Private_Clean / Private_Dirty / Shared 字段
+// 调用: getMemoryDetail -> this
+// ============================================================
 func readSmapsRollup(pid int32, mem *MemoryDetail) error {
 	filePath := fmt.Sprintf("/proc/%d/smaps_rollup", pid)
 	file, err := os.Open(filePath)
@@ -318,6 +442,19 @@ func readSmapsRollup(pid int32, mem *MemoryDetail) error {
 	return scanner.Err()
 }
 
+// ============================================================
+// readSmaps  解析 /proc/<pid>/smaps 拿 PSS/USS（rollup 不可用时回退）
+// ============================================================
+// 参数:
+//   - pid (int32) — 进程 ID
+//   - mem (*MemoryDetail) — 写入目标
+// 返回:
+//   - error — 读/解析失败
+// 流程:
+//   1. 打开 smaps（按段输出）
+//   2. 累加每段的 PSS / Private / Shared
+// 调用: getMemoryDetail -> this（回退路径）
+// ============================================================
 func readSmaps(pid int32, mem *MemoryDetail) error {
 	filePath := fmt.Sprintf("/proc/%d/smaps", pid)
 	file, err := os.Open(filePath)

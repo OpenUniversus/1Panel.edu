@@ -12,10 +12,26 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ProcessRouter (struct)
+// ============================================================
+// ProcessRouter  进程管理路由（WebSocket + REST）
+// ============================================================
+// 方法:
+//   - InitRouter(Router) — 注册 /process/* 路由
+// ============================================================
 type ProcessRouter struct {
 }
 
+// ============================================================
+// InitRouter  注册 /process 路由组下的 4 个接口
+// ============================================================
+// 参数:
+//   - Router (*gin.RouterGroup) — 父路由组
+// 注册:
+//   - GET  /process/ws — 进程 WebSocket 推送
+//   - POST /process/stop — 杀进程
+//   - POST /process/listening — 监听端口进程
+//   - GET  /process/:pid — 进程详情
+// ============================================================
 func (f *ProcessRouter) InitRouter(Router *gin.RouterGroup) {
 	processRouter := Router.Group("process")
 	baseApi := v2.ApiGroupApp.BaseApi

@@ -34,6 +34,18 @@ import (
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
+// ============================================================
+// WsLocalTerminal  打开本机 WebSocket 终端（直接进服务器 shell）
+// ============================================================
+// 参数:
+//   - c (*gin.Context) — HTTP 请求上下文
+// 流程:
+//   1. 复用通用 SSH 会话启动逻辑
+//   2. 用 loadLocalConn 拿本地 SSH 连接
+//   3. 进入本地 shell
+// 调用: 前端 "本机终端" -> this; this -> runSSHSession
+// ============================================================
+
 // @Router /hosts/terminal/local [get]
 func (b *BaseApi) WsLocalTerminal(c *gin.Context) {
 	b.runSSHSession(c, loadLocalConn, c.DefaultQuery("command", ""))
@@ -46,6 +58,18 @@ func (b *BaseApi) WsLocalTerminal(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
+// ============================================================
+// WsHostSSH  打开远程主机的 WebSocket 终端（通过 SSH）
+// ============================================================
+// 参数:
+//   - c (*gin.Context) — query 中带 host id 和可选 command
+// 流程:
+//   1. 从 query 拿 host id，查出主机信息
+//   2. 用 newHostSSHClient 建立 SSH 客户端
+//   3. 复用 runSSHSession 走通用 SSH 终端流程
+// 调用: 前端 "远程主机终端" -> this; this -> runSSHSession -> newHostSSHClient
+// ============================================================
+
 // @Router /hosts/terminal/ssh [get]
 func (b *BaseApi) WsHostSSH(c *gin.Context) {
 	b.runSSHSession(c, func() (*ssh.SSHClient, error) {
@@ -65,6 +89,19 @@ func (b *BaseApi) WsHostSSH(c *gin.Context) {
 // @Success 200
 // @Security ApiKeyAuth
 // @Security Timestamp
+// ============================================================
+// WsContainerTerminal  打开容器内部 WebSocket 终端（docker exec）
+// ============================================================
+// 参数:
+//   - c (*gin.Context) — query 中带 cols/rows/source
+// 流程:
+//   1. 准备 WebSocket + 终端尺寸
+//   2. 根据 source (redis/ollama/container/database) 拼出 docker exec 命令
+//   3. 启动伪终端，把容器内 shell 推到前端
+//   4. 阻塞到任一端关闭
+// 调用: 前端 "容器终端" -> this; this -> loadContainerTerminalCommand
+// ============================================================
+
 // @Router /hosts/terminal/container [get]
 func (b *BaseApi) WsContainerTerminal(c *gin.Context) {
 	wsConn, cols, rows, ok := prepareTerminalSession(c)
@@ -94,6 +131,25 @@ func (b *BaseApi) WsContainerTerminal(c *gin.Context) {
 	closeTerminalConn(wsConn)
 }
 
+// ============================================================
+// prepareTerminalSession  准备一个 WebSocket 终端会话（公共前置步骤）
+// ============================================================
+// 作用:
+//   - 校验 WebSocket 握手
+//   - 升级 HTTP 为 WebSocket
+//   - 拒绝演示服务器
+//   - 解析 cols/rows（终端列数/行数）
+// 参数:
+//   - c (*gin.Context) — HTTP 请求上下文
+// 返回:
+//   - (*websocket.Conn, cols, rows, ok) — 连接、终端列、终端行、是否成功
+// 流程:
+//   1. 校验 WebSocket Upgrade
+//   2. 升级连接
+//   3. 演示环境直接拒绝
+//   4. 解析 query 里的 cols/rows
+// 调用: WsLocalTerminal / WsHostSSH / WsContainerTerminal -> this
+// ============================================================
 func prepareTerminalSession(c *gin.Context) (*websocket.Conn, int, int, bool) {
 	if !websocket.IsWebSocketUpgrade(c.Request) {
 		helper.Success(c)
@@ -122,6 +178,20 @@ func prepareTerminalSession(c *gin.Context) (*websocket.Conn, int, int, bool) {
 	return wsConn, cols, rows, true
 }
 
+// ============================================================
+// runSSHSession  通用的 SSH 终端会话启动器（WebSocket ↔ SSH 双向桥接）
+// ============================================================
+// 参数:
+//   - c (*gin.Context) — HTTP 上下文
+//   - connect (func() (*ssh.SSHClient, error)) — 拿到 SSH 客户端的回调（本地/远端不同实现）
+//   - command (string) — 可选的初始命令
+// 流程:
+//   1. 准备 WebSocket
+//   2. 调 connect 拿 SSH 客户端
+//   3. 用 terminal.NewLogicSshWsSession 桥接 WebSocket 和 SSH
+//   4. 阻塞到 quit
+// 调用: WsLocalTerminal / WsHostSSH -> this
+// ============================================================
 func (b *BaseApi) runSSHSession(c *gin.Context, connect func() (*ssh.SSHClient, error), command string) {
 	wsConn, cols, rows, ok := prepareTerminalSession(c)
 	if !ok {
@@ -150,11 +220,33 @@ func (b *BaseApi) runSSHSession(c *gin.Context, connect func() (*ssh.SSHClient, 
 	closeTerminalConn(wsConn)
 }
 
+// ============================================================
+// closeTerminalConn  优雅地关闭一个 WebSocket 终端连接
+// ============================================================
+// 流程:
+//   1. 给前端发一个 Close 控制帧
+//   2. 1 秒超时（避免阻塞）
+// 调用: WsLocalTerminal / WsHostSSH / WsContainerTerminal -> this
+// ============================================================
 func closeTerminalConn(wsConn *websocket.Conn) {
 	dt := time.Now().Add(time.Second)
 	_ = wsConn.WriteControl(websocket.CloseMessage, nil, dt)
 }
 
+// ============================================================
+// newHostSSHClient  根据数据库里的 Host 记录建立 SSH 客户端
+// ============================================================
+// 参数:
+//   - host (*model.Host) — 主机信息（地址/端口/账号/认证方式）
+//   - err (error) — 上一步查 host 的错误
+// 返回:
+//   - (*ssh.SSHClient, error) — 包装好的 SSH 客户端
+// 流程:
+//   1. err 不为空就直接透传
+//   2. 把 host 字段映射到 ssh.ConnInfo
+//   3. 调 ssh.NewClient 真正建连
+// 调用: WsHostSSH -> this
+// ============================================================
 func newHostSSHClient(host *model.Host, err error) (*ssh.SSHClient, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "load host info by id failed")
@@ -173,6 +265,18 @@ func newHostSSHClient(host *model.Host, err error) (*ssh.SSHClient, error) {
 	return ssh.NewClient(connInfo)
 }
 
+// ============================================================
+// loadContainerTerminalCommand  根据 source 拼出"进入容器内 shell"的命令
+// ============================================================
+// 参数:
+//   - c (*gin.Context) — query 中带 source
+// 返回:
+//   - (*terminal.LocalCommand, error) — 用 docker exec 包装出的本地命令
+// 流程:
+//   1. 按 source 分发到不同 loader（redis/ollama/container/database）
+//   2. 拿到 init 命令后用 terminal.NewCommand 包成 docker exec
+// 调用: WsContainerTerminal -> this
+// ============================================================
 func loadContainerTerminalCommand(c *gin.Context) (*terminal.LocalCommand, error) {
 	source := c.Query("source")
 	var (
@@ -197,6 +301,18 @@ func loadContainerTerminalCommand(c *gin.Context) (*terminal.LocalCommand, error
 	return terminal.NewCommand("docker", initCmd...)
 }
 
+// ============================================================
+// loadRedisInitCmd  拼出"进入 redis-cli"的 docker exec 命令
+// ============================================================
+// 参数:
+//   - c (*gin.Context) — query 中带 name/from
+//   - redisType (string) — "redis" 或 "redis-cluster"
+// 流程:
+//   1. 查数据库拿到地址/端口/密码
+//   2. from=local 时直接 exec 容器 + redis-cli
+//   3. 否则用 1Panel-redis-cli-tools 工具容器连上去
+// 调用: loadContainerTerminalCommand -> this
+// ============================================================
 func loadRedisInitCmd(c *gin.Context, redisType string) ([]string, error) {
 	name := c.Query("name")
 	from := c.Query("from")
@@ -225,6 +341,17 @@ func loadRedisInitCmd(c *gin.Context, redisType string) ([]string, error) {
 	return commands, nil
 }
 
+// ============================================================
+// loadOllamaInitCmd  拼出"ollama run <model>" 的 docker exec 命令
+// ============================================================
+// 参数:
+//   - c (*gin.Context) — query 中带 name（模型名）
+// 流程:
+//   1. 校验模型名（防注入）
+//   2. 查出 ollama 容器名
+//   3. 拼出 exec -it <容器> ollama run <模型>
+// 调用: loadContainerTerminalCommand -> this
+// ============================================================
 func loadOllamaInitCmd(c *gin.Context) ([]string, error) {
 	name := c.Query("name")
 	if cmd.CheckIllegal(name) {
@@ -238,6 +365,17 @@ func loadOllamaInitCmd(c *gin.Context) ([]string, error) {
 	return []string{"exec", "-it", containerName, "ollama", "run", name}, nil
 }
 
+// ============================================================
+// loadContainerInitCmd  拼出"docker exec -it <container> <command>"
+// ============================================================
+// 参数:
+//   - c (*gin.Context) — query 中带 containerid/command/user
+// 流程:
+//   1. 校验所有入参（防命令注入）
+//   2. 缺参数报错
+//   3. 可选地追加 -u <user>
+// 调用: loadContainerTerminalCommand -> this
+// ============================================================
 func loadContainerInitCmd(c *gin.Context) ([]string, error) {
 	containerID := c.Query("containerid")
 	command := c.Query("command")
@@ -256,6 +394,17 @@ func loadContainerInitCmd(c *gin.Context) ([]string, error) {
 	return commands, nil
 }
 
+// ============================================================
+// loadDatabaseInitCmd  拼出"进入数据库 CLI"的 docker exec 命令
+// ============================================================
+// 参数:
+//   - c (*gin.Context) — query 中带 database/databaseType
+// 流程:
+//   1. 查应用安装表拿到数据库连接信息
+//   2. 按 mysql / mariadb / mongodb / postgresql 拼不同命令
+//   3. 带上账号密码
+// 调用: loadContainerTerminalCommand -> this
+// ============================================================
 func loadDatabaseInitCmd(c *gin.Context) ([]string, error) {
 	database := c.Query("database")
 	databaseType := c.Query("databaseType")
@@ -289,6 +438,19 @@ func loadDatabaseInitCmd(c *gin.Context) ([]string, error) {
 	return commands, nil
 }
 
+// ============================================================
+// wshandleError  WebSocket 错误处理工具：把错误推到前端并返回 true
+// ============================================================
+// 参数:
+//   - ws (*websocket.Conn) — 当前 WebSocket
+//   - err (error) — 待处理错误
+// 返回:
+//   - bool — true 表示有错误（处理过），false 表示无错
+// 流程:
+//   1. 尝试发 Close 控制帧
+//   2. 失败时改发一条 WsMsg JSON 文本
+// 调用: WsContainerTerminal / runSSHSession -> this
+// ============================================================
 func wshandleError(ws *websocket.Conn, err error) bool {
 	if err != nil {
 		global.LOG.Errorf("handler ws faled:, err: %v", err)
@@ -309,6 +471,14 @@ func wshandleError(ws *websocket.Conn, err error) bool {
 	return false
 }
 
+// ============================================================
+// upGrader  WebSocket 升级器（HTTP -> WS 握手用），允许任意来源
+// ============================================================
+// 字段:
+//   - ReadBufferSize (int) — 读缓冲 4KB
+//   - WriteBufferSize (int) — 写缓冲 16KB
+//   - CheckOrigin (func) — 跨域检查（这里是全放行）
+// ============================================================
 var upGrader = websocket.Upgrader{
 	ReadBufferSize:  4096,
 	WriteBufferSize: 16384,
