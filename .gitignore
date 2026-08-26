@@ -23,6 +23,23 @@ daily-mgmt-state.json
 .backups/
 _archive_*
 
+# Old daemon scripts (leftover from 1Panel-edu-research/, not part of KB)
+ALERTS.md
+DAILY-SUMMARY.md
+daily-mgmt.ps1
+init-state.ps1
+run-add-commit.bat
+run-commit.bat
+WEEKLY-REPORT.md
+COVERAGE-REPORT.md
+HEALTH-SCORE.md
+QUALITY-REPORT.md
+STATS.md
+UPSTREAM-DIFF.md
+DAILY-STATUS.md
+BLACKLIST.md
+KB-INDEX.md  # duplicate of repo's own KB-INDEX
+
 # Local-only
 .env
 .venv/
