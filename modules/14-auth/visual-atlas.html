@@ -585,14 +585,14 @@ MW->>H: 路由命中
 
 H->>Tracker: IsLocked(ip)?
     alt IP locked
-Tracker-->>H: true
-H-->>Browser: 401 ErrLoginLocked
+    Tracker-->>H: true
+    H-->>Browser: 401 ErrLoginLocked
     end
 
 H->>Tracker: NeedCaptcha(ip)?
     alt Need Captcha
-Tracker-->>H: true
-H->>H: captcha.VerifyCode(req.CaptchaID, req.Captcha)
+    Tracker-->>H: true
+    H->>H: captcha.VerifyCode(req.CaptchaID, req.Captcha)
     end
 
 H->>H: 解 base64 EntranceCode
@@ -603,15 +603,15 @@ X->>Auth: Login(c, info, entrance)
 Auth->>Repo: Get(UserName)
 Repo->>Cache: hit?
     alt miss
-Repo->>DB: SELECT * FROM settings WHERE key=?
-DB-->>Repo: row
-Repo->>Cache: Set(UserName, value, 5min)
+    Repo->>DB: SELECT * FROM settings WHERE key=?
+    DB-->>Repo: row
+    Repo->>Cache: Set(UserName, value, 5min)
     end
 Repo-->>Auth: setting
 
 Auth->>Auth: info.Name == setting.Value?
     alt 不匹配
-Auth-->>H: nil, "ErrAuth", err
+    Auth-->>H: nil, "ErrAuth", err
     end
 
 Auth->>Repo: Get(PASSWORD_PRIVATE_KEY) + Get(Password)
@@ -630,15 +630,15 @@ Auth->>Repo: Get(MFAStatus)
 Auth->>Repo: Update(Language, info.Language)
 
     alt MFA enabled
-Auth->>Auth: BeginMFALogin
-Auth-->>H: UserLoginInfo(MfaSession, MfaStatus: Enable)
-H-->>Browser: 200 + MfaSession (未登录)
+    Auth->>Auth: BeginMFALogin
+    Auth-->>H: UserLoginInfo(MfaSession, MfaStatus: Enable)
+    H-->>Browser: 200 + MfaSession (未登录)
     else MFA disabled
-Auth->>Auth: 组装 SessionUser(ID: __super_admin__, Role: ADMIN)
-Auth->>Sess: SetFresh(c, user, SSL, ttl)
-Sess->>Sess: 生成新 sessionID + CSRF token
-Sess-->>Browser: Set-Cookie psession + pcsrftoken
-Auth-->>H: UserLoginInfo(Name, Role)
+    Auth->>Auth: 组装 SessionUser(ID: __super_admin__, Role: ADMIN)
+    Auth->>Sess: SetFresh(c, user, SSL, ttl)
+    Sess->>Sess: 生成新 sessionID + CSRF token
+    Sess-->>Browser: Set-Cookie psession + pcsrftoken
+    Auth-->>H: UserLoginInfo(Name, Role)
     end
 
 H->>H: 失败 → IPTracker.RecordFailure + SetNeedCaptcha
@@ -696,31 +696,31 @@ H->>X: MFALogin(c, req, entrance)
 X->>Auth: MFALogin(c, info, entrance)
 Auth->>MFAS: Get(sessionID)
     alt session 不存在 / IP 不匹配
-MFAS-->>Auth: not found
-Auth-->>H: nil, "ErrMFA"
+    MFAS-->>Auth: not found
+    Auth-->>H: nil, "ErrMFA"
     end
 Auth->>Repo: Get(MFASecret) + Get(MFAInterval)
 Repo-->>Auth: secret, interval
 Auth->>Auth: mfa.ValidCode(interval, code, secret)
 Note over Auth: TOTP 校验 (RFC 6238)
     alt code invalid
-Auth-->>H: nil, "ErrMFA"
-H->>Tracker: RecordFailure(ip)
-H->>MFAS: RecordFailure(sessionID)
+    Auth-->>H: nil, "ErrMFA"
+    H->>Tracker: RecordFailure(ip)
+    H->>MFAS: RecordFailure(sessionID)
         alt failures >= 5
-H->>Tracker: SetNeedCaptcha(ip)
-H-->>Browser: 401 ErrCaptchaCode
+        H->>Tracker: SetNeedCaptcha(ip)
+        H-->>Browser: 401 ErrCaptchaCode
         else
-H-->>Browser: 401 ErrMFA
+        H-->>Browser: 401 ErrMFA
         end
     else code valid
-Auth->>MFAS: Delete(sessionID)
-Auth->>Auth: 组装 SessionUser
-Auth->>Sess: SetFresh(c, user, SSL, ttl)
-Sess-->>Browser: Set-Cookie psession + pcsrftoken
-Auth-->>H: UserLoginInfo
-H->>Tracker: Clear(ip)
-H-->>Browser: 200 OK
+    Auth->>MFAS: Delete(sessionID)
+    Auth->>Auth: 组装 SessionUser
+    Auth->>Sess: SetFresh(c, user, SSL, ttl)
+    Sess-->>Browser: Set-Cookie psession + pcsrftoken
+    Auth-->>H: UserLoginInfo
+    H->>Tracker: Clear(ip)
+    H-->>Browser: 200 OK
     end
 H->>H: go saveLoginLogs(...)
       </div>
@@ -879,12 +879,12 @@ Note over Auth: 默认 60s 容忍 / + ttl 分钟 (ApiKeyValidityTime)
 Auth->>Auth: isValid1PanelToken (md5 / hmac-sha256)
 Auth->>Auth: isIPInWhiteList (clientIP, whiteList)
     alt 校验失败
-Auth-->>User: 401 ErrApiConfig*Invalid
+    Auth-->>User: 401 ErrApiConfig*Invalid
     else 校验成功
-Auth->>Auth: c.Set("API_AUTH", true)
-Auth->>Master: c.Next()
+    Auth->>Auth: c.Set("API_AUTH", true)
+    Auth->>Master: c.Next()
 Note over Master: 后续 SessionAuth 见 API_AUTH=true 直接放行
-Master-->>User: 200 OK
+    Master-->>User: 200 OK
     end
       </div>
       <div class="caption">图 6.1: API Key 签名 + 验证时序。客户端用 MD5/HMAC-SHA256 签名,服务端校验时间戳 + IP 白名单。</div>

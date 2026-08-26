@@ -248,12 +248,12 @@ S2->>TK: AddSubTaskWithOps(installApp, 1h)
 S2-->>H: return *appInstall, nil
 H-->>FE: 200 OK (ID, Name, ...)
     par 异步执行 (L590 go func)
-TK->>S2: Execute() → installApp 闭包
-S2->>S2: copyData() 拷数据
-S2->>S2: runScript() init.sh
-S2->>DK: upApp() docker compose up -d
-DK-->>S2: container running
-S2->>R: appInstallRepo.Save(Status=Running)
+    TK->>S2: Execute() → installApp 闭包
+    S2->>S2: copyData() 拷数据
+    S2->>S2: runScript() init.sh
+    S2->>DK: upApp() docker compose up -d
+    DK-->>S2: container running
+    S2->>R: appInstallRepo.Save(Status=Running)
     end
 </div>
 
@@ -296,21 +296,21 @@ SR->>S2: AddSubTask(createSyncAppStoreMetaTask)
 SR-->>H: return nil
 H-->>FE: 200 OK
     par 异步执行
-TK->>S1: Execute()
-S1->>NET: HTTP GET 1panel.json.zip
-NET-->>S1: zip 流
-S1->>S1: 解压到 /opt/1panel/resource/1panel.json
-S1->>S1: json.NewDecoder.Decode → ()AppDefine
-S1->>R: appRepo.BatchCreate / Save (事务)
-R-->>S1: 写入完成
-S1-->>TK: subtask done
-TK->>S2: Execute()
-S2->>NET: 拉每个 app 的 icon + compose
-NET-->>S2: 资源文件
-S2->>R: appDetailRepo.BatchCreate
-S2->>R: setting.Update(AppStoreLastModified, now)
-S2-->>TK: subtask done
-TK->>SR: defer 解锁 appStoreSyncing=false
+    TK->>S1: Execute()
+    S1->>NET: HTTP GET 1panel.json.zip
+    NET-->>S1: zip 流
+    S1->>S1: 解压到 /opt/1panel/resource/1panel.json
+    S1->>S1: json.NewDecoder.Decode → ()AppDefine
+    S1->>R: appRepo.BatchCreate / Save (事务)
+    R-->>S1: 写入完成
+    S1-->>TK: subtask done
+    TK->>S2: Execute()
+    S2->>NET: 拉每个 app 的 icon + compose
+    NET-->>S2: 资源文件
+    S2->>R: appDetailRepo.BatchCreate
+    S2->>R: setting.Update(AppStoreLastModified, now)
+    S2-->>TK: subtask done
+    TK->>SR: defer 解锁 appStoreSyncing=false
     end
 </div>
 

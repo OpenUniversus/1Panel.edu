@@ -318,21 +318,21 @@ Sv->>Sv: alias 校验 / Punycode
 Sv->>N: getAppInstallByKey(AppOpenresty)
 Sv->>Sv: task.NewTaskWithOps + 子任务
     alt CreateDb
-Sv->>Sv: MySQL/PG service.Create
+    Sv->>Sv: MySQL/PG service.Create
     end
     alt Deployment
-Sv->>Sv: NewIAppService().Install
+    Sv->>Sv: NewIAppService().Install
     end
 Sv->>N: configDefaultNginx
 Sv->>N: createWafConfig
 Sv->>R2: websiteRepo.Create
 Sv->>R2: websiteDomainRepo.BatchCreate
     alt EnableSSL
-Sv->>L: newWebsiteSSLLegoClient
-L->>D: DNS-01 / HTTP-01
-L->>LetsEncrypt: Order
-LetsEncrypt-->>L: Certificate
-Sv->>N: applySSL (写 ssl_certificate)
+    Sv->>L: newWebsiteSSLLegoClient
+    L->>D: DNS-01 / HTTP-01
+    L->>LetsEncrypt: Order
+    LetsEncrypt-->>L: Certificate
+    Sv->>N: applySSL (写 ssl_certificate)
     end
 Sv->>N: nginx -t + nginx -s reload
 Sv-->>H: nil / err
@@ -365,14 +365,14 @@ Sv->>Sv: alias 校验 (Punycode)
 Sv->>N: getAppInstallByKey(Openresty)
 Sv->>Sv: build website + task
     alt CreateDb = true
-Sv->>T: AddSubTask(创库)
-T->>DB: Create MySQL/PG
+    Sv->>T: AddSubTask(创库)
+    T->>DB: Create MySQL/PG
     end
     alt Type = Deployment
-Sv->>A: NewIAppService().Install
-A-->>Sv: appInstall
+    Sv->>A: NewIAppService().Install
+    A-->>Sv: appInstall
     else Type = Runtime
-Sv->>DB: runtimeRepo.Get
+    Sv->>DB: runtimeRepo.Get
     end
 Sv->>T: AddSubTask(ConfigOpenresty)
 T->>N: configDefaultNginx
@@ -380,11 +380,11 @@ T->>N: createWafConfig
 T->>DB: websiteRepo.Create
 T->>DB: websiteDomainRepo.BatchCreate
     alt EnableSSL
-Sv->>T: AddSubTask(EnableSSL)
-T->>N: applySSL
+    Sv->>T: AddSubTask(EnableSSL)
+    T->>N: applySSL
     end
     alt FTP
-Sv->>T: AddSubTask(ConfigFTP)
+    Sv->>T: AddSubTask(ConfigFTP)
     end
 Sv->>T: task.Execute()
 Sv-->>H: nil
