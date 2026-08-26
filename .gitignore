@@ -7,52 +7,28 @@ Thumbs.db
 .idea/
 *.swp
 
-# Local state
-daily-mgmt-state.json
-
-# ============================================================
-# Scheduler runtime — all Python / PowerShell / batch scripts
-# are kept locally, never pushed to repo.
-# ============================================================
-.scheduler/
-*.py
-*.ps1
-*.bat
-*.cmd
-*.vbs
-
-# Backups
-.backups/
-
-# Archives (kept locally, not for repo)
-_archive_*
-
-# Python
+# Python (in case any helper added)
 __pycache__/
 *.pyc
+.pytest_cache/
+.mypy_cache/
 
-# Go
-*.exe
-*.test
-*.out
+# Runtime / state
+*.log
+*.pid
+*.lock
+daily-mgmt-state.json
 
-# Auto-generated scheduler reports (regen by sub-tasks, not source)
-DAILY-SUMMARY.md
-WEEKLY-REPORT.md
-UPSTREAM-DIFF.md
-COVERAGE-REPORT.md
-HEALTH-SCORE.md
-BLACKLIST.md
-ALERTS.md
-DAILY-STATUS.md
+# Backups / archives
+.backups/
+_archive_*
 
-# ============================================================
-# Repo layout (kept):
-#   skeleton/             Go 源码 (英文代码)
-#   modules/              13 模块知识库 (中文 HUMAN-READABLE.md + 英文 visual-atlas.html)
-#   firewall-architecture.md  防火墙深度研究 (中文)
-#   modules/00-landscape.md   1Panel 全景图 (中文)
-#   modules/00-KNOWLEDGE-BOOK.html  database 知识书 (中文)
-#   KB-INDEX.md           KB 索引 (中文)
-#   README.md / LICENSE / NOTICE  元数据 (英文)
-# ============================================================
+# Local-only
+.env
+.venv/
+
+# IMPORTANT: This .gitignore only applies to 1Panel/1Panel.edu/ subdir.
+# The parent D:\MiniMax Code\1Panel\ is 1Panel upstream (1Panel-dev/1Panel) —
+# 1Panel/1Panel.edu/ is local-only research KB, not pushed there.
+# 1Panel upstream is excluded via D:\MiniMax Code\1Panel\.git\info\exclude
+#   1Panel.edu/
