@@ -561,90 +561,90 @@ flowchart TB
       <div class="mermaid">
 sequenceDiagram
     autonumber
-    participant Browser
-    participant Gin
-    participant MW as Middleware
-    participant H as BaseApi.Login
-    participant Tracker as IPTracker
-    participant X as xpack.AuthProvider
-    participant Auth as app/auth.Login
-    participant Repo as SettingRepo
-    participant Cache as go-cache
-    participant DB as SQLite
-    participant Sess as PSession
+participant Browser
+participant Gin
+participant MW as Middleware
+participant H as BaseApi.Login
+participant Tracker as IPTracker
+participant X as xpack.AuthProvider
+participant Auth as app auth.Login
+participant Repo as SettingRepo
+participant Cache as go-cache
+participant DB as SQLite
+participant Sess as PSession
 
-    Browser->>Gin: GET /api/v2/core/auth/captcha
-    Gin->>MW: 中间件链
-    MW-->>Browser: captchaID + image
+Browser->>Gin: GET /api/v2/core/auth/captcha
+Gin->>MW: 中间件链
+MW-->>Browser: captchaID + image
 
-    Browser->>Gin: POST /api/v2/core/auth/login
-    Note over Browser,Gin: Header: EntranceCode (base64) / Body: dto.Login{Name, Password(RSA 加密), Captcha, Language}
+Browser->>Gin: POST /api/v2/core/auth/login
+Note over Browser,Gin: Header: EntranceCode (base64) / Body: dto.Login(Name, Password(RSA 加密), Captcha, Language)
 
-    Gin->>MW: CSRF skip (公开路由) + SessionAuth skip
-    MW->>H: 路由命中
+Gin->>MW: CSRF skip (公开路由) + SessionAuth skip
+MW->>H: 路由命中
 
-    H->>Tracker: IsLocked(ip)?
+H->>Tracker: IsLocked(ip)?
     alt IP locked
-        Tracker-->>H: true
-        H-->>Browser: 401 ErrLoginLocked
+Tracker-->>H: true
+H-->>Browser: 401 ErrLoginLocked
     end
 
-    H->>Tracker: NeedCaptcha(ip)?
+H->>Tracker: NeedCaptcha(ip)?
     alt Need Captcha
-        Tracker-->>H: true
-        H->>H: captcha.VerifyCode(req.CaptchaID, req.Captcha)
+Tracker-->>H: true
+H->>H: captcha.VerifyCode(req.CaptchaID, req.Captcha)
     end
 
-    H->>H: 解 base64 EntranceCode
-    H->>X: Login(c, req, entrance)
+H->>H: 解 base64 EntranceCode
+H->>X: Login(c, req, entrance)
 
-    X->>Auth: Login(c, info, entrance)
+X->>Auth: Login(c, info, entrance)
 
-    Auth->>Repo: Get(UserName)
-    Repo->>Cache: hit?
+Auth->>Repo: Get(UserName)
+Repo->>Cache: hit?
     alt miss
-        Repo->>DB: SELECT * FROM settings WHERE key=?
-        DB-->>Repo: row
-        Repo->>Cache: Set(UserName, value, 5min)
+Repo->>DB: SELECT * FROM settings WHERE key=?
+DB-->>Repo: row
+Repo->>Cache: Set(UserName, value, 5min)
     end
-    Repo-->>Auth: setting
+Repo-->>Auth: setting
 
-    Auth->>Auth: info.Name == setting.Value?
+Auth->>Auth: info.Name == setting.Value?
     alt 不匹配
-        Auth-->>H: nil, "ErrAuth", err
+Auth-->>H: nil, "ErrAuth", err
     end
 
-    Auth->>Repo: Get(PASSWORD_PRIVATE_KEY) + Get(Password)
-    Repo-->>Auth: priKey, encryptedPassword
+Auth->>Repo: Get(PASSWORD_PRIVATE_KEY) + Get(Password)
+Repo-->>Auth: priKey, encryptedPassword
 
-    Auth->>Auth: DecryptLoginPassword(priKey, info.Password)
-    Note over Auth: RSA 私钥解密前端公钥加密的密码
-    Auth->>Auth: encrypt.StringDecrypt(encryptedPassword)
-    Note over Auth: AES 解密存库的密码
-    Auth->>Auth: hmac.Equal(decrypted, loginPassword)
-    Note over Auth: 时间安全比对 (防时序攻击)
+Auth->>Auth: DecryptLoginPassword(priKey, info.Password)
+Note over Auth: RSA 私钥解密前端公钥加密的密码
+Auth->>Auth: encrypt.StringDecrypt(encryptedPassword)
+Note over Auth: AES 解密存库的密码
+Auth->>Auth: hmac.Equal(decrypted, loginPassword)
+Note over Auth: 时间安全比对 (防时序攻击)
 
-    Auth->>Repo: Get(SecurityEntrance)
-    Auth->>Auth: entrance 一致性
-    Auth->>Repo: Get(MFAStatus)
-    Auth->>Repo: Update(Language, info.Language)
+Auth->>Repo: Get(SecurityEntrance)
+Auth->>Auth: entrance 一致性
+Auth->>Repo: Get(MFAStatus)
+Auth->>Repo: Update(Language, info.Language)
 
     alt MFA enabled
-        Auth->>Auth: BeginMFALogin
-        Auth-->>H: UserLoginInfo{MfaSession, MfaStatus: Enable}
-        H-->>Browser: 200 + MfaSession (未登录)
+Auth->>Auth: BeginMFALogin
+Auth-->>H: UserLoginInfo(MfaSession, MfaStatus: Enable)
+H-->>Browser: 200 + MfaSession (未登录)
     else MFA disabled
-        Auth->>Auth: 组装 SessionUser{ID: __super_admin__, Role: ADMIN}
-        Auth->>Sess: SetFresh(c, user, SSL, ttl)
-        Sess->>Sess: 生成新 sessionID + CSRF token
-        Sess-->>Browser: Set-Cookie psession + pcsrftoken
-        Auth-->>H: UserLoginInfo{Name, Role}
+Auth->>Auth: 组装 SessionUser(ID: __super_admin__, Role: ADMIN)
+Auth->>Sess: SetFresh(c, user, SSL, ttl)
+Sess->>Sess: 生成新 sessionID + CSRF token
+Sess-->>Browser: Set-Cookie psession + pcsrftoken
+Auth-->>H: UserLoginInfo(Name, Role)
     end
 
-    H->>H: 失败 → IPTracker.RecordFailure + SetNeedCaptcha
-    H->>H: 成功 → IPTracker.Clear(ip)
-    H->>H: go saveLoginLogs(...)
-    H-->>Browser: 200 OK
+H->>H: 失败 → IPTracker.RecordFailure + SetNeedCaptcha
+H->>H: 成功 → IPTracker.Clear(ip)
+H->>H: go saveLoginLogs(...)
+H-->>Browser: 200 OK
       </div>
       <div class="caption">图 3.1: 完整 Login 时序。从浏览器请求到 SQLite 落盘 + session 创建。共 13 步,失败有 4 个分支。</div>
     </div>
@@ -677,52 +677,52 @@ func CheckPassword(priKey, password, passwordFromDB string) error {
       <div class="mermaid">
 sequenceDiagram
     autonumber
-    participant Browser
-    participant H as BaseApi.MFALogin
-    participant Tracker as IPTracker
-    participant MFAS as MFASessionStore
-    participant X as AuthProvider
-    participant Auth as app/auth.MFALogin
-    participant Repo as SettingRepo
-    participant DB as SQLite
-    participant Sess as PSession
+participant Browser
+participant H as BaseApi.MFALogin
+participant Tracker as IPTracker
+participant MFAS as MFASessionStore
+participant X as AuthProvider
+participant Auth as app auth.MFALogin
+participant Repo as SettingRepo
+participant DB as SQLite
+participant Sess as PSession
 
-    Note over Browser: 已经通过主登录,拿到 MfaSession
-    Browser->>H: POST /api/v2/core/auth/mfalogin
-    Note over Browser,H: Body: dto.MFALogin{SessionID, Code}
-    H->>Tracker: IsLocked(ip)?
-    H->>H: 解 base64 EntranceCode
-    H->>X: MFALogin(c, req, entrance)
-    X->>Auth: MFALogin(c, info, entrance)
-    Auth->>MFAS: Get(sessionID)
+Note over Browser: 已经通过主登录,拿到 MfaSession
+Browser->>H: POST /api/v2/core/auth/mfalogin
+Note over Browser,H: Body: dto.MFALogin(SessionID, Code)
+H->>Tracker: IsLocked(ip)?
+H->>H: 解 base64 EntranceCode
+H->>X: MFALogin(c, req, entrance)
+X->>Auth: MFALogin(c, info, entrance)
+Auth->>MFAS: Get(sessionID)
     alt session 不存在 / IP 不匹配
-        MFAS-->>Auth: not found
-        Auth-->>H: nil, "ErrMFA"
+MFAS-->>Auth: not found
+Auth-->>H: nil, "ErrMFA"
     end
-    Auth->>Repo: Get(MFASecret) + Get(MFAInterval)
-    Repo-->>Auth: secret, interval
-    Auth->>Auth: mfa.ValidCode(interval, code, secret)
-    Note over Auth: TOTP 校验 (RFC 6238)
+Auth->>Repo: Get(MFASecret) + Get(MFAInterval)
+Repo-->>Auth: secret, interval
+Auth->>Auth: mfa.ValidCode(interval, code, secret)
+Note over Auth: TOTP 校验 (RFC 6238)
     alt code invalid
-        Auth-->>H: nil, "ErrMFA"
-        H->>Tracker: RecordFailure(ip)
-        H->>MFAS: RecordFailure(sessionID)
+Auth-->>H: nil, "ErrMFA"
+H->>Tracker: RecordFailure(ip)
+H->>MFAS: RecordFailure(sessionID)
         alt failures >= 5
-            H->>Tracker: SetNeedCaptcha(ip)
-            H-->>Browser: 401 ErrCaptchaCode
+H->>Tracker: SetNeedCaptcha(ip)
+H-->>Browser: 401 ErrCaptchaCode
         else
-            H-->>Browser: 401 ErrMFA
+H-->>Browser: 401 ErrMFA
         end
     else code valid
-        Auth->>MFAS: Delete(sessionID)
-        Auth->>Auth: 组装 SessionUser
-        Auth->>Sess: SetFresh(c, user, SSL, ttl)
-        Sess-->>Browser: Set-Cookie psession + pcsrftoken
-        Auth-->>H: UserLoginInfo
-        H->>Tracker: Clear(ip)
-        H-->>Browser: 200 OK
+Auth->>MFAS: Delete(sessionID)
+Auth->>Auth: 组装 SessionUser
+Auth->>Sess: SetFresh(c, user, SSL, ttl)
+Sess-->>Browser: Set-Cookie psession + pcsrftoken
+Auth-->>H: UserLoginInfo
+H->>Tracker: Clear(ip)
+H-->>Browser: 200 OK
     end
-    H->>H: go saveLoginLogs(...)
+H->>H: go saveLoginLogs(...)
       </div>
       <div class="caption">图 4.1: MFA 登录时序。MFASession 5min TTL,5 次失败后强制图形验证码。</div>
     </div>
@@ -765,54 +765,54 @@ flowchart LR
       <div class="mermaid">
 sequenceDiagram
     autonumber
-    participant Browser
-    participant Auth as Authenticator
-    participant H as BaseApi.PasskeyBegin/Finish
-    participant X as xpack.AuthProvider
-    participant Pkg as app/auth.passkey
-    participant WA as go-webauthn
-    participant DB as SQLite
+participant Browser
+participant Auth as Authenticator
+participant H as BaseApi.PasskeyBegin Finish
+participant X as xpack.AuthProvider
+participant Pkg as app auth.passkey
+participant WA as go-webauthn
+participant DB as SQLite
 
-    Note over Browser: 1. 用户点击 "Passkey 登录" 按钮
-    Browser->>H: POST /api/v2/core/auth/passkey/begin
-    Note over Browser,H: Header: EntranceCode (可选)
-    H->>X: PasskeyBeginLogin(c, entrance)
-    X->>Pkg: PasskeyBeginLogin(c, entrance)
-    Pkg->>Pkg: CheckEntrance(entrance)
-    Pkg->>DB: Get(BindDomain) + Get(PanelName)
-    Pkg->>Pkg: 构造 webauthn.Config
-    Note over Pkg: PasskeyEnabled 要求 TLS != nil
-    Note over Pkg: BindDomain 必须跟 Host header 匹配
-    Pkg->>DB: Get(PasskeyCredentials)
-    Pkg->>Pkg: LoadPasskeyCredentialRecords (AES 解密)
-    Pkg->>Pkg: 凭据列表为空? 返回 ErrPasskeyNotConfigured
-    Pkg->>Pkg: communityPasskeyUser(records)
-    Pkg->>WA: webauthn.New(config)
-    Pkg->>WA: BeginLogin(user)
-    WA-->>Pkg: assertion + sessionData
-    Pkg->>Pkg: passkeySessionStore.Set(Login, "", sessionData)
-    Pkg-->>H: PasskeyBeginResponse{SessionID, PublicKey}
-    H-->>Browser: 200 + {sessionId, publicKey}
+Note over Browser: 1. 用户点击 "Passkey 登录" 按钮
+Browser->>H: POST /api/v2/core/auth/passkey/begin
+Note over Browser,H: Header: EntranceCode (可选)
+H->>X: PasskeyBeginLogin(c, entrance)
+X->>Pkg: PasskeyBeginLogin(c, entrance)
+Pkg->>Pkg: CheckEntrance(entrance)
+Pkg->>DB: Get(BindDomain) + Get(PanelName)
+Pkg->>Pkg: 构造 webauthn.Config
+Note over Pkg: PasskeyEnabled 要求 TLS != nil
+Note over Pkg: BindDomain 必须跟 Host header 匹配
+Pkg->>DB: Get(PasskeyCredentials)
+Pkg->>Pkg: LoadPasskeyCredentialRecords (AES 解密)
+Pkg->>Pkg: 凭据列表为空? 返回 ErrPasskeyNotConfigured
+Pkg->>Pkg: communityPasskeyUser(records)
+Pkg->>WA: webauthn.New(config)
+Pkg->>WA: BeginLogin(user)
+WA-->>Pkg: assertion + sessionData
+Pkg->>Pkg: passkeySessionStore.Set(Login, "", sessionData)
+Pkg-->>H: PasskeyBeginResponse(SessionID, PublicKey)
+H-->>Browser: 200 + (sessionId, publicKey)
 
-    Browser->>Auth: navigator.credentials.get({publicKey})
-    Note over Browser,Auth: 用户指纹/PIN 验证
-    Auth-->>Browser: signature (signed challenge)
+Browser->>Auth: navigator.credentials.get((publicKey))
+Note over Browser,Auth: 用户指纹/PIN 验证
+Auth-->>Browser: signature (signed challenge)
 
-    Browser->>H: POST /api/v2/core/auth/passkey/finish
-    Note over Browser,H: Header: Passkey-Session: sessionID
-    H->>X: PasskeyFinishLogin(c, sessionID, entrance)
-    X->>Pkg: PasskeyFinishLogin(c, sessionID, entrance)
-    Pkg->>Pkg: CheckEntrance(entrance)
-    Pkg->>Pkg: passkeySessionStore.Get(sessionID)
-    Pkg->>Pkg: passkeySessionStore.Delete(sessionID)
-    Pkg->>WA: FinishLogin(user, sessionData, request)
-    WA-->>Pkg: credential (验证通过)
-    Pkg->>Pkg: UpdatePasskeyCredentialRecord (更新 LastUsedAt)
-    Pkg->>DB: Update(PasskeyCredentials, encrypted)
-    Pkg->>DB: Get(UserName)
-    Pkg->>Pkg: GenerateSession(c, SuperAdmin)
-    Pkg-->>H: UserLoginInfo
-    H-->>Browser: 200 + Set-Cookie psession
+Browser->>H: POST /api/v2/core/auth/passkey/finish
+Note over Browser,H: Header: Passkey-Session: sessionID
+H->>X: PasskeyFinishLogin(c, sessionID, entrance)
+X->>Pkg: PasskeyFinishLogin(c, sessionID, entrance)
+Pkg->>Pkg: CheckEntrance(entrance)
+Pkg->>Pkg: passkeySessionStore.Get(sessionID)
+Pkg->>Pkg: passkeySessionStore.Delete(sessionID)
+Pkg->>WA: FinishLogin(user, sessionData, request)
+WA-->>Pkg: credential (验证通过)
+Pkg->>Pkg: UpdatePasskeyCredentialRecord (更新 LastUsedAt)
+Pkg->>DB: Update(PasskeyCredentials, encrypted)
+Pkg->>DB: Get(UserName)
+Pkg->>Pkg: GenerateSession(c, SuperAdmin)
+Pkg-->>H: UserLoginInfo
+H-->>Browser: 200 + Set-Cookie psession
       </div>
       <div class="caption">图 5.1: Passkey 完整时序。Begin 生成 challenge → 浏览器用 authenticator 签名 → Finish 验签 + 创建 session。</div>
     </div>
@@ -855,36 +855,36 @@ stateDiagram-v2
       <div class="mermaid">
 sequenceDiagram
     autonumber
-    participant User
-    participant Browser
-    participant Master as Master API
-    participant Auth as APIAuthMiddleware
-    participant Repo as SettingRepo
+participant User
+participant Browser
+participant Master as Master API
+participant Auth as APIAuthMiddleware
+participant Repo as SettingRepo
 
-    Note over User: 1. 用户在面板生成 API Key
-    User->>Browser: POST /auth/api/generate
-    Browser->>Master: 调 GenerateApiKey
-    Note over Master: 检查 1Panel-Token header / 若已用 API 模式,返回 ErrApiConfigDisable
-    Master->>Repo: Update("ApiKey", RandStr(32))
-    Master-->>User: 返回 32 字符 key
+Note over User: 1. 用户在面板生成 API Key
+User->>Browser: POST /auth/api/generate
+Browser->>Master: 调 GenerateApiKey
+Note over Master: 检查 1Panel-Token header / 若已用 API 模式,返回 ErrApiConfigDisable
+Master->>Repo: Update("ApiKey", RandStr(32))
+Master-->>User: 返回 32 字符 key
 
-    Note over User: 2. 外部系统用 API Key 调接口
-    User->>User: ts = unix() now
-    User->>User: token = md5("1panel" + apiKey + ts)
-    User->>Master: GET /api/v2/xxx / 1Panel-Token: token / 1Panel-Timestamp: ts
-    Master->>Auth: APIAuthMiddleware
-    Auth->>Repo: Get(ApiInterfaceStatus, ApiKey, IpWhiteList, ApiKeyValidityTime)
-    Auth->>Auth: isValid1PanelTimestamp (ts, ttl)
-    Note over Auth: 默认 60s 容忍 / + ttl 分钟 (ApiKeyValidityTime)
-    Auth->>Auth: isValid1PanelToken (md5 / hmac-sha256)
-    Auth->>Auth: isIPInWhiteList (clientIP, whiteList)
+Note over User: 2. 外部系统用 API Key 调接口
+User->>User: ts = unix() now
+User->>User: token = md5("1panel" + apiKey + ts)
+User->>Master: GET /api/v2/xxx / 1Panel-Token: token / 1Panel-Timestamp: ts
+Master->>Auth: APIAuthMiddleware
+Auth->>Repo: Get(ApiInterfaceStatus, ApiKey, IpWhiteList, ApiKeyValidityTime)
+Auth->>Auth: isValid1PanelTimestamp (ts, ttl)
+Note over Auth: 默认 60s 容忍 / + ttl 分钟 (ApiKeyValidityTime)
+Auth->>Auth: isValid1PanelToken (md5 / hmac-sha256)
+Auth->>Auth: isIPInWhiteList (clientIP, whiteList)
     alt 校验失败
-        Auth-->>User: 401 ErrApiConfig*Invalid
+Auth-->>User: 401 ErrApiConfig*Invalid
     else 校验成功
-        Auth->>Auth: c.Set("API_AUTH", true)
-        Auth->>Master: c.Next()
-        Note over Master: 后续 SessionAuth 见 API_AUTH=true 直接放行
-        Master-->>User: 200 OK
+Auth->>Auth: c.Set("API_AUTH", true)
+Auth->>Master: c.Next()
+Note over Master: 后续 SessionAuth 见 API_AUTH=true 直接放行
+Master-->>User: 200 OK
     end
       </div>
       <div class="caption">图 6.1: API Key 签名 + 验证时序。客户端用 MD5/HMAC-SHA256 签名,服务端校验时间戳 + IP 白名单。</div>

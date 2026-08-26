@@ -300,44 +300,44 @@ graph TB
   <div class="mermaid">
 sequenceDiagram
     autonumber
-    participant U as 用户 (浏览器)
-    participant R as Gin Router
-    participant H as BaseApi / (handler)
-    participant Sv as IWebsiteService / (service)
-    participant R2 as Repo / (GORM)
-    participant M as Model / (MySQL 表)
-    participant N as OpenResty
-    participant L as Lego (ACME)
-    participant D as Docker
+participant U as 用户 (浏览器)
+participant R as Gin Router
+participant H as BaseApi   (handler)
+participant Sv as IWebsiteService   (service)
+participant R2 as Repo   (GORM)
+participant M as Model   (MySQL 表)
+participant N as OpenResty
+participant L as Lego (ACME)
+participant D as Docker
 
-    U->>R: POST /websites {type, alias, domains}
-    R->>H: CreateWebsite(c)
-    H->>H: CheckBindAndValidate(&req, c)
-    H->>Sv: CreateWebsite(req)
-    Sv->>Sv: alias 校验 / Punycode
-    Sv->>N: getAppInstallByKey(AppOpenresty)
-    Sv->>Sv: task.NewTaskWithOps + 子任务
+U->>R: POST /websites (type, alias, domains)
+R->>H: CreateWebsite(c)
+H->>H: CheckBindAndValidate(&req, c)
+H->>Sv: CreateWebsite(req)
+Sv->>Sv: alias 校验 / Punycode
+Sv->>N: getAppInstallByKey(AppOpenresty)
+Sv->>Sv: task.NewTaskWithOps + 子任务
     alt CreateDb
-        Sv->>Sv: MySQL/PG service.Create
+Sv->>Sv: MySQL/PG service.Create
     end
     alt Deployment
-        Sv->>Sv: NewIAppService().Install
+Sv->>Sv: NewIAppService().Install
     end
-    Sv->>N: configDefaultNginx
-    Sv->>N: createWafConfig
-    Sv->>R2: websiteRepo.Create
-    Sv->>R2: websiteDomainRepo.BatchCreate
+Sv->>N: configDefaultNginx
+Sv->>N: createWafConfig
+Sv->>R2: websiteRepo.Create
+Sv->>R2: websiteDomainRepo.BatchCreate
     alt EnableSSL
-        Sv->>L: newWebsiteSSLLegoClient
-        L->>D: DNS-01 / HTTP-01
-        L->>LetsEncrypt: Order
-        LetsEncrypt-->>L: Certificate
-        Sv->>N: applySSL (写 ssl_certificate)
+Sv->>L: newWebsiteSSLLegoClient
+L->>D: DNS-01 / HTTP-01
+L->>LetsEncrypt: Order
+LetsEncrypt-->>L: Certificate
+Sv->>N: applySSL (写 ssl_certificate)
     end
-    Sv->>N: nginx -t + nginx -s reload
-    Sv-->>H: nil / err
-    H-->>R: 200 / 500
-    R-->>U: HTTP 响应
+Sv->>N: nginx -t + nginx -s reload
+Sv-->>H: nil / err
+H-->>R: 200 / 500
+R-->>U: HTTP 响应
   </div>
 </section>
 
@@ -347,48 +347,48 @@ sequenceDiagram
   <div class="mermaid">
 sequenceDiagram
     autonumber
-    participant U as 用户
-    participant R as Router
-    participant H as BaseApi.CreateWebsite
-    participant Sv as WebsiteService
-    participant T as task.Task
-    participant N as OpenResty
-    participant DB as MySQL
-    participant LE as Let's Encrypt
-    participant A as 1Panel App
+participant U as 用户
+participant R as Router
+participant H as BaseApi.CreateWebsite
+participant Sv as WebsiteService
+participant T as task.Task
+participant N as OpenResty
+participant DB as MySQL
+participant LE as Let's Encrypt
+participant A as 1Panel App
 
-    U->>R: POST /websites
-    R->>H: CreateWebsite(c)
-    H->>H: CheckBindAndValidate
-    H->>Sv: CreateWebsite(req)
-    Sv->>Sv: alias 校验 (Punycode)
-    Sv->>N: getAppInstallByKey(Openresty)
-    Sv->>Sv: build website + task
+U->>R: POST /websites
+R->>H: CreateWebsite(c)
+H->>H: CheckBindAndValidate
+H->>Sv: CreateWebsite(req)
+Sv->>Sv: alias 校验 (Punycode)
+Sv->>N: getAppInstallByKey(Openresty)
+Sv->>Sv: build website + task
     alt CreateDb = true
-        Sv->>T: AddSubTask(创库)
-        T->>DB: Create MySQL/PG
+Sv->>T: AddSubTask(创库)
+T->>DB: Create MySQL/PG
     end
     alt Type = Deployment
-        Sv->>A: NewIAppService().Install
-        A-->>Sv: appInstall
+Sv->>A: NewIAppService().Install
+A-->>Sv: appInstall
     else Type = Runtime
-        Sv->>DB: runtimeRepo.Get
+Sv->>DB: runtimeRepo.Get
     end
-    Sv->>T: AddSubTask(ConfigOpenresty)
-    T->>N: configDefaultNginx
-    T->>N: createWafConfig
-    T->>DB: websiteRepo.Create
-    T->>DB: websiteDomainRepo.BatchCreate
+Sv->>T: AddSubTask(ConfigOpenresty)
+T->>N: configDefaultNginx
+T->>N: createWafConfig
+T->>DB: websiteRepo.Create
+T->>DB: websiteDomainRepo.BatchCreate
     alt EnableSSL
-        Sv->>T: AddSubTask(EnableSSL)
-        T->>N: applySSL
+Sv->>T: AddSubTask(EnableSSL)
+T->>N: applySSL
     end
     alt FTP
-        Sv->>T: AddSubTask(ConfigFTP)
+Sv->>T: AddSubTask(ConfigFTP)
     end
-    Sv->>T: task.Execute()
-    Sv-->>H: nil
-    H-->>U: 200
+Sv->>T: task.Execute()
+Sv-->>H: nil
+H-->>U: 200
   </div>
 </section>
 
@@ -398,36 +398,36 @@ sequenceDiagram
   <div class="mermaid">
 sequenceDiagram
     autonumber
-    participant U as 用户
-    participant R as Router
-    participant H as ApplyWebsiteSSL
-    participant Sv as WebsiteSSLService
-    participant L as Lego
-    participant LE as Let's Encrypt
-    participant D as DNS API
-    participant N as OpenResty
-    participant DB as MySQL
+participant U as 用户
+participant R as Router
+participant H as ApplyWebsiteSSL
+participant Sv as WebsiteSSLService
+participant L as Lego
+participant LE as Let's Encrypt
+participant D as DNS API
+participant N as OpenResty
+participant DB as MySQL
 
-    U->>R: POST /websites/ssl/obtain
-    R->>H: ApplyWebsiteSSL
-    H->>Sv: ApplyWebsiteSSL(req)
-    Sv->>DB: websiteSSLRepo.GetFirst(id)
-    Sv->>Sv: newWebsiteSSLLogger
-    Sv->>Sv: withLegoLoggerTimeout(20min)
-    Sv->>L: newWebsiteSSLLegoClient
-    L->>LE: Register Account
-    L->>LE: Create Order (域名)
-    LE-->>L: Authorizations
-    L->>D: Add TXT Record (DNS-01)
-    L->>LE: Validate Challenges
-    LE-->>L: All Valid
-    L->>LE: Finalize (CSR)
-    LE-->>L: Certificate
-    Sv->>N: saveCertificateFile
-    Sv->>N: reloadSystemSSL (nginx -s reload)
-    Sv->>DB: websiteSSLRepo.Save
-    Sv-->>H: nil
-    H-->>U: 200
+U->>R: POST /websites/ssl/obtain
+R->>H: ApplyWebsiteSSL
+H->>Sv: ApplyWebsiteSSL(req)
+Sv->>DB: websiteSSLRepo.GetFirst(id)
+Sv->>Sv: newWebsiteSSLLogger
+Sv->>Sv: withLegoLoggerTimeout(20min)
+Sv->>L: newWebsiteSSLLegoClient
+L->>LE: Register Account
+L->>LE: Create Order (域名)
+LE-->>L: Authorizations
+L->>D: Add TXT Record (DNS-01)
+L->>LE: Validate Challenges
+LE-->>L: All Valid
+L->>LE: Finalize (CSR)
+LE-->>L: Certificate
+Sv->>N: saveCertificateFile
+Sv->>N: reloadSystemSSL (nginx -s reload)
+Sv->>DB: websiteSSLRepo.Save
+Sv-->>H: nil
+H-->>U: 200
   </div>
 </section>
 

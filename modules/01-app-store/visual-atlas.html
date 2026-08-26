@@ -210,50 +210,50 @@ flowchart TB
 <div class="mermaid">
 sequenceDiagram
     autonumber
-    participant FE as 前端
-    participant MW as Middleware
-    participant H as InstallApp / (api/v2/app.go:162)
-    participant S1 as Install / (app.go:350 壳)
-    participant S2 as installWithHooks / (app.go:354 ★ 250行)
-    participant R as Repo (GORM)
-    participant TK as task
-    participant DK as Docker
+participant FE as 前端
+participant MW as Middleware
+participant H as InstallApp   (api v2 app.go:162)
+participant S1 as Install   (app.go:350 壳)
+participant S2 as installWithHooks   (app.go:354 ★ 250行)
+participant R as Repo (GORM)
+participant TK as task
+participant DK as Docker
 
-    FE->>MW: POST /api/v2/apps/install / {appDetailId, name, params, ...}
-    MW->>H: CheckBindAndValidate(req)
-    H->>S1: appService.Install(req, true)
-    S1->>S2: installWithHooks(req, true, nil)
-    Note over S2: ─── 阶段 1: 校验 ───
-    S2->>DK: CreateDefaultDockerNetwork()
-    S2->>R: appInstallRepo.ListBy(WithByLowerName)
-    R-->>S2: 已有同名 → ErrAppNameExist
-    S2->>R: appDetailRepo.GetFirst(WithByID)
-    R-->>S2: appDetail
-    S2->>R: appRepo.GetFirst(WithByID)
-    R-->>S2: app
-    S2->>R: databaseRepo 检查 DB 依赖
-    S2->>S2: checkPort() / checkRequiredAndLimit()
-    Note over S2: ─── 阶段 2: 渲染 ───
-    S2->>S2: yaml.Unmarshal(detail.DockerCompose)
-    S2->>S2: addDockerComposeCommonParam()
-    S2->>S2: yaml.Marshal → appInstall.DockerCompose
-    S2->>S2: json.Marshal(params) → appInstall.Env
-    Note over S2: ─── 阶段 3: 写库 ───
-    S2->>R: appInstallRepo.Create(appInstall)
-    R-->>S2: appInstall.ID
-    Note over S2: ─── 阶段 4: 异步任务 ───
-    S2->>TK: NewTaskWithOps(name, Install, App, taskID, installID)
-    S2->>S2: createLink() 写 .env / hosts
-    S2->>TK: AddSubTaskWithOps(installApp, 1h)
-    S2-->>H: return *appInstall, nil
-    H-->>FE: 200 OK {ID, Name, ...}
+FE->>MW: POST /api/v2/apps/install / (appDetailId, name, params, ...)
+MW->>H: CheckBindAndValidate(req)
+H->>S1: appService.Install(req, true)
+S1->>S2: installWithHooks(req, true, nil)
+Note over S2: ─── 阶段 1: 校验 ───
+S2->>DK: CreateDefaultDockerNetwork()
+S2->>R: appInstallRepo.ListBy(WithByLowerName)
+R-->>S2: 已有同名 → ErrAppNameExist
+S2->>R: appDetailRepo.GetFirst(WithByID)
+R-->>S2: appDetail
+S2->>R: appRepo.GetFirst(WithByID)
+R-->>S2: app
+S2->>R: databaseRepo 检查 DB 依赖
+S2->>S2: checkPort() / checkRequiredAndLimit()
+Note over S2: ─── 阶段 2: 渲染 ───
+S2->>S2: yaml.Unmarshal(detail.DockerCompose)
+S2->>S2: addDockerComposeCommonParam()
+S2->>S2: yaml.Marshal → appInstall.DockerCompose
+S2->>S2: json.Marshal(params) → appInstall.Env
+Note over S2: ─── 阶段 3: 写库 ───
+S2->>R: appInstallRepo.Create(appInstall)
+R-->>S2: appInstall.ID
+Note over S2: ─── 阶段 4: 异步任务 ───
+S2->>TK: NewTaskWithOps(name, Install, App, taskID, installID)
+S2->>S2: createLink() 写 .env / hosts
+S2->>TK: AddSubTaskWithOps(installApp, 1h)
+S2-->>H: return *appInstall, nil
+H-->>FE: 200 OK (ID, Name, ...)
     par 异步执行 (L590 go func)
-        TK->>S2: Execute() → installApp 闭包
-        S2->>S2: copyData() 拷数据
-        S2->>S2: runScript() init.sh
-        S2->>DK: upApp() docker compose up -d
-        DK-->>S2: container running
-        S2->>R: appInstallRepo.Save(Status=Running)
+TK->>S2: Execute() → installApp 闭包
+S2->>S2: copyData() 拷数据
+S2->>S2: runScript() init.sh
+S2->>DK: upApp() docker compose up -d
+DK-->>S2: container running
+S2->>R: appInstallRepo.Save(Status=Running)
     end
 </div>
 
@@ -271,46 +271,46 @@ sequenceDiagram
 <div class="mermaid">
 sequenceDiagram
     autonumber
-    participant FE as 前端
-    participant H as SyncApp / (api/v2/app.go:42)
-    participant CK as GetAppUpdate / (app.go:836)
-    participant SR as SyncAppListFromRemote / (app.go:976)
-    participant S1 as createSyncAppStoreTask
-    participant S2 as createSyncAppStoreMetaTask
-    participant TK as task
-    participant NET as HTTP
-    participant R as Repo
+participant FE as 前端
+participant H as SyncApp   (api v2 app.go:42)
+participant CK as GetAppUpdate   (app.go:836)
+participant SR as SyncAppListFromRemote   (app.go:976)
+participant S1 as createSyncAppStoreTask
+participant S2 as createSyncAppStoreMetaTask
+participant TK as task
+participant NET as HTTP
+participant R as Repo
 
-    FE->>H: POST /api/v2/apps/sync/remote / {taskID}
-    H->>CK: appService.GetAppUpdate()
-    CK->>NET: GET 1panel.json.version.txt
-    NET-->>CK: lastModified=1717829300
-    CK->>R: setting.Get(AppStoreLastModified)
-    CK-->>H: {CanUpdate: true, AppList: [...]}
-    H->>SR: appService.SyncAppListFromRemote(taskID)
-    SR->>SR: appStoreSyncMu.Lock()
-    SR->>SR: appStoreSyncing=true
-    SR->>TK: NewTaskWithOps("App", Sync, AppStore, taskID, 0)
-    SR->>S1: AddSubTask(createSyncAppStoreTask)
-    SR->>S2: AddSubTask(createSyncAppStoreMetaTask)
-    SR-->>H: return nil
-    H-->>FE: 200 OK
+FE->>H: POST /api/v2/apps/sync/remote / (taskID)
+H->>CK: appService.GetAppUpdate()
+CK->>NET: GET 1panel.json.version.txt
+NET-->>CK: lastModified=1717829300
+CK->>R: setting.Get(AppStoreLastModified)
+CK-->>H: (CanUpdate: true, AppList: (...))
+H->>SR: appService.SyncAppListFromRemote(taskID)
+SR->>SR: appStoreSyncMu.Lock()
+SR->>SR: appStoreSyncing=true
+SR->>TK: NewTaskWithOps("App", Sync, AppStore, taskID, 0)
+SR->>S1: AddSubTask(createSyncAppStoreTask)
+SR->>S2: AddSubTask(createSyncAppStoreMetaTask)
+SR-->>H: return nil
+H-->>FE: 200 OK
     par 异步执行
-        TK->>S1: Execute()
-        S1->>NET: HTTP GET 1panel.json.zip
-        NET-->>S1: zip 流
-        S1->>S1: 解压到 /opt/1panel/resource/1panel.json
-        S1->>S1: json.NewDecoder.Decode → []AppDefine
-        S1->>R: appRepo.BatchCreate / Save (事务)
-        R-->>S1: 写入完成
-        S1-->>TK: subtask done
-        TK->>S2: Execute()
-        S2->>NET: 拉每个 app 的 icon + compose
-        NET-->>S2: 资源文件
-        S2->>R: appDetailRepo.BatchCreate
-        S2->>R: setting.Update(AppStoreLastModified, now)
-        S2-->>TK: subtask done
-        TK->>SR: defer 解锁 appStoreSyncing=false
+TK->>S1: Execute()
+S1->>NET: HTTP GET 1panel.json.zip
+NET-->>S1: zip 流
+S1->>S1: 解压到 /opt/1panel/resource/1panel.json
+S1->>S1: json.NewDecoder.Decode → ()AppDefine
+S1->>R: appRepo.BatchCreate / Save (事务)
+R-->>S1: 写入完成
+S1-->>TK: subtask done
+TK->>S2: Execute()
+S2->>NET: 拉每个 app 的 icon + compose
+NET-->>S2: 资源文件
+S2->>R: appDetailRepo.BatchCreate
+S2->>R: setting.Update(AppStoreLastModified, now)
+S2-->>TK: subtask done
+TK->>SR: defer 解锁 appStoreSyncing=false
     end
 </div>
 
