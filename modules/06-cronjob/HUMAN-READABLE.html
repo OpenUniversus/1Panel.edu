@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CronJob 定时任务 · 1Panel.edu KB</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <nav class="top">
+    <a class="brand" href="../../index.html"><span class="logo">1P</span>1Panel.edu KB</a>
+    <div class="nav-links">
+      <a href="../../index.html">目录</a>
+      <a href="../../modules/modules/06-cronjob#">本模块</a>
+      <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+  <div class="layout">
+    <aside class="toc">
+      <h3>本文目录</h3>
+      <ul></ul>
+    </aside>
+    <main>
+      <header class="doc">
+        <h1>CronJob 定时任务</h1>
+        <div class="meta">
+          <span class="pill pill-todo">TODO</span>
+          <span>⭐⭐</span>
+          <span>8.4 KB</span>
+          <span>2026-08-24</span>
+        </div>
+      </header>
+      <article>
+<blockquote>30 分钟搞懂 1Panel 怎么"傻瓜式 cron"。 详细代码注解在同目录 <code>README.md</code>（51 行 stub + 4 文件清单 / ~2200 行 Go）。 这份文档是入口 —— 先看这个，再决定要不要啃那份。  🎨 <strong>可视化版</strong>：同目录 <code>visual-atlas.html</code>（浏览器里看，4 张 Mermaid 真实图 + 4 个 cron 抽象层级 + 3 个反模式卡片） 📋 <strong>研究 commit</strong>：<code>7915230</code>（dev-v2） ⚠️ <strong>状态</strong>：stub + 人话版，详细注解待做 🔔 <strong>关联</strong>：跟 mavis cron 调度器有相似模式（任务链 / lease / 静默）</blockquote>
+<hr>
+<h2>0. 这份文档回答 5 个问题</h2>
+<ol>
+<li><strong>"傻瓜式 cron"是什么？怎么避免用户写 5 段 cron 表达式？</strong></li>
+<li><strong>1Panel 的 cron 跟系统级 <code>/etc/crontab</code> 什么关系？</strong></li>
+<li><strong>"下次执行时间"怎么算？前端怎么显示"还有 X 小时"？</strong></li>
+<li><strong>任务类型怎么扩展？现在只支持 backup，能加 shell / HTTP / 容器重启吗？</strong></li>
+<li><strong>对 Sirius Cloud L3 调度有什么借鉴价值？</strong></li>
+</ol>
+<hr>
+<h2>1. 一句话总结</h2>
+<p>**1Panel 在系统 cron 之上包一层 Web 界面：把"0 3 <em> </em> 0"翻译成"每周日凌晨 3 点"，用 <a href="https://github.com/robfig/cron">robfig/cron</a> 库 + Go runtime timer 调度。~2200 行 Go。**</p>
+<p>藏了 <strong>2 个必抄的设计</strong>（重点是用户友好 cron 抽象） + <strong>3 个反模式</strong>（重点是单进程内存调度），下面拆。</p>
+<hr>
+<h2>2. 1Panel 凭什么"傻瓜式 cron"</h2>
+<h3>2.1 传统 cron 痛点</h3>
+<pre data-lang="bash"><code class="language-bash"># 系统 crontab 格式
+0 3 * * 0 /opt/backup.sh &gt;&gt; /var/log/backup.log 2&gt;&amp;1
+# 5 段：分 时 日 月 周
+# 用户要记 5 段语法 + shell 重定向 + 环境变量</code></pre>
+<p>1Panel 的解法：&lt;strong&gt;暴露下拉框&lt;/strong&gt;，不暴露 5 段。</p>
+<pre data-lang=""><code>┌──────────────────────────────────────┐
+│ 添加定时备份任务                        │
+├──────────────────────────────────────┤
+│ 备份对象:  [MySQL: my-company-db ▼] │
+│ 频率:      [每周 ▼]                  │
+│ 时间:      [星期日 ▼] [03:00 ▼]     │
+│ 保留份数:  [7  ▼]                    │
+│  [确定]                                │
+└──────────────────────────────────────┘</code></pre>
+<h3>2.2 内部还是 5 段 cron 表达式</h3>
+<pre data-lang="go"><code class="language-go">// cronjob_helper.go 472 行
+// 把"每周日凌晨 3 点"翻译成 "0 3 * * 0"
+func (h *CronHelper) BuildExpression(freq Frequency, dow time.Weekday, hour, minute int) string {
+    switch freq {
+    case FreqDaily:
+        return fmt.Sprintf("%d %d * * *", minute, hour)
+    case FreqWeekly:
+        return fmt.Sprintf("%d %d * * %d", minute, hour, dow)
+    case FreqMonthly:
+        return fmt.Sprintf("%d %d %d * *", minute, hour, dayOfMonth)
+    }
+    return ""
+}</code></pre>
+<p>然后用 <a href="https://github.com/robfig/cron">robfig/cron</a> 库解析 + 调度。</p>
+<hr>
+<h2>3. 4 层抽象</h2>
+<pre class="mermaid">flowchart TB
+    UI[Web UI 下拉框] --&gt; A[抽象层&lt;br/&gt;每周日凌晨 3 点]
+    A --&gt; B[翻译层&lt;br/&gt;0 3 * * 0]
+    B --&gt; C[robfig/cron 库&lt;br/&gt;解析 + 调度]
+    C --&gt; D[Go runtime timer&lt;br/&gt;实际触发]
+    D --&gt; E[执行 callback]
+    style A fill:#c97b3f,color:#fff
+    style C fill:#2f6f5e,color:#fff</pre>
+<p><strong>4 层职责</strong>：</p>
+<ol>
+<li><strong>UI 层</strong>：下拉框</li>
+<li><strong>抽象层</strong>：把"每周日凌晨 3 点"翻译成结构化数据</li>
+<li><strong>翻译层</strong>：结构化数据 → cron 表达式</li>
+<li><strong>执行层</strong>：robfig/cron + Go timer + callback</li>
+</ol>
+<hr>
+<h2>4. 下次执行时间预计算</h2>
+<pre data-lang="go"><code class="language-go">// cronjob_helper.go
+func (h *CronHelper) NextRun(expr string, from time.Time) (time.Time, error) {
+    schedule, err := cron.ParseStandard(expr)
+    if err != nil {
+        return time.Time{}, err
+    }
+    return schedule.Next(from), nil
+}</code></pre>
+<p><strong>前端展示</strong>：</p>
+<pre data-lang="typescript"><code class="language-typescript">// 前端轮询 /api/cronjob/list
+for (const job of jobs) {
+    const next = new Date(job.nextRun);
+    const diff = next - new Date();
+    job.humanReadable = `还有 ${formatDuration(diff)}`;
+}</code></pre>
+<p><strong>用户感知</strong>："还有 5 小时 32 分"。</p>
+<hr>
+<h2>5. 任务类型扩展</h2>
+<p>当前只支持 backup，但 <code>Type</code> 字段预留扩展：</p>
+<pre data-lang="go"><code class="language-go">type CronJob struct {
+    ID     uint
+    Name   string
+    Type   string  // "backup" / "shell" / "http" / "container_restart"
+    Spec   string  // "0 3 * * 0"
+    Config JSON    // 不同 Type 不同结构
+}</code></pre>
+<p>扩展新类型只加 switch case：</p>
+<pre data-lang="go"><code class="language-go">func (s *CronService) Execute(job CronJob) error {
+    switch job.Type {
+    case "backup":           return s.runBackup(job)
+    case "shell":            return s.runShell(job)
+    case "http":             return s.runHTTP(job)
+    case "container_restart": return s.runContainerRestart(job)
+    }
+}</code></pre>
+<hr>
+<h2>6. 2 个必抄的设计</h2>
+<h3>6.1 ⭐⭐⭐⭐ <strong>用户友好 cron 抽象</strong></h3>
+<p><strong>为什么必抄</strong>：你 L3 调度不能让用户写 5 段 cron 表达式。Sirius Cloud 早期可以用简单下拉框，复杂场景才暴露表达式。</p>
+<pre data-lang="python"><code class="language-python"># 你的 Python 抽象
+class Frequency(Enum):
+    HOURLY = "hourly"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    CUSTOM = "custom"  # 高级用户
+
+def build_cron_expr(freq, **kwargs) -&gt; str:
+    if freq == Frequency.HOURLY: return "0 * * * *"
+    if freq == Frequency.DAILY: return f"{kwargs['minute']} {kwargs['hour']} * * *"
+    if freq == Frequency.WEEKLY: return f"{kwargs['minute']} {kwargs['hour']} * * {kwargs['weekday']}"
+    if freq == Frequency.CUSTOM: return kwargs['expression']</code></pre>
+<h3>6.2 ⭐⭐⭐⭐ <strong>下次执行时间预计算</strong></h3>
+<p><strong>为什么必抄</strong>：前端展示"还有 X 小时"提升 UX 10 倍。</p>
+<pre data-lang="python"><code class="language-python">from croniter import croniter
+next_run = croniter("0 3 * * 0", datetime.now()).get_next(datetime)</code></pre>
+<hr>
+<h2>7. 3 个反模式 / 避坑</h2>
+<h3>7.1 ⚠️ <strong>执行状态在内存里</strong></h3>
+<p>1Panel 的 cron 调度器在 agent 进程内，&lt;strong&gt;执行历史&lt;/strong&gt;（最近 10 次执行结果）只在内存里。agent 重启就丢。</p>
+<p><strong>任务定义</strong>在 DB 里，重启后从 DB 重新加载任务定义 + 重置调度器，&lt;strong&gt;但执行历史丢了&lt;/strong&gt;。</p>
+<p><strong>避坑</strong>：你的 Sirius Cloud 调度器把执行历史写 DB（&lt;code&gt;cronjob_history&lt;/code&gt; 表），agent 重启也能查。</p>
+<h3>7.2 ⚠️ <strong>单 agent 进程调度，多机部署会重复执行</strong></h3>
+<p>如果 Sirius Cloud 部署多 agent（你 L2 架构），每台 agent 都跑自己的 cron，&lt;strong&gt;同一任务会执行 N 次&lt;/strong&gt;。</p>
+<p><strong>避坑</strong>：</p>
+<ul>
+<li><strong>方案 A</strong>：cron 只在 leader 跑（leader 选举）</li>
+<li><strong>方案 B</strong>：cron 任务定义带 <code>node_selector</code>，只让指定节点跑</li>
+<li><strong>方案 C</strong>：用分布式锁（etcd / Redis）保证单实例</li>
+</ul>
+<h3>7.3 ❌ <strong><code>cronjob.go</code> 783 行偏大</strong></h3>
+<p>CRUD + 调度逻辑 + 状态机全在一个文件。</p>
+<p><strong>避坑</strong>：拆成 <code>cronjob_crud.go</code> + <code>cronjob_schedule.go</code> + <code>cronjob_history.go</code> 3 个文件。</p>
+<hr>
+<h2>8. 跟 Sirius Cloud 的对位</h2>
+<table><thead><tr><th>Sirius Cloud 需求</th><th>1Panel Cronjob 对应</th><th>推荐度</th></tr></thead><tbody><tr><td><strong>L3 任务调度</strong></td><td>整套</td><td>⭐⭐⭐⭐</td></tr><tr><td><strong>L3 用户友好 cron</strong></td><td>抽象 + 下拉框</td><td>⭐⭐⭐⭐</td></tr><tr><td><strong>L3 分布式任务</strong></td><td>❌ 改用 leader 选举</td><td>⭐⭐⭐</td></tr><tr><td><strong>新功能：定时清理临时文件</strong></td><td>扩展 Type="shell"</td><td>⭐⭐⭐</td></tr></tbody></table>
+<h3>8.1 必抄清单</h3>
+<ol>
+<li><strong>用户友好 cron 抽象</strong>（4 层 + 下拉框）</li>
+<li><strong>下次执行时间预计算</strong>（前端展示"还有 X 小时"）</li>
+</ol>
+<h3>8.2 抄的时候要改</h3>
+<ol>
+<li><strong>加 leader 选举</strong>（多机部署不重复执行）</li>
+<li><strong>执行历史写 DB</strong>（不丢历史）</li>
+<li><strong>Type 字段扩展</strong>（shell / http / 容器重启）</li>
+</ol>
+<hr>
+<h2>9. 接下来怎么读</h2>
+<h3>9.1 30 分钟通道</h3>
+<ol>
+<li>看完本文档</li>
+<li>看 <code>06-cronjob/README.md</code> §1（4 文件清单）</li>
+<li>直接看 <code>cronjob_helper.go</code> 的 <code>BuildExpression</code> 函数</li>
+</ol>
+<h3>9.2 2 小时通道</h3>
+<ol>
+<li>上面 30 分钟</li>
+<li><code>cronjob_backup.go</code> 的"自动备份"型任务执行</li>
+<li><code>cronjob.go</code> 的调度器初始化</li>
+</ol>
+<h3>9.3 1 天写代码通道</h3>
+<ol>
+<li>上面所有</li>
+<li>Python 用 <code>croniter</code> 库 + APScheduler 写一个最小调度器</li>
+<li>加 leader 选举（etcd / Redis lock）</li>
+<li>执行历史写 SQLite</li>
+</ol>
+<hr>
+<h2>10. 写作说明</h2>
+<ul>
+<li><strong>本文档定位</strong>：30 分钟读完的"故事版"</li>
+<li><strong><code>06-cronjob/README.md</code> 定位</strong>：4 文件清单 + stub（详细注解待做）</li>
+<li><strong><code>firewall-architecture.md</code> 定位</strong>：v2 防火墙深度注解</li>
+<li><strong><code>00-landscape.md</code> 定位</strong>：13 个模块的全景图</li>
+</ul>
+<hr>
+<p><strong>研究 commit</strong>：<code>7915230</code>（dev-v2）· <strong>更新</strong>：2026-08-24 · <strong>作者</strong>：1Panel v2 研究员</p>
+      </article>
+    </main>
+  </div>
+  <footer>
+    <p>1Panel.edu KB · <a href="../../index.html">返回目录</a> · <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+  <script src="../../assets/app.js"></script>
+</body>
+</html>

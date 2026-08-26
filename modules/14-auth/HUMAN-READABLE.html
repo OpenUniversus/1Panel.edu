@@ -1,44 +1,67 @@
-# 1Panel Auth 模块
-
-> 1Panel v2 (dev-v2 @ 2dea44a) master 端 Auth 模块深度解析
-> 创建: 2026-08-25 11:45, 自动从 Explore 报告生成
-> 源码根: `D:\MiniMax Code\1Panel\core\`
-> 🎨 **可视化版**: 同目录 `visual-atlas.html`(浏览器里看,9 张 Mermaid 真实图 + 5 个关键时序 + 完整路由分组)
-
----
-
-## 一句话作用
-
-1Panel Auth 模块是 1Panel master 端基于 **SQLite + 进程内 session** 的单管理员登录体系,负责密码 / MFA / Passkey 认证、登录态、API 接口密钥签发与安全入口校验,是面板所有受保护路由的网关。
-
-## 0. 这份文档回答 7 个问题
-
-1. **1Panel 怎么保护 master 端所有受保护 API?** (psession cookie + CSRF + 进程内 session)
-2. **登录密码为什么用 RSA 公钥加密传输?** (公钥下发到浏览器,前端 JS 加密,后端私钥解密)
-3. **MFA / Passkey 怎么嵌入到主登录流程?** (TOTP 5min session + WebAuthn challenge/response)
-4. **API 接口密钥 (`1Panel-Token`) 怎么签名?** (MD5 / HMAC-SHA256 双算法,带 timestamp 防重放)
-5. **登录失败怎么限流?** (IP 维度 10 次失败 → 锁 5 分钟;需先过图形验证码)
-6. **xpack 扩展点怎么设计?** (AuthProvider interface 19 个方法,community 实现硬编码走本地)
-7. **跟 1Panel 其他模块(04-database / 12-security)什么关系?** (共享 SQLite 进程 + 共享 WhiteAllow 中间件)
-
----
-
-## 1. 模块职责
-
-- **单管理员登录认证**: master 端是单机面板,只有 1 个超级管理员用户,`UserName` 存 SQLite `settings` 表,登录走 `BaseApi.Login` (core/app/api/v2/auth.go:32)。
-- **MFA 双因素**: TOTP (Time-based One-Time Password) 实现,`mfa.ValidCode` 校验;MFA 中间态用 `MFASessionStore` (init/auth/mfa_session.go) 存 5 分钟,失败 5 次后强制走图形验证码。
-- **Passkey (WebAuthn) 无密码登录**: 基于 `github.com/go-webauthn/webauthn` 实现,支持 `BeginLogin` / `FinishLogin` / `BeginRegister` / `FinishRegister` 完整流程,Passkey 凭据加密后存 SQLite `settings.PasskeyCredentials` 字段 (auth/passkey.go:294-308)。
-- **进程内 session 代替 Redis**: `PSession` (init/session/psession/psession.go:43-47) 用 `sync.RWMutex + map[string]sessionItem` 存 session,Cookie 名 `psession`,TTL 来自 `settings.SessionTimeout`。
-- **API 接口密钥 (1Panel-Token)**: 32 字符随机串存 `settings.ApiKey`,签名用 `md5("1panel" + apiKey + timestamp)` 或 `hmac-sha256(apiKey, "1panel:" + timestamp)`,带 timestamp 防重放 + IP 白名单 (auth/api_auth.go:34-81)。
-- **安全入口 (SecurityEntrance)**: 可选 URL prefix,前端通过 base64 header `EntranceCode` 透传,后端比对 `settings.SecurityEntrance`,不一致返回 `ErrEntrance` (auth/auth.go:194-204)。
-- **失败限流 + 图形验证码**: `IPTracker` (init/auth/ip_tracker.go) 内存统计每个 IP 失败次数,10 次失败 → 锁 5 分钟;`/auth/captcha` 接口生成图形验证码 (api/v2/auth.go:218-225)。
-
----
-
-## 2. 目录结构
-
-```
-core/
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth 登录认证 · 1Panel.edu KB</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <nav class="top">
+    <a class="brand" href="../../index.html"><span class="logo">1P</span>1Panel.edu KB</a>
+    <div class="nav-links">
+      <a href="../../index.html">目录</a>
+      <a href="../../modules/modules/14-auth#">本模块</a>
+      <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+  <div class="layout">
+    <aside class="toc">
+      <h3>本文目录</h3>
+      <ul></ul>
+    </aside>
+    <main>
+      <header class="doc">
+        <h1>Auth 登录认证</h1>
+        <div class="meta">
+          <span class="pill pill-done">DONE v1</span>
+          <span>⭐⭐⭐</span>
+          <span>90.6 KB</span>
+          <span>2026-08-25</span>
+        </div>
+      </header>
+      <article>
+<blockquote>1Panel v2 (dev-v2 @ 2dea44a) master 端 Auth 模块深度解析 创建: 2026-08-25 11:45, 自动从 Explore 报告生成 源码根: <code>D:\MiniMax Code\1Panel\core\</code> 🎨 <strong>可视化版</strong>: 同目录 <code>visual-atlas.html</code>(浏览器里看,9 张 Mermaid 真实图 + 5 个关键时序 + 完整路由分组)</blockquote>
+<hr>
+<h2>一句话作用</h2>
+<p>1Panel Auth 模块是 1Panel master 端基于 <strong>SQLite + 进程内 session</strong> 的单管理员登录体系,负责密码 / MFA / Passkey 认证、登录态、API 接口密钥签发与安全入口校验,是面板所有受保护路由的网关。</p>
+<h2>0. 这份文档回答 7 个问题</h2>
+<ol>
+<li><strong>1Panel 怎么保护 master 端所有受保护 API?</strong> (psession cookie + CSRF + 进程内 session)</li>
+<li><strong>登录密码为什么用 RSA 公钥加密传输?</strong> (公钥下发到浏览器,前端 JS 加密,后端私钥解密)</li>
+<li><strong>MFA / Passkey 怎么嵌入到主登录流程?</strong> (TOTP 5min session + WebAuthn challenge/response)</li>
+<li><strong>API 接口密钥 (<code>1Panel-Token</code>) 怎么签名?</strong> (MD5 / HMAC-SHA256 双算法,带 timestamp 防重放)</li>
+<li><strong>登录失败怎么限流?</strong> (IP 维度 10 次失败 → 锁 5 分钟;需先过图形验证码)</li>
+<li><strong>xpack 扩展点怎么设计?</strong> (AuthProvider interface 19 个方法,community 实现硬编码走本地)</li>
+<li><strong>跟 1Panel 其他模块(04-database / 12-security)什么关系?</strong> (共享 SQLite 进程 + 共享 WhiteAllow 中间件)</li>
+</ol>
+<hr>
+<h2>1. 模块职责</h2>
+<ul>
+<li><strong>单管理员登录认证</strong>: master 端是单机面板,只有 1 个超级管理员用户,<code>UserName</code> 存 SQLite <code>settings</code> 表,登录走 <code>BaseApi.Login</code> (core/app/api/v2/auth.go:32)。</li>
+<li><strong>MFA 双因素</strong>: TOTP (Time-based One-Time Password) 实现,<code>mfa.ValidCode</code> 校验;MFA 中间态用 <code>MFASessionStore</code> (init/auth/mfa_session.go) 存 5 分钟,失败 5 次后强制走图形验证码。</li>
+<li><strong>Passkey (WebAuthn) 无密码登录</strong>: 基于 <code>github.com/go-webauthn/webauthn</code> 实现,支持 <code>BeginLogin</code> / <code>FinishLogin</code> / <code>BeginRegister</code> / <code>FinishRegister</code> 完整流程,Passkey 凭据加密后存 SQLite <code>settings.PasskeyCredentials</code> 字段 (auth/passkey.go:294-308)。</li>
+<li><strong>进程内 session 代替 Redis</strong>: <code>PSession</code> (init/session/psession/psession.go:43-47) 用 <code>sync.RWMutex + map[string]sessionItem</code> 存 session,Cookie 名 <code>psession</code>,TTL 来自 <code>settings.SessionTimeout</code>。</li>
+<li><strong>API 接口密钥 (1Panel-Token)</strong>: 32 字符随机串存 <code>settings.ApiKey</code>,签名用 <code>md5("1panel" + apiKey + timestamp)</code> 或 <code>hmac-sha256(apiKey, "1panel:" + timestamp)</code>,带 timestamp 防重放 + IP 白名单 (auth/api_auth.go:34-81)。</li>
+<li><strong>安全入口 (SecurityEntrance)</strong>: 可选 URL prefix,前端通过 base64 header <code>EntranceCode</code> 透传,后端比对 <code>settings.SecurityEntrance</code>,不一致返回 <code>ErrEntrance</code> (auth/auth.go:194-204)。</li>
+<li><strong>失败限流 + 图形验证码</strong>: <code>IPTracker</code> (init/auth/ip_tracker.go) 内存统计每个 IP 失败次数,10 次失败 → 锁 5 分钟;<code>/auth/captcha</code> 接口生成图形验证码 (api/v2/auth.go:218-225)。</li>
+</ul>
+<hr>
+<h2>2. 目录结构</h2>
+<pre data-lang=""><code>core/
 ├── app/
 │   ├── api/v2/
 │   │   ├── auth.go              # 19 个 Handler 方法,541 行 (核心)
@@ -89,7 +112,7 @@ core/
 │
 ├── utils/
 │   ├── xpack/
-│   │   ├── community.go         # //go:build !xpack && !enterprise
+│   │   ├── community.go         # //go:build !xpack &amp;&amp; !enterprise
 │   │   ├── helper/
 │   │   │   └── auth_helper.go   # community AuthProvider 实现 (97 行)
 │   │   └── providers/
@@ -102,17 +125,11 @@ core/
 │   └── session.go               # SessionName="psession" / CSRFTokenName="pcsrftoken" / CSRFHeaderName="X-CSRF-Token" (10 行)
 │
 └── global/
-    └── global.go                # 全局变量:DB / AlertDB / TaskDB / AgentDB / SESSION / IPTracker
-```
-
----
-
-## 3. 架构总览
-
-1Panel Auth 模块采用经典的 5 层架构,Router → Middleware → Handler → Service → Repository → Model。从 HTTP 进入到 SQLite 落盘,清晰分层,xpack 通过 `AuthProvider` interface 把 19 个方法注入到 community 实现,允许 enterprise 版替换为 OIDC / SAML2 / LDAP 接入。
-
-```
-              ┌───────────────────────────────────────────────────────┐
+    └── global.go                # 全局变量:DB / AlertDB / TaskDB / AgentDB / SESSION / IPTracker</code></pre>
+<hr>
+<h2>3. 架构总览</h2>
+<p>1Panel Auth 模块采用经典的 5 层架构,Router → Middleware → Handler → Service → Repository → Model。从 HTTP 进入到 SQLite 落盘,清晰分层,xpack 通过 <code>AuthProvider</code> interface 把 19 个方法注入到 community 实现,允许 enterprise 版替换为 OIDC / SAML2 / LDAP 接入。</p>
+<pre data-lang=""><code>              ┌───────────────────────────────────────────────────────┐
               │              HTTP Request (POST /api/v2/core/auth/*)   │
               └───────────────────────────────────────────────────────┘
                                        │
@@ -238,21 +255,17 @@ core/
    │   task.db   ← 任务相关                                                │
    │   agent.db  ← agent 注册                                              │
    │   alert.db  ← 告警                                                    │
-   └─────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 4. Router 注册
-
-### 4.1 注册点
-
-- **文件**: `D:\MiniMax Code\1Panel\core\router\ro_base.go:11-43`
-- **结构**: `BaseRouter.InitRouter(Router *gin.RouterGroup)`
-- **路由前缀**: `/api/v2/core/auth`
-- **装配入口**: `core/init/router/router.go:98-102`
-  ```go
-  PrivateGroup := Router.Group("/api/v2/core")
+   └─────────────────────────────────────────────────────────────────────┘</code></pre>
+<hr>
+<h2>4. Router 注册</h2>
+<h3>4.1 注册点</h3>
+<ul>
+<li><strong>文件</strong>: <code>D:\MiniMax Code\1Panel\core\router\ro_base.go:11-43</code></li>
+<li><strong>结构</strong>: <code>BaseRouter.InitRouter(Router *gin.RouterGroup)</code></li>
+<li><strong>路由前缀</strong>: <code>/api/v2/core/auth</code></li>
+<li><strong>装配入口</strong>: <code>core/init/router/router.go:98-102</code></li>
+</ul>
+<pre data-lang=""><code>  PrivateGroup := Router.Group("/api/v2/core")
   PrivateGroup.Use(middleware.SetPasswordPublicKey())
   for _, router := range rou.RouterGroupApp {
       router.InitRouter(PrivateGroup)
@@ -295,7 +308,7 @@ core/
 | POST | `/api/v2/core/auth/current/update` | `baseApi.UpdateCurrentUser` (auth.go:495) | 更新当前用户(改密码/改用户名) |
 | POST | `/api/v2/core/auth/expired/reset` | `baseApi.ResetPassword` (auth.go:516) | 密码过期后重置 |
 
-> 注:`/auth/expired/reset` 虽然有 `authRouter` 的 session 检查,但 `middleware/password_expired.go:34-45` 显式把 `/api/v2/core/auth` 整组排除,意味着密码过期后仍能调这个 reset 接口。
+&gt; 注:`/auth/expired/reset` 虽然有 `authRouter` 的 session 检查,但 `middleware/password_expired.go:34-45` 显式把 `/api/v2/core/auth` 整组排除,意味着密码过期后仍能调这个 reset 接口。
 
 ---
 
@@ -343,63 +356,25 @@ core/
 
 **用途**: 验证 `psession` cookie,提取 `SessionUser` 到 gin context。
 
-**跳过的路径** (硬编码 `isAnonymousAuthPath` 在 `session.go:61-74`):
-```
-/api/v2/core/auth/captcha
-/api/v2/core/auth/passkey/begin
-/api/v2/core/auth/passkey/finish
-/api/v2/core/auth/mfalogin
-/api/v2/core/auth/login
-/api/v2/core/auth/logout
-/api/v2/core/auth/setting
-/api/v2/core/auth/welcome
-```
-
+**跳过的路径** (硬编码 `isAnonymousAuthPath` 在 `session.go:61-74`):</code></pre>
+<p>/api/v2/core/auth/captcha /api/v2/core/auth/passkey/begin /api/v2/core/auth/passkey/finish /api/v2/core/auth/mfalogin /api/v2/core/auth/login /api/v2/core/auth/logout /api/v2/core/auth/setting /api/v2/core/auth/welcome</p>
+<pre data-lang=""><code>
 **跳过条件**:
 - `c.GetBool("API_AUTH")` 为 true (1Panel-Token 签名已通过)
 - `c.GetBool("LOCAL_REQUEST")` 为 true (X-Panel-Local-Token 走的本地同步)
 
-**关键代码片段** (session.go:23-37):
-```go
-psession, err := global.SESSION.Get(c)
-if err != nil {
-    errItem := err.Error()
-    if errItem == "ErrSessionDataFormat" || errItem == "ErrSessionDataNotFound" {
-        helper.BadAuth(c, "ErrNotLogin", buserr.New(errItem))
-        return
-    }
-    helper.BadAuth(c, "ErrNotLogin", err)
-    return
-}
-if len(psession.Name) == 0 || len(psession.ID) == 0 {
-    helper.BadAuth(c, "ErrNotLogin", err)
-    return
-}
-c.Set(psessionUtils.GinContextSessionUserKey, psession)
-```
-
+**关键代码片段** (session.go:23-37):</code></pre>
+<p>psession, err := global.SESSION.Get(c) if err != nil { errItem := err.Error() if errItem == "ErrSessionDataFormat" || errItem == "ErrSessionDataNotFound" { helper.BadAuth(c, "ErrNotLogin", buserr.New(errItem)) return } helper.BadAuth(c, "ErrNotLogin", err) return } if len(psession.Name) == 0 || len(psession.ID) == 0 { helper.BadAuth(c, "ErrNotLogin", err) return } c.Set(psessionUtils.GinContextSessionUserKey, psession)</p>
+<pre data-lang=""><code>
 **TTL 续期**: 第 47 行 `global.SESSION.RefreshIfNeeded(c, psession, SSL, lifeTime)`,`lifeTime` 来自 `settings.SessionTimeout`(单位秒)。
 
 ### 6.2 PasswordExpired (`core/middleware/password_expired.go:20-106`)
 
 **用途**: 全局拦截密码过期的 session,要求走 `/auth/expired/reset` 重置。
 
-**跳过的路径** (password_expired.go:34-45):
-```go
-if strings.HasPrefix(c.Request.URL.Path, "/api/v2/core/auth") ||
-    c.Request.URL.Path == "/api/v2/core/settings/search" ||
-    c.Request.URL.Path == "/api/v2/core/settings/search/base" ||
-    c.Request.URL.Path == "/api/v2/core/xpack/settings/search" ||
-    c.Request.URL.Path == "/api/v2/core/xapp/verifyQRCode" ||
-    c.Request.URL.Path == "/api/v2/core/enterprise/users/info" ||
-    c.Request.URL.Path == "/api/v2/core/enterprise/licenses/info" ||
-    c.Request.URL.Path == "/api/v2/core/enterprise/licenses/status" ||
-    c.Request.URL.Path == "/api/v2/core/enterprise/licenses/upload" {
-    c.Next()
-    return
-}
-```
-
+**跳过的路径** (password_expired.go:34-45):</code></pre>
+<p>if strings.HasPrefix(c.Request.URL.Path, "/api/v2/core/auth") || c.Request.URL.Path == "/api/v2/core/settings/search" || c.Request.URL.Path == "/api/v2/core/settings/search/base" || c.Request.URL.Path == "/api/v2/core/xpack/settings/search" || c.Request.URL.Path == "/api/v2/core/xapp/verifyQRCode" || c.Request.URL.Path == "/api/v2/core/enterprise/users/info" || c.Request.URL.Path == "/api/v2/core/enterprise/licenses/info" || c.Request.URL.Path == "/api/v2/core/enterprise/licenses/status" || c.Request.URL.Path == "/api/v2/core/enterprise/licenses/upload" { c.Next() return }</p>
+<pre data-lang=""><code>
 **关键逻辑** (password_expired.go:71-104):
 1. 读 `settings.ExpirationDays`,0 表示不检查
 2. 调 `xpack.AuthProvider.ShouldCheckPasswordExpiration` 二次判断
@@ -409,40 +384,18 @@ if strings.HasPrefix(c.Request.URL.Path, "/api/v2/core/auth") ||
 
 **用途**: 对所有非安全方法 (POST/PUT/DELETE/PATCH) 的 `/api/v2/*` 请求校验 `X-CSRF-Token` header。
 
-**跳过的路径** (csrf_protect.go:49-62):
-```go
-case "/api/v2/core/auth/login",
-    "/api/v2/core/auth/mfalogin",
-    "/api/v2/core/auth/passkey/begin",
-    "/api/v2/core/auth/passkey/finish",
-    "/api/v2/core/auth/oidc/begin",  // xpack OIDC 扩展
-    "/api/v2/core/auth/oidc/finish",
-    "/api/v2/core/auth/saml2/begin",
-    "/api/v2/core/auth/saml2/acs",
-    "/api/v2/core/auth/saml2/finish",
-    "/api/v2/core/auth/saml2/logout":
-    return false
-```
-
+**跳过的路径** (csrf_protect.go:49-62):</code></pre>
+<p>case "/api/v2/core/auth/login", "/api/v2/core/auth/mfalogin", "/api/v2/core/auth/passkey/begin", "/api/v2/core/auth/passkey/finish", "/api/v2/core/auth/oidc/begin",  // xpack OIDC 扩展 "/api/v2/core/auth/oidc/finish", "/api/v2/core/auth/saml2/begin", "/api/v2/core/auth/saml2/acs", "/api/v2/core/auth/saml2/finish", "/api/v2/core/auth/saml2/logout": return false</p>
+<pre data-lang=""><code>
 **跳过条件**:
 - `c.GetBool("LOCAL_REQUEST")` 为 true
 - `c.GetBool("API_AUTH")` 为 true (1Panel-Token 路径)
 - 没有 `psession` cookie (说明未登录)
 - 公共前缀不在 `/api/v2/` 下
 
-**校验代码** (csrf_protect.go:21-29):
-```go
-token := strings.TrimSpace(c.GetHeader(constant.CSRFHeaderName))  // "X-CSRF-Token"
-if !global.SESSION.CheckCSRFToken(c, token) {
-    c.AbortWithStatusJSON(http.StatusForbidden, dto.Response{
-        Code:    http.StatusForbidden,
-        Message: i18n.GetMsgWithMap("ErrNotLogin", map[string]interface{}{"detail": "CSRF token invalid"}),
-        Data:    nil,
-    })
-    return
-}
-```
-
+**校验代码** (csrf_protect.go:21-29):</code></pre>
+<p>token := strings.TrimSpace(c.GetHeader(constant.CSRFHeaderName))  // "X-CSRF-Token" if !global.SESSION.CheckCSRFToken(c, token) { c.AbortWithStatusJSON(http.StatusForbidden, dto.Response{ Code:    http.StatusForbidden, Message: i18n.GetMsgWithMap("ErrNotLogin", map[string]interface{}{"detail": "CSRF token invalid"}), Data:    nil, }) return }</p>
+<pre data-lang=""><code>
 CSRF Token 在 `psession.set()` 里生成,跟 `psession` cookie 同时下发给浏览器 (`psession.go:109-115`)。
 
 ### 6.4 SetPasswordPublicKey (`core/middleware/password_rsa.go:9-22`)
@@ -451,20 +404,9 @@ CSRF Token 在 `psession.set()` 里生成,跟 `psession` cookie 同时下发给�
 
 **挂载位置**: `core/init/router/router.go:99` (路由组 `/api/v2/core` 通用,所有请求都会过)。
 
-**关键代码** (password_rsa.go:11-21):
-```go
-cookieKey, _ := c.Cookie("panel_public_key")
-settingRepo := repo.NewISettingRepo()
-key, _ := settingRepo.GetValueByKey("PASSWORD_PUBLIC_KEY")
-base64Key := base64.StdEncoding.EncodeToString([]byte(key))
-if base64Key == cookieKey {
-    c.Next()
-    return
-}
-c.SetCookie("panel_public_key", base64Key, 7*24*60*60, "/", "", false, false)
-c.Next()
-```
-
+**关键代码** (password_rsa.go:11-21):</code></pre>
+<p>cookieKey, _ := c.Cookie("panel_public_key") settingRepo := repo.NewISettingRepo() key, _ := settingRepo.GetValueByKey("PASSWORD_PUBLIC_KEY") base64Key := base64.StdEncoding.EncodeToString([]byte(key)) if base64Key == cookieKey { c.Next() return } c.SetCookie("panel_public_key", base64Key, 7<em>24</em>60*60, "/", "", false, false) c.Next()</p>
+<pre data-lang=""><code>
 **流程**:
 1. 浏览器第一次访问,无 `panel_public_key` cookie
 2. 中间件读 `settings.PASSWORD_PUBLIC_KEY`,base64 编码后 Set-Cookie
@@ -478,53 +420,18 @@ c.Next()
 
 **挂载位置**: `core/init/router/router.go:73` (最早执行,跟 i18n 并列)。
 
-**关键代码** (ip_limit.go:14-54):
-```go
-func WhiteAllow() gin.HandlerFunc {
-    return func(c *gin.Context) {
-        tokenString := c.GetHeader("X-Panel-Local-Token")
-        remoteIP := common.GetRealClientIP(c)
-        if isLocalSyncRequest(c.Request.URL.Path, remoteIP, tokenString) {
-            c.Set("LOCAL_REQUEST", true)
-            c.Next()
-            return
-        }
-        settingRepo := repo.NewISettingRepo()
-        trustedProxies, err := settingRepo.GetValueByKey("AllowIPTrustedProxies")
-        // ...
-        allowIPs, err := settingRepo.GetValueByKey("AllowIPs")
-        if len(allowIPs) == 0 {
-            c.Next()
-            return
-        }
-        for _, ip := range strings.Split(allowIPs, ",") {
-            if ip == clientIP || (strings.Contains(ip, "/") && common.CheckIpInCidr(ip, clientIP)) {
-                c.Next()
-                return
-            }
-        }
-        code := security.LoadErrCode()
-        helper.ErrWithHtml(c, code, "err_ip_limit")
-    }
-}
-```
-
+**关键代码** (ip_limit.go:14-54):</code></pre>
+<p>func WhiteAllow() gin.HandlerFunc { return func(c *gin.Context) { tokenString := c.GetHeader("X-Panel-Local-Token") remoteIP := common.GetRealClientIP(c) if isLocalSyncRequest(c.Request.URL.Path, remoteIP, tokenString) { c.Set("LOCAL_REQUEST", true) c.Next() return } settingRepo := repo.NewISettingRepo() trustedProxies, err := settingRepo.GetValueByKey("AllowIPTrustedProxies") // ... allowIPs, err := settingRepo.GetValueByKey("AllowIPs") if len(allowIPs) == 0 { c.Next() return } for _, ip := range strings.Split(allowIPs, ",") { if ip == clientIP || (strings.Contains(ip, "/") &amp;&amp; common.CheckIpInCidr(ip, clientIP)) { c.Next() return } } code := security.LoadErrCode() helper.ErrWithHtml(c, code, "err_ip_limit") } }</p>
+<pre data-lang=""><code>
 **注意**:`AllowIPs` 为空时**不限制** IP(默认全开),需要管理员在面板里设置 `AllowIPs` setting 后才生效。
 
 ### 6.6 IPTracker (失败限流,非 Gin 中间件)
 
 **位置**: `core/init/auth/ip_tracker.go`,全局单例 `global.IPTracker`。
 
-**常量** (ip_tracker.go:8-13):
-```go
-const (
-    MaxIPCount        = 100      // 最多跟踪 100 个 IP
-    ExpireDuration    = 30 * time.Minute  // 30 分钟无活动过期
-    MaxFailedAttempts = 10       // 10 次失败锁 IP
-    LockDuration      = 5 * time.Minute   // 锁 5 分钟
-)
-```
-
+**常量** (ip_tracker.go:8-13):</code></pre>
+<p>const ( MaxIPCount        = 100      // 最多跟踪 100 个 IP ExpireDuration    = 30 <em> time.Minute  // 30 分钟无活动过期 MaxFailedAttempts = 10       // 10 次失败锁 IP LockDuration      = 5 </em> time.Minute   // 锁 5 分钟 )</p>
+<pre data-lang=""><code>
 **API**:
 - `IsLocked(ip) bool` (ip_tracker.go:52):锁定期内返回 true,Login handler 第 39 行调用
 - `NeedCaptcha(ip) bool` (ip_tracker.go:35):是否需要图形验证码
@@ -545,7 +452,7 @@ LRU 淘汰:超过 100 个 IP 时,删除 `ipOrder` 最早的 (`removeOldestUnsafe
 **入口**: `BaseApi.Login` (api/v2/auth.go:32-85)
 
 **调用链步骤**:
-1. `helper.CheckBindAndValidate(&req, c)` 校验 `dto.Login` 结构体(用户名必填、密码必填、语言必须在 12 个白名单中)(auth.go:34-36)
+1. `helper.CheckBindAndValidate(&amp;req, c)` 校验 `dto.Login` 结构体(用户名必填、密码必填、语言必须在 12 个白名单中)(auth.go:34-36)
 2. `common.GetRealClientIP(c)` 拿真实 IP(读 X-Forwarded-For 链)(auth.go:38)
 3. `global.IPTracker.IsLocked(ip)` 判定 IP 是否在锁定期(10 失败/5min)(auth.go:39-42)
 4. `global.IPTracker.NeedCaptcha(ip)` 判定是否需要图形验证码(失败后)(auth.go:43)
@@ -623,7 +530,7 @@ LRU 淘汰:超过 100 个 IP 时,删除 `ipOrder` 最早的 (`removeOldestUnsafe
 4. 出口:返回新 key 给前端展示,**不写 cookie**
 
 **调用流程 (使用时)**:
-1. 客户端构造 `1Panel-Token: <md5(1panel+apiKey+timestamp)>` 和 `1Panel-Timestamp: <unix_seconds>`
+1. 客户端构造 `1Panel-Token: &lt;md5(1panel+apiKey+timestamp)&gt;` 和 `1Panel-Timestamp: &lt;unix_seconds&gt;`
 2. `CoreAPIAuthMiddleware` (api_auth.go:34-81) 校验:
    - 读 `settings.ApiInterfaceStatus`,必须 `Enable`
    - `isValid1PanelTimestamp(panelTimestamp, apiKeyValidityTime)` (api_auth.go:62-65, 117-137),默认 60 秒容忍,`apiKeyValidityTime` 单位是分钟
@@ -680,38 +587,19 @@ LRU 淘汰:超过 100 个 IP 时,删除 `ipOrder` 最早的 (`removeOldestUnsafe
 
 ### 8.3 SettingRepo (`core/app/repo/setting.go`, 120 行)
 
-**接口** (setting.go:21-30):
-```go
-type ISettingRepo interface {
-    List(opts ...global.DBOption) ([]model.Setting, error)
-    Get(opts ...global.DBOption) (model.Setting, error)
-    GetValueByKey(key string) (string, error)
-    Create(key, value string) error
-    Update(key, value string) error
-    UpdateIfMatch(key, oldValue, value string) (bool, error)
-    UpdateOrCreate(key, value string) error
-    DefaultMenu() error
-}
-```
-
-**In-memory Cache** (setting.go:16-19):
-```go
-var (
-    settingCache = cache.New(5*time.Minute, 10*time.Minute)  // 5min 过期,10min 清理
-    settingTTL   = 5 * time.Minute
-)
-```
-- 用 `github.com/patrickmn/go-cache`
+**接口** (setting.go:21-30):</code></pre>
+<p>type ISettingRepo interface { List(opts ...global.DBOption) ([]model.Setting, error) Get(opts ...global.DBOption) (model.Setting, error) GetValueByKey(key string) (string, error) Create(key, value string) error Update(key, value string) error UpdateIfMatch(key, oldValue, value string) (bool, error) UpdateOrCreate(key, value string) error DefaultMenu() error }</p>
+<pre data-lang=""><code>
+**In-memory Cache** (setting.go:16-19):</code></pre>
+<p>var ( settingCache = cache.New(5<em>time.Minute, 10</em>time.Minute)  // 5min 过期,10min 清理 settingTTL   = 5 * time.Minute )</p>
+<pre data-lang=""><code>- 用 `github.com/patrickmn/go-cache`
 - **读路径** (`GetValueByKey` L72-83): 先查 cache,miss 走 SQLite,再回写 cache
 - **写路径** (`Update/UpdateOrCreate/Create`): 写 SQLite 成功后同步更新 cache
 - **注意**: `List()` (L36) 和 `Get()` (L58) 不读 cache,直接走 SQLite (用于实时一致性场景)
 
-**DBOption 模式** (global/global.go:35):
-```go
-type DBOption func(*gorm.DB) *gorm.DB
-// repo.WithByKey("UserName") (在 setting.go 导出)
-```
-
+**DBOption 模式** (global/global.go:35):</code></pre>
+<p>type DBOption func(<em>gorm.DB) </em>gorm.DB // repo.WithByKey("UserName") (在 setting.go 导出)</p>
+<pre data-lang=""><code>
 ### 8.4 Auth 相关的 `settings` 表 Key 清单
 
 下面是 Auth 模块用到 / 写过的所有 settings key:
@@ -748,50 +636,21 @@ type DBOption func(*gorm.DB) *gorm.DB
 
 ### 8.5 `login_logs` 表
 
-**模型** (`app/model/logs.go:25-33`):
-```go
-type LoginLog struct {
-    BaseModel            // ID, CreatedAt, UpdatedAt
-    IP      string       // c.ClientIP()
-    User    string       // 用户名
-    Address string       // (可选,地理位置)
-    Agent   string       // c.GetHeader("User-Agent")
-    Status  string       // StatusSuccess / StatusFailed
-    Message string       // 错误信息
-}
-```
-
+**模型** (`app/model/logs.go:25-33`):</code></pre>
+<p>type LoginLog struct { BaseModel            // ID, CreatedAt, UpdatedAt IP      string       // c.ClientIP() User    string       // 用户名 Address string       // (可选,地理位置) Agent   string       // c.GetHeader("User-Agent") Status  string       // StatusSuccess / StatusFailed Message string       // 错误信息 }</p>
+<pre data-lang=""><code>
 **写入入口**: `api/v2/auth.go:529-541` 的 `saveLoginLogs(c, userName, err)`,在 `Login` (L65, L112, L171), `MFALogin` (L112), `PasskeyFinishLogin` (L171) 全部以 `go saveLoginLogs(...)` 异步调用,不阻塞响应。
 
 **为什么异步**: 写登录日志不能影响登录延迟,且失败也不应影响登录结果 (`_ = logService.CreateLoginLog(...)`, 错误被吞掉)。
 
 ### 8.6 进程内 PSession (`core/init/session/psession/psession.go`)
 
-**结构** (psession.go:34-39):
-```go
-type PSession struct {
-    mu              sync.RWMutex
-    sessions        map[string]sessionItem
-    cleanupCursor   atomic.Uint64  // 惰性 GC 游标
-    lastFullCleanup time.Time
-}
-type sessionItem struct {
-    CreatedAt    time.Time
-    LastActiveAt time.Time
-    CSRFToken    string
-    User         SessionUser
-    ExpiredAt    time.Time
-}
-```
-
-**初始化** (`core/init/session/session.go:8-10`):
-```go
-func Init() {
-    global.SESSION = psession.NewPSession("")
-    global.LOG.Info("init in-memory session successfully")
-}
-```
-
+**结构** (psession.go:34-39):</code></pre>
+<p>type PSession struct { mu              sync.RWMutex sessions        map[string]sessionItem cleanupCursor   atomic.Uint64  // 惰性 GC 游标 lastFullCleanup time.Time } type sessionItem struct { CreatedAt    time.Time LastActiveAt time.Time CSRFToken    string User         SessionUser ExpiredAt    time.Time }</p>
+<pre data-lang=""><code>
+**初始化** (`core/init/session/session.go:8-10`):</code></pre>
+<p>func Init() { global.SESSION = psession.NewPSession("") global.LOG.Info("init in-memory session successfully") }</p>
+<pre data-lang=""><code>
 **常量**:
 - `SuperAdminSessionUserID = "__super_admin__"` (psession.go:23) - 单管理员写死
 - `GinContextSessionUserKey = "session_user"` (psession.go:24) - gin context key
@@ -832,57 +691,24 @@ func Init() {
 | `CurrentUserUpdate` | `Name (required)`, `Password`, `OldPassword` | 更新当前用户请求 | `BaseApi.UpdateCurrentUser` (L496) |
 
 ### 9.2 Model (`core/app/model/setting.go`)
-
-```go
-type Setting struct {
-    BaseModel
-    Key   string `json:"key" gorm:"not null;"`
-    Value string `json:"value"`
-    About string `json:"about"`
-}
-```
-
-**BaseModel** (在 `app/model/base.go`,共享):
-```go
-type BaseModel struct {
-    ID        uint      `gorm:"primarykey"`
-    CreatedAt time.Time
-    UpdatedAt time.Time
-}
-```
-
+</code></pre>
+<p>type Setting struct { BaseModel Key   string <code>json:"key" gorm:"not null;"</code> Value string <code>json:"value"</code> About string <code>json:"about"</code> }</p>
+<pre data-lang=""><code>
+**BaseModel** (在 `app/model/base.go`,共享):</code></pre>
+<p>type BaseModel struct { ID        uint      <code>gorm:"primarykey"</code> CreatedAt time.Time UpdatedAt time.Time }</p>
+<pre data-lang=""><code>
 ### 9.3 `login_logs` Model (`app/model/logs.go:25-33`)
 
 见 §8.5。
 
 ### 9.4 passkey 包结构 (`core/utils/passkey/`)
 
-**PasskeyUser** (自定义 `webauthn.User` 接口实现):
-```go
-type PasskeyUser struct {
-    ID          []byte
-    Name        string
-    DisplayName string
-    Credentials []webauthn.Credential
-}
-func (u *PasskeyUser) WebAuthnID() []byte       { return u.ID }
-func (u *PasskeyUser) WebAuthnName() string      { return u.Name }
-func (u *PasskeyUser) WebAuthnDisplayName() string { return u.DisplayName }
-func (u *PasskeyUser) WebAuthnCredentials() []webauthn.Credential { return u.Credentials }
-```
-
-**PasskeyCredentialRecord** (存库用):
-```go
-type PasskeyCredentialRecord struct {
-    ID         string  // base64url(credential.ID)
-    Name       string  // 显示名
-    CreatedAt  string  // YYYY-MM-DD HH:MM:SS
-    LastUsedAt string
-    FlagsValue uint8   // bitfield: UserPresent, UserVerified, BackupEligible, BackupState
-    Credential webauthn.Credential
-}
-```
-
+**PasskeyUser** (自定义 `webauthn.User` 接口实现):</code></pre>
+<p>type PasskeyUser struct { ID          []byte Name        string DisplayName string Credentials []webauthn.Credential } func (u <em>PasskeyUser) WebAuthnID() []byte       { return u.ID } func (u </em>PasskeyUser) WebAuthnName() string      { return u.Name } func (u <em>PasskeyUser) WebAuthnDisplayName() string { return u.DisplayName } func (u </em>PasskeyUser) WebAuthnCredentials() []webauthn.Credential { return u.Credentials }</p>
+<pre data-lang=""><code>
+**PasskeyCredentialRecord** (存库用):</code></pre>
+<p>type PasskeyCredentialRecord struct { ID         string  // base64url(credential.ID) Name       string  // 显示名 CreatedAt  string  // YYYY-MM-DD HH:MM:SS LastUsedAt string FlagsValue uint8   // bitfield: UserPresent, UserVerified, BackupEligible, BackupState Credential webauthn.Credential }</p>
+<pre data-lang=""><code>
 **常量**:
 - `PasskeyMaxCredentials` (默认 10): 单用户最多绑 10 个 Passkey
 - `PasskeyCredentialNameDefault`: 默认名 "passkey-"
@@ -905,24 +731,13 @@ type PasskeyCredentialRecord struct {
 1. 解密后的明文密码用 `utils.encrypt.StringEncrypt` 加密后存 `settings.Password` 字段
 2. 加密方式 AES-CBC,密钥来自 `init/migration/auth` 时生成
 
-**HMAC 时间安全比对** (auth/auth.go:206-219):
-```go
-func CheckPassword(priKey, password, passwordFromDB string) error {
-    loginPassword, err := DecryptLoginPassword(priKey, password)
-    if err != nil { return err }
-    existPassword, err := encrypt.StringDecrypt(passwordFromDB)
-    if err != nil { return err }
-    if !hmac.Equal([]byte(loginPassword), []byte(existPassword)) {
-        return buserr.New("ErrAuth")
-    }
-    return nil
-}
-```
-- 用 `hmac.Equal` 而非 `==`,**防止时序攻击**
+**HMAC 时间安全比对** (auth/auth.go:206-219):</code></pre>
+<p>func CheckPassword(priKey, password, passwordFromDB string) error { loginPassword, err := DecryptLoginPassword(priKey, password) if err != nil { return err } existPassword, err := encrypt.StringDecrypt(passwordFromDB) if err != nil { return err } if !hmac.Equal([]byte(loginPassword), []byte(existPassword)) { return buserr.New("ErrAuth") } return nil }</p>
+<pre data-lang=""><code>- 用 `hmac.Equal` 而非 `==`,**防止时序攻击**
 
 ### 10.2 Token: 不使用 JWT, 用 cookie + 进程内 session
 
-- **Cookie**: `psession=<sessionID>` (HttpOnly, Secure 取决于 SSL setting)
+- **Cookie**: `psession=&lt;sessionID&gt;` (HttpOnly, Secure 取决于 SSL setting)
 - **sessionID**: 32 字节随机串,base64url 编码 (psession.go:230 `generateSessionID`)
 - **CSRF Token**: session 创建时同步生成,放 `pcsrftoken` cookie (非 HttpOnly,前端可读)
 - **为什不上 JWT**:
@@ -958,37 +773,9 @@ func CheckPassword(priKey, password, passwordFromDB string) error {
 
 ### 10.7 xpack 扩展点: AuthProvider interface
 
-**接口** (`core/utils/xpack/providers/auth.go:9-41`):
-```go
-type AuthProvider interface {
-    Login(c *gin.Context, info dto.Login, entrance string) (*dto.UserLoginInfo, string, error)
-    MFALogin(c *gin.Context, info dto.MFALogin, entrance string) (*dto.UserLoginInfo, string, error)
-    PrepareLogout(c *gin.Context) (*dto.LogoutResult, error)
-    ResetSuperAdminUser(name, password string) error
-    LoadMFA(c *gin.Context, req dto.MfaRequest) (mfa.Otp, error)
-    MFABind(c *gin.Context, req dto.MfaCredential) error
-    MFAClose(c *gin.Context) error
-    GenerateApiKey(c *gin.Context) (string, error)
-    UpdateApiConfig(c *gin.Context, req dto.ApiInterfaceConfig) error
-    PasskeyBeginLogin(c *gin.Context, entrance string) (*dto.PasskeyBeginResponse, string, error)
-    PasskeyFinishLogin(c *gin.Context, sessionID, entrance string) (*dto.UserLoginInfo, string, error)
-    PasskeyBeginRegister(c *gin.Context, name string) (*dto.PasskeyBeginResponse, string, error)
-    PasskeyFinishRegister(c *gin.Context, sessionID string) (string, error)
-    PasskeyList(c *gin.Context) ([]dto.PasskeyInfo, error)
-    PasskeyDelete(c *gin.Context, id string) error
-    PasskeyStatus(c *gin.Context) bool
-    ClearPasskeys() error
-    GetCurrentUserInfo(c *gin.Context) (*dto.CurrentUserInfo, error)
-    ShouldCheckPasswordExpiration(c *gin.Context) (bool, error)
-    LoadPasswordExpirationTime(c *gin.Context) (string, error)
-    SyncPasswordExpirationTime(expirationDays string) error
-    UpdateCurrentUserInfo(c *gin.Context, req dto.CurrentUserUpdate) error
-    HandlePasswordExpired(c *gin.Context, old, new string) error
-    CoreAPIAuthMiddleware() gin.HandlerFunc
-    CoreRBACMiddlewares() []gin.HandlerFunc
-}
-```
-
+**接口** (`core/utils/xpack/providers/auth.go:9-41`):</code></pre>
+<p>type AuthProvider interface { Login(c <em>gin.Context, info dto.Login, entrance string) (</em>dto.UserLoginInfo, string, error) MFALogin(c <em>gin.Context, info dto.MFALogin, entrance string) (</em>dto.UserLoginInfo, string, error) PrepareLogout(c <em>gin.Context) (</em>dto.LogoutResult, error) ResetSuperAdminUser(name, password string) error LoadMFA(c <em>gin.Context, req dto.MfaRequest) (mfa.Otp, error) MFABind(c </em>gin.Context, req dto.MfaCredential) error MFAClose(c <em>gin.Context) error GenerateApiKey(c </em>gin.Context) (string, error) UpdateApiConfig(c <em>gin.Context, req dto.ApiInterfaceConfig) error PasskeyBeginLogin(c </em>gin.Context, entrance string) (<em>dto.PasskeyBeginResponse, string, error) PasskeyFinishLogin(c </em>gin.Context, sessionID, entrance string) (<em>dto.UserLoginInfo, string, error) PasskeyBeginRegister(c </em>gin.Context, name string) (<em>dto.PasskeyBeginResponse, string, error) PasskeyFinishRegister(c </em>gin.Context, sessionID string) (string, error) PasskeyList(c <em>gin.Context) ([]dto.PasskeyInfo, error) PasskeyDelete(c </em>gin.Context, id string) error PasskeyStatus(c <em>gin.Context) bool ClearPasskeys() error GetCurrentUserInfo(c </em>gin.Context) (<em>dto.CurrentUserInfo, error) ShouldCheckPasswordExpiration(c </em>gin.Context) (bool, error) LoadPasswordExpirationTime(c <em>gin.Context) (string, error) SyncPasswordExpirationTime(expirationDays string) error UpdateCurrentUserInfo(c </em>gin.Context, req dto.CurrentUserUpdate) error HandlePasswordExpired(c *gin.Context, old, new string) error CoreAPIAuthMiddleware() gin.HandlerFunc CoreRBACMiddlewares() []gin.HandlerFunc }</p>
+<pre data-lang=""><code>
 **community 实现** (`core/utils/xpack/helper/auth_helper.go`, 97 行):
 - 硬编码调 `app/auth/xxx` 纯函数
 - `ResetSuperAdminUser` 返回 `nil` (社区版不支持)
@@ -1051,197 +838,31 @@ type AuthProvider interface {
 ## 12. 调用链总结
 
 ### 12.1 完整登录时序图 (Mermaid)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Browser
-    participant Gin
-    participant MW as Middleware
-    participant H as BaseApi.Login
-    participant X as xpack.AuthProvider
-    participant Auth as app/auth.Login
-    participant Repo as SettingRepo
-    participant Cache as go-cache
-    participant DB as SQLite
-    participant Sess as PSession
-
-    Browser->>Gin: GET /api/v2/core/auth/captcha
-    Gin->>MW: 中间件链
-    MW-->>Browser: 返回 captchaID + 图片
-
-    Browser->>Gin: POST /api/v2/core/auth/login
-    Note over Browser,Gin: EntranceCode header<br/>(base64 of SecurityEntrance)
-    Gin->>MW: 中间件链 (CSRF skip / SessionAuth skip)
-    MW->>H: 路由命中
-    H->>H: IPTracker.IsLocked(ip) ?
-    H->>H: IPTracker.NeedCaptcha(ip) ?
-    H->>H: captcha.VerifyCode(...)
-    H->>X: Login(c, req, entrance)
-    X->>Auth: Login(c, info, entrance)
-    Auth->>Repo: Get(UserName)
-    Repo->>Cache: Get(UserName)
-    Cache-->>Repo: miss
-    Repo->>DB: SELECT * FROM settings WHERE key=?
-    DB-->>Repo: row
-    Repo->>Cache: Set(UserName, value)
-    Repo-->>Auth: setting
-    Auth->>Auth: 比对 info.Name == setting.Value
-    Auth->>Repo: Get(PASSWORD_PRIVATE_KEY) + Get(Password)
-    Repo-->>Auth: priKey, encryptedPassword
-    Auth->>Auth: DecryptLoginPassword(priKey, info.Password) [RSA]
-    Auth->>Auth: encrypt.StringDecrypt(encryptedPassword) [AES]
-    Auth->>Auth: hmac.Equal(decrypted, loginPassword)
-    Auth->>Repo: Get(SecurityEntrance)
-    Auth->>Auth: entrance 一致性
-    Auth->>Repo: Get(MFAStatus)
-    Auth->>Repo: Update(Language, info.Language)
-    alt MFA enabled
-        Auth->>Auth: BeginMFALogin
-        Auth-->>H: UserLoginInfo{MfaSession: token, MfaStatus: Enable}
-        H-->>Browser: 200 + MfaSession (未登录)
-    else MFA disabled
-        Auth->>Auth: 组装 SessionUser{ID: __super_admin__, Role: ADMIN}
-        Auth->>Sess: SetFresh(c, user, SSL, ttl)
-        Sess->>Sess: 生成新 sessionID + CSRF token
-        Sess->>Browser: Set-Cookie psession + pcsrftoken
-        Auth-->>H: UserLoginInfo{Name, Role}
-        H-->>Browser: 200 OK
-    end
-    H->>H: go saveLoginLogs(...)
-    H-->>Browser: (异步) 写 login_logs 表
-```
-
+</code></pre>
+<p>sequenceDiagram autonumber participant Browser participant Gin participant MW as Middleware participant H as BaseApi.Login participant X as xpack.AuthProvider participant Auth as app/auth.Login participant Repo as SettingRepo participant Cache as go-cache participant DB as SQLite participant Sess as PSession</p>
+<p>Browser-&gt;&gt;Gin: GET /api/v2/core/auth/captcha Gin-&gt;&gt;MW: 中间件链 MW--&gt;&gt;Browser: 返回 captchaID + 图片</p>
+<p>Browser-&gt;&gt;Gin: POST /api/v2/core/auth/login Note over Browser,Gin: EntranceCode header&lt;br/&gt;(base64 of SecurityEntrance) Gin-&gt;&gt;MW: 中间件链 (CSRF skip / SessionAuth skip) MW-&gt;&gt;H: 路由命中 H-&gt;&gt;H: IPTracker.IsLocked(ip) ? H-&gt;&gt;H: IPTracker.NeedCaptcha(ip) ? H-&gt;&gt;H: captcha.VerifyCode(...) H-&gt;&gt;X: Login(c, req, entrance) X-&gt;&gt;Auth: Login(c, info, entrance) Auth-&gt;&gt;Repo: Get(UserName) Repo-&gt;&gt;Cache: Get(UserName) Cache--&gt;&gt;Repo: miss Repo-&gt;&gt;DB: SELECT * FROM settings WHERE key=? DB--&gt;&gt;Repo: row Repo-&gt;&gt;Cache: Set(UserName, value) Repo--&gt;&gt;Auth: setting Auth-&gt;&gt;Auth: 比对 info.Name == setting.Value Auth-&gt;&gt;Repo: Get(PASSWORD_PRIVATE_KEY) + Get(Password) Repo--&gt;&gt;Auth: priKey, encryptedPassword Auth-&gt;&gt;Auth: DecryptLoginPassword(priKey, info.Password) [RSA] Auth-&gt;&gt;Auth: encrypt.StringDecrypt(encryptedPassword) [AES] Auth-&gt;&gt;Auth: hmac.Equal(decrypted, loginPassword) Auth-&gt;&gt;Repo: Get(SecurityEntrance) Auth-&gt;&gt;Auth: entrance 一致性 Auth-&gt;&gt;Repo: Get(MFAStatus) Auth-&gt;&gt;Repo: Update(Language, info.Language) alt MFA enabled Auth-&gt;&gt;Auth: BeginMFALogin Auth--&gt;&gt;H: UserLoginInfo{MfaSession: token, MfaStatus: Enable} H--&gt;&gt;Browser: 200 + MfaSession (未登录) else MFA disabled Auth-&gt;&gt;Auth: 组装 SessionUser{ID: __super_admin__, Role: ADMIN} Auth-&gt;&gt;Sess: SetFresh(c, user, SSL, ttl) Sess-&gt;&gt;Sess: 生成新 sessionID + CSRF token Sess-&gt;&gt;Browser: Set-Cookie psession + pcsrftoken Auth--&gt;&gt;H: UserLoginInfo{Name, Role} H--&gt;&gt;Browser: 200 OK end H-&gt;&gt;H: go saveLoginLogs(...) H--&gt;&gt;Browser: (异步) 写 login_logs 表</p>
+<pre data-lang=""><code>
 ### 12.2 Passkey 完整时序图
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Browser
-    participant Auth as Authenticator<br/>(TouchID/YubiKey)
-    participant H as BaseApi
-    participant X as xpack.AuthProvider
-    participant Pkg as app/auth.passkey
-    participant WA as go-webauthn
-    participant DB as SQLite settings
-
-    Note over Browser: 1. 加载登录页 → 看到 "Passkey 登录" 按钮
-    Browser->>H: POST /api/v2/core/auth/passkey/begin
-    H->>X: PasskeyBeginLogin(c, entrance)
-    X->>Pkg: PasskeyBeginLogin(c, entrance)
-    Pkg->>Pkg: CheckEntrance(entrance)
-    Pkg->>DB: Get(BindDomain) + Get(PanelName)
-    Pkg->>Pkg: 构造 webauthn.Config{...}
-    Pkg->>DB: Get(PasskeyCredentials)
-    Pkg->>Pkg: LoadPasskeyCredentialRecords(AES 解密)
-    Pkg->>Pkg: 凭据列表为空? 返回 ErrPasskeyNotConfigured
-    Pkg->>Pkg: communityPasskeyUser(records)
-    Pkg->>WA: webauthn.New(config)
-    Pkg->>WA: BeginLogin(user)
-    WA-->>Pkg: assertion + sessionData
-    Pkg->>Pkg: passkeySessionStore.Set(Login, "", sessionData)
-    Pkg-->>H: PasskeyBeginResponse{SessionID, PublicKey}
-    H-->>Browser: 200 + {sessionId, publicKey}
-
-    Browser->>Auth: navigator.credentials.get({publicKey})
-    Auth-->>Browser: signature (signed challenge)
-
-    Browser->>H: POST /api/v2/core/auth/passkey/finish<br/>Header: Passkey-Session: <id>
-    H->>X: PasskeyFinishLogin(c, sessionID, entrance)
-    X->>Pkg: PasskeyFinishLogin(c, sessionID, entrance)
-    Pkg->>Pkg: CheckEntrance(entrance)
-    Pkg->>DB: Get(BindDomain) + Get(PanelName)
-    Pkg->>WA: webauthn.New(config)
-    Pkg->>Pkg: passkeySessionStore.Get(sessionID)
-    Pkg->>WA: FinishLogin(user, sessionData, request)
-    WA-->>Pkg: credential
-    Pkg->>Pkg: UpdatePasskeyCredentialRecord (更新 LastUsedAt)
-    Pkg->>DB: Update(PasskeyCredentials, encrypted)
-    Pkg->>DB: Get(UserName)
-    Pkg->>Pkg: GenerateSession(c, SuperAdmin)
-    Pkg-->>H: UserLoginInfo
-    H-->>Browser: 200 + Set-Cookie psession
-```
-
+</code></pre>
+<p>sequenceDiagram autonumber participant Browser participant Auth as Authenticator&lt;br/&gt;(TouchID/YubiKey) participant H as BaseApi participant X as xpack.AuthProvider participant Pkg as app/auth.passkey participant WA as go-webauthn participant DB as SQLite settings</p>
+<p>Note over Browser: 1. 加载登录页 → 看到 "Passkey 登录" 按钮 Browser-&gt;&gt;H: POST /api/v2/core/auth/passkey/begin H-&gt;&gt;X: PasskeyBeginLogin(c, entrance) X-&gt;&gt;Pkg: PasskeyBeginLogin(c, entrance) Pkg-&gt;&gt;Pkg: CheckEntrance(entrance) Pkg-&gt;&gt;DB: Get(BindDomain) + Get(PanelName) Pkg-&gt;&gt;Pkg: 构造 webauthn.Config{...} Pkg-&gt;&gt;DB: Get(PasskeyCredentials) Pkg-&gt;&gt;Pkg: LoadPasskeyCredentialRecords(AES 解密) Pkg-&gt;&gt;Pkg: 凭据列表为空? 返回 ErrPasskeyNotConfigured Pkg-&gt;&gt;Pkg: communityPasskeyUser(records) Pkg-&gt;&gt;WA: webauthn.New(config) Pkg-&gt;&gt;WA: BeginLogin(user) WA--&gt;&gt;Pkg: assertion + sessionData Pkg-&gt;&gt;Pkg: passkeySessionStore.Set(Login, "", sessionData) Pkg--&gt;&gt;H: PasskeyBeginResponse{SessionID, PublicKey} H--&gt;&gt;Browser: 200 + {sessionId, publicKey}</p>
+<p>Browser-&gt;&gt;Auth: navigator.credentials.get({publicKey}) Auth--&gt;&gt;Browser: signature (signed challenge)</p>
+<p>Browser-&gt;&gt;H: POST /api/v2/core/auth/passkey/finish&lt;br/&gt;Header: Passkey-Session: &lt;id&gt; H-&gt;&gt;X: PasskeyFinishLogin(c, sessionID, entrance) X-&gt;&gt;Pkg: PasskeyFinishLogin(c, sessionID, entrance) Pkg-&gt;&gt;Pkg: CheckEntrance(entrance) Pkg-&gt;&gt;DB: Get(BindDomain) + Get(PanelName) Pkg-&gt;&gt;WA: webauthn.New(config) Pkg-&gt;&gt;Pkg: passkeySessionStore.Get(sessionID) Pkg-&gt;&gt;WA: FinishLogin(user, sessionData, request) WA--&gt;&gt;Pkg: credential Pkg-&gt;&gt;Pkg: UpdatePasskeyCredentialRecord (更新 LastUsedAt) Pkg-&gt;&gt;DB: Update(PasskeyCredentials, encrypted) Pkg-&gt;&gt;DB: Get(UserName) Pkg-&gt;&gt;Pkg: GenerateSession(c, SuperAdmin) Pkg--&gt;&gt;H: UserLoginInfo H--&gt;&gt;Browser: 200 + Set-Cookie psession</p>
+<pre data-lang=""><code>
 ### 12.3 中间件链 (Mermaid)
-
-```mermaid
-flowchart TB
-    Req[HTTP Request] --> A1[i18n.UseI18n]
-    A1 --> A2[WhiteAllow<br/>IP 白名单]
-    A2 --> A3[BindDomain]
-    A3 --> A4[FrontendFallback]
-    A4 --> A5[OperationLog]
-    A5 --> A6[GlobalLoading]
-    A6 --> A7[CoreAPIAuthMiddleware<br/>1Panel-Token 验签]
-    A7 --> A8[PasswordExpired]
-    A8 --> A9[CSRFTokenGuard]
-    A9 --> A10[CoreRBACMiddlewares]
-    A10 --> A11[Proxy]
-
-    A11 --> B1{URL 路径}
-    B1 -->|/api/v2/core/auth/*<br/>已挂 SessionAuth| B2[authRouter<br/>SessionAuth + PasswordExpired]
-    B1 -->|/api/v2/core/auth/*<br/>公开路由| B3[baseRouter<br/>无 session 检查]
-    B1 -->|其他业务路由| B4[对应 Router.InitRouter]
-
-    B2 --> C1[BaseApi.xxx]
-    B3 --> C1
-    B4 --> C1
-
-    C1 --> D1[xpack.AuthProvider.xxx]
-    D1 --> E1[app/auth 纯函数]
-    E1 --> F1[SettingRepo]
-    F1 --> F2[SQLite settings]
-    E1 --> F3[PSession]
-    E1 --> F4[MFASessionStore]
-    E1 --> F5[IPTracker]
-    E1 --> F6[passkey.GetPasskeySessionStore]
-```
-
+</code></pre>
+<p>flowchart TB Req[HTTP Request] --&gt; A1[i18n.UseI18n] A1 --&gt; A2[WhiteAllow&lt;br/&gt;IP 白名单] A2 --&gt; A3[BindDomain] A3 --&gt; A4[FrontendFallback] A4 --&gt; A5[OperationLog] A5 --&gt; A6[GlobalLoading] A6 --&gt; A7[CoreAPIAuthMiddleware&lt;br/&gt;1Panel-Token 验签] A7 --&gt; A8[PasswordExpired] A8 --&gt; A9[CSRFTokenGuard] A9 --&gt; A10[CoreRBACMiddlewares] A10 --&gt; A11[Proxy]</p>
+<p>A11 --&gt; B1{URL 路径} B1 --&gt;|/api/v2/core/auth/<em>&lt;br/&gt;已挂 SessionAuth| B2[authRouter&lt;br/&gt;SessionAuth + PasswordExpired] B1 --&gt;|/api/v2/core/auth/</em>&lt;br/&gt;公开路由| B3[baseRouter&lt;br/&gt;无 session 检查] B1 --&gt;|其他业务路由| B4[对应 Router.InitRouter]</p>
+<p>B2 --&gt; C1[BaseApi.xxx] B3 --&gt; C1 B4 --&gt; C1</p>
+<p>C1 --&gt; D1[xpack.AuthProvider.xxx] D1 --&gt; E1[app/auth 纯函数] E1 --&gt; F1[SettingRepo] F1 --&gt; F2[SQLite settings] E1 --&gt; F3[PSession] E1 --&gt; F4[MFASessionStore] E1 --&gt; F5[IPTracker] E1 --&gt; F6[passkey.GetPasskeySessionStore]</p>
+<pre data-lang=""><code>
 ### 12.4 失败限流 ASCII 流程图
-
-```
-                    用户登录失败 (Login handler L69)
-                              │
-                              ▼
-                IPTracker.RecordFailure(ip)   (ip_tracker.go:94)
-                              │
-                ┌─────────────┴─────────────┐
-                │                           │
-       record 不存在                  record 存在
-                │                           │
-                ▼                           ▼
-       新建 IPRecord{              record.FailedCount++
-       FailedCount: 1,            record.LastUpdate = now
-       LastUpdate: now}           if FailedCount >= 10:
-                │                       record.LockedUntil = now + 5min
-                │                           │
-                ▼                           ▼
-            return                  (下次 IsLocked 返回 true)
-                              │
-                              ▼
-                  IPTracker.SetNeedCaptcha(ip)   (L69)
-                              │
-                              ▼
-                标记 record.NeedCaptcha = true
-                              │
-                              ▼
-        (下次 Login handler 看到 NeedCaptcha,要求图形验证码)
-```
-
-```
-        用户登录成功
-              │
-              ▼
-   IPTracker.Clear(ip)   (ip_tracker.go:122)
-              │
-              ▼
-   removeIPUnsafe(ip): delete from records + ipOrder
-              │
-              ▼
-        下次 NeedCaptcha / IsLocked 都返回 false
-```
-
+</code></pre>
+<p>用户登录失败 (Login handler L69) │ ▼ IPTracker.RecordFailure(ip)   (ip_tracker.go:94) │ ┌─────────────┴─────────────┐ │                           │ record 不存在                  record 存在 │                           │ ▼                           ▼ 新建 IPRecord{              record.FailedCount++ FailedCount: 1,            record.LastUpdate = now LastUpdate: now}           if FailedCount &gt;= 10: │                       record.LockedUntil = now + 5min │                           │ ▼                           ▼ return                  (下次 IsLocked 返回 true) │ ▼ IPTracker.SetNeedCaptcha(ip)   (L69) │ ▼ 标记 record.NeedCaptcha = true │ ▼ (下次 Login handler 看到 NeedCaptcha,要求图形验证码)</p>
+<pre data-lang=""><code></code></pre>
+<p>用户登录成功 │ ▼ IPTracker.Clear(ip)   (ip_tracker.go:122) │ ▼ removeIPUnsafe(ip): delete from records + ipOrder │ ▼ 下次 NeedCaptcha / IsLocked 都返回 false</p>
+<pre data-lang=""><code>
 ---
 
 ## 13. 关键文件清单
@@ -1728,33 +1349,10 @@ flowchart TB
 ---
 
 ## 附录 A: 19 个 Auth 路由速查
-
-```
-公开路由 (8 条, 无需 session):
-  GET  /api/v2/core/auth/captcha                  - 图形验证码
-  POST /api/v2/core/auth/login                    - 主登录 (用户名+RSA 密码+可选 captcha)
-  POST /api/v2/core/auth/mfalogin                 - MFA 第二步 (sessionId + code)
-  POST /api/v2/core/auth/passkey/begin            - WebAuthn 登录 challenge
-  POST /api/v2/core/auth/passkey/finish           - WebAuthn 登录 verify (Header: Passkey-Session)
-  POST /api/v2/core/auth/logout                   - 登出
-  GET  /api/v2/core/auth/setting                  - 登录页元数据 (语言/主题/Passkey 状态)
-  GET  /api/v2/core/auth/welcome                  - 首次欢迎页
-
-受保护路由 (11 条, 需 psession cookie + 密码未过期):
-  POST /api/v2/core/auth/mfa                      - 生成 MFA 绑定二维码
-  POST /api/v2/core/auth/mfa/bind                 - 绑定 MFA (secret + code)
-  POST /api/v2/core/auth/mfa/close                - 关闭 MFA
-  POST /api/v2/core/auth/passkey/register/begin   - 注册 Passkey challenge
-  POST /api/v2/core/auth/passkey/register/finish  - 注册 Passkey verify
-  GET  /api/v2/core/auth/passkey/list             - 列出已注册 Passkey
-  POST /api/v2/core/auth/passkey/del              - 删除 Passkey (id)
-  POST /api/v2/core/auth/api/generate             - 生成 API 接口密钥
-  POST /api/v2/core/auth/api/update               - 更新 API 配置 (白名单/有效时间)
-  GET  /api/v2/core/auth/current                  - 获取当前用户信息
-  POST /api/v2/core/auth/current/update           - 更新当前用户 (改密码/改用户名)
-  POST /api/v2/core/auth/expired/reset            - 密码过期重置
-```
-
+</code></pre>
+<p>公开路由 (8 条, 无需 session): GET  /api/v2/core/auth/captcha                  - 图形验证码 POST /api/v2/core/auth/login                    - 主登录 (用户名+RSA 密码+可选 captcha) POST /api/v2/core/auth/mfalogin                 - MFA 第二步 (sessionId + code) POST /api/v2/core/auth/passkey/begin            - WebAuthn 登录 challenge POST /api/v2/core/auth/passkey/finish           - WebAuthn 登录 verify (Header: Passkey-Session) POST /api/v2/core/auth/logout                   - 登出 GET  /api/v2/core/auth/setting                  - 登录页元数据 (语言/主题/Passkey 状态) GET  /api/v2/core/auth/welcome                  - 首次欢迎页</p>
+<p>受保护路由 (11 条, 需 psession cookie + 密码未过期): POST /api/v2/core/auth/mfa                      - 生成 MFA 绑定二维码 POST /api/v2/core/auth/mfa/bind                 - 绑定 MFA (secret + code) POST /api/v2/core/auth/mfa/close                - 关闭 MFA POST /api/v2/core/auth/passkey/register/begin   - 注册 Passkey challenge POST /api/v2/core/auth/passkey/register/finish  - 注册 Passkey verify GET  /api/v2/core/auth/passkey/list             - 列出已注册 Passkey POST /api/v2/core/auth/passkey/del              - 删除 Passkey (id) POST /api/v2/core/auth/api/generate             - 生成 API 接口密钥 POST /api/v2/core/auth/api/update               - 更新 API 配置 (白名单/有效时间) GET  /api/v2/core/auth/current                  - 获取当前用户信息 POST /api/v2/core/auth/current/update           - 更新当前用户 (改密码/改用户名) POST /api/v2/core/auth/expired/reset            - 密码过期重置</p>
+<pre data-lang=""><code>
 ## 附录 B: Auth 模块 5 分钟学习路径
 
 1. 读 `api/v2/auth.go` 的 `Login` 函数 (32-85 行),理解入口
@@ -1772,3 +1370,13 @@ flowchart TB
 - Passkey 怎么工作?
 - API 怎么签名?
 - 怎么扩展到 enterprise (xpack)?
+</code></pre>
+      </article>
+    </main>
+  </div>
+  <footer>
+    <p>1Panel.edu KB · <a href="../../index.html">返回目录</a> · <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+  <script src="../../assets/app.js"></script>
+</body>
+</html>

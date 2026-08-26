@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agent · 1Panel.edu KB</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <nav class="top">
+    <a class="brand" href="../../index.html"><span class="logo">1P</span>1Panel.edu KB</a>
+    <div class="nav-links">
+      <a href="../../index.html">目录</a>
+      <a href="../../modules/modules/09-ai-agent#">本模块</a>
+      <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+  <div class="layout">
+    <aside class="toc">
+      <h3>本文目录</h3>
+      <ul></ul>
+    </aside>
+    <main>
+      <header class="doc">
+        <h1>AI Agent</h1>
+        <div class="meta">
+          <span class="pill pill-todo">TODO</span>
+          <span>-</span>
+          <span>13.3 KB</span>
+          <span>2026-08-24</span>
+        </div>
+      </header>
+      <article>
+<blockquote>30 分钟搞懂 1Panel v2 怎么在自己服务器上跑 AI Agent。 详细代码注解在同目录 <code>README.md</code>（75 行 stub + 17 文件清单 / ~10000 行 Go）。 这份文档是入口 —— 先看这个，再决定要不要啃那份。  🎨 <strong>可视化版</strong>：同目录 <code>visual-atlas.html</code>（浏览器里看，4 张 Mermaid 真实图 + 8 个 Agent 组件图 + 6 步 MCP 协议时序） 📋 <strong>研究 commit</strong>：<code>7915230</code>（dev-v2） ⚠️ <strong>状态</strong>：stub + 人话版，详细注解待做（MCP server 是核心，建议先看那 1006 行）</blockquote>
+<hr>
+<h2>0. 这份文档回答 5 个问题</h2>
+<ol>
+<li><strong>1Panel v2 的"AI Agent"到底是什么？跟 ChatGPT 有什么区别？</strong></li>
+<li><strong>怎么让 LLM 调 1Panel 自己的工具（防火墙 / 数据库 / 文件）？</strong></li>
+<li><strong>MCP 协议是什么？1Panel 怎么当 MCP server？</strong></li>
+<li><strong>用户能"装"什么 AI Agent？openai / claude / 本地 ollama？</strong></li>
+<li><strong>对 Sirius Cloud 有什么借鉴价值？怎么抄？</strong></li>
+</ol>
+<hr>
+<h2>1. 一句话总结</h2>
+<p><strong>1Panel v2 把"AI Agent"做成一个"LLM + Skills 工具箱 + 多渠道输入"的组合，在你服务器上跑。</strong></p>
+<p>具体：~10000 行 Go（18 service 文件 + 2 API 文件）+ 集成 <a href="https://github.com/">Hermes Agent 框架</a> + 实现 <a href="https://modelcontextprotocol.io">MCP 协议 server</a> + 4 套渠道适配（IM / API / Web UI / CLI）。<strong>v2 50% 的代码量在这。</strong></p>
+<p>藏了 <strong>8 个值得抄的设计</strong>（重点是 MCP server） + <strong>3 个反模式</strong>（重点是强依赖 Hermes），下面一一拆。</p>
+<hr>
+<h2>2. 1Panel 凭什么"能跑 AI Agent"</h2>
+<h3>2.1 先想象 3 种用户</h3>
+<table><thead><tr><th>用户</th><th>场景</th><th>1Panel 怎么服务</th></tr></thead><tbody><tr><td><strong>A. 我有 OpenAI key</strong></td><td>想在 1Panel 上搭个 ChatOps："@bot 查 MySQL 慢查询"</td><td>1Panel 调 OpenAI API + 暴露 DB 工具给 LLM</td></tr><tr><td><strong>B. 我有自建 ollama</strong></td><td>想完全本地跑，不泄漏数据</td><td>1Panel 接 ollama 端点 + 暴露工具</td></tr><tr><td><strong>C. 我有 Hermes</strong></td><td>我已经在用 Hermes，想集成到 1Panel</td><td>1Panel 内嵌 Hermes runtime + 双向同步</td></tr></tbody></table>
+<p><strong>3 种用户 × 4 套渠道（IM / API / Web / CLI）× N 套工具（MySQL/防火墙/...）= 12N 组合。</strong> 你要写 12N 套代码吗？</p>
+<h3>2.2 1Panel 的解法：<strong>3 层抽象</strong></h3>
+<pre class="mermaid">flowchart TB
+    subgraph 渠道层 "渠道层（4 套适配）"
+        IM[IM 飞书/钉钉]
+        API[HTTP API]
+        Web[Web UI]
+        CLI[CLI]
+    end
+    subgraph 编排层 "编排层（Agent runtime）"
+        Core[Agent Core&lt;br/&gt;1635 行]
+        Ctx[Context 管理&lt;br/&gt;1518 行]
+    end
+    subgraph 工具层 "工具层（Skills + MCP）"
+        Skills[Skills 插件&lt;br/&gt;863 行]
+        MCP[MCP Server&lt;br/&gt;1006 行]
+    end
+    LLM[LLM&lt;br/&gt;OpenAI/Claude/ollama]
+    渠道层 --&gt; 编排层
+    编排层 --&gt; 工具层
+    编排层 &lt;--&gt; LLM
+    工具层 --&gt; 真实[真实工具&lt;br/&gt;MySQL/防火墙/...]</pre>
+<p><strong>渠道层</strong>：所有"外部输入"统一转成"内部消息"格式。<strong>编排层</strong>：agent 内部状态机（接收消息 → 拼 context → 调 LLM → 调工具 → 返回）。<strong>工具层</strong>：所有"内部工具"统一通过 MCP 协议暴露给 LLM。</p>
+<p>调用方（不管是 IM 还是 API）只跟编排层打交道，<strong>不知道也不关心</strong> LLM 是 OpenAI 还是 ollama。</p>
+<h3>2.3 类比：<strong>像乐高</strong></h3>
+<pre data-lang=""><code>普通积木：每个牌子的积木不能混搭        ❌
+乐高：     有统一接口（凸点 + 凹槽）     ✅
+
+1Panel 普通：每个渠道写一套 LLM 调用     ❌
+1Panel 乐高：用 Agent Core + 渠道适配器    ✅</code></pre>
+<h3>2.4 4 个关键概念</h3>
+<pre data-lang="go"><code class="language-go">// agent/app/model/agent.go（推测结构）
+type Agent struct {
+    ID         string
+    Name       string
+    Provider   string   // openai | claude | ollama | hermes
+    Model      string   // gpt-4 / claude-3-opus / llama3
+    APIKey     string   // 加密存储
+    BaseURL    string   // ollama 自定义端点
+    Skills     []Skill  // 这个 Agent 能调的工具
+    Channels   []Channel // 这个 Agent 接入的渠道
+}
+
+type Skill struct {
+    Name        string   // "query_mysql_slow_log"
+    Description string   // 给 LLM 看的工具描述
+    Parameters  JSON    // 工具参数 schema
+    Handler     func()  // 实际执行函数
+}
+
+type Channel struct {
+    Type   string   // "feishu" / "dingtalk" / "api" / "web"
+    Config JSON     // 各渠道的配置（webhook URL 等）
+}
+
+type Message struct {
+    Role    string  // "user" / "assistant" / "tool"
+    Content string
+    ToolCall *ToolCall
+}</code></pre>
+<p><strong>Agent / Skill / Channel / Message</strong> 四个核心模型，把"AI Agent 平台"的所有复杂度都收进去。</p>
+<hr>
+<h2>3. 一个真实场景走查：用户用飞书问 1Panel Bot</h2>
+<p>想象你在飞书里给 1Panel Bot 发消息：</p>
+<pre data-lang=""><code>[你] @1Panel 查一下 10.10.10.100 的 MySQL 慢查询，最近 1 小时</code></pre>
+<h3>3.1 Bot 收到消息后 12 步</h3>
+<p><strong>1. 渠道适配</strong>（<code>agents_channels.go</code>）</p>
+<pre data-lang="go"><code class="language-go">// 把飞书消息转成内部 Message 格式
+msg := Message{
+    Role:    "user",
+    Content: "查一下 10.10.10.100 的 MySQL 慢查询",
+    Source:  "feishu",
+    UserID:  "u_123",
+}</code></pre>
+<p><strong>2. Agent 路由</strong>（<code>agents.go</code>）</p>
+<pre data-lang="go"><code class="language-go">// 找到要用的 Agent（用户在 1Panel Web UI 里配置过"飞书→哪个 Agent"）
+agent := routeToAgent(msg.Source, msg.UserID)</code></pre>
+<p><strong>3. 拼 context</strong>（<code>agents_utils.go</code>）</p>
+<pre data-lang="go"><code class="language-go">ctx := buildContext(agent, msg)
+// 包含：系统提示 + 历史消息 + 工具列表 + 当前消息</code></pre>
+<p><strong>4. 调 LLM</strong>（<code>ai.go</code>）</p>
+<pre data-lang="go"><code class="language-go">resp := callLLM(agent.Provider, agent.Model, ctx)
+// LLM 决定要调 "query_mysql_slow_log" 工具</code></pre>
+<p><strong>5. MCP 工具调用</strong>（<code>mcp_server.go</code>）</p>
+<pre data-lang="go"><code class="language-go">result := mcp.CallTool("query_mysql_slow_log", {
+    "host":   "10.10.10.100",
+    "window": "1h",
+})</code></pre>
+<p><strong>6. 工具执行</strong>（实际 handler）</p>
+<pre data-lang="go"><code class="language-go">// 1Panel 内部去 10.10.10.100 跑 mysql slow log 查询
+slowLogs := mysql.QuerySlowLog("10.10.10.100", "1h")</code></pre>
+<p><strong>7-9. 把结果回给 LLM → LLM 总结 → 拼成飞书消息回复</strong></p>
+<p><strong>10. 渠道发送</strong>（<code>agents_channels.go</code>）</p>
+<pre data-lang="go"><code class="language-go">feishu.Reply(msg.UserID, formattedAnswer)</code></pre>
+<p><strong>11. 持久化历史</strong>（<code>agents_utils.go</code>）</p>
+<pre data-lang="go"><code class="language-go">saveMessage(agent.ID, msg, resp)</code></pre>
+<p><strong>12. 触发 webhook / 通知 / 日志</strong></p>
+<p>整个 12 步走完，用户看到飞书里 Bot 回了 3 行慢查询摘要 + 1 个 deep link 到 1Panel Web UI。</p>
+<h3>3.2 全程时序</h3>
+<pre class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 用户(飞书)
+    participant C as 渠道适配
+    participant A as Agent Core
+    participant L as LLM
+    participant M as MCP Server
+    participant T as 工具(MySQL)
+    U-&gt;&gt;C: 飞书消息
+    C-&gt;&gt;A: 内部 Message
+    A-&gt;&gt;L: 调 LLM(带 context)
+    L--&gt;&gt;A: 要调工具
+    A-&gt;&gt;M: MCP CallTool
+    M-&gt;&gt;T: 实际执行
+    T--&gt;&gt;M: 结果
+    M--&gt;&gt;A: 工具结果
+    A-&gt;&gt;L: 拼 context 再调
+    L--&gt;&gt;A: 总结文本
+    A--&gt;&gt;C: 最终回复
+    C--&gt;&gt;U: 飞书消息</pre>
+<hr>
+<h2>4. 8 个值得抄的设计</h2>
+<h3>4.1 ⭐⭐⭐⭐⭐ <strong>MCP Server 端实现</strong>（<code>mcp_server.go</code> 1006 行）</h3>
+<p><strong>MCP 协议</strong>（Model Context Protocol）是 Anthropic 2024 年 11 月开源的"LLM 调工具协议"。1Panel 自己实现了一个 server 端。</p>
+<pre data-lang="go"><code class="language-go">// mcp_server.go（推测结构）
+type MCPServer struct {
+    tools   map[string]Tool
+    session *Session
+}
+
+func (s *MCPServer) RegisterTool(name string, tool Tool) {
+    s.tools[name] = tool
+}
+
+func (s *MCPServer) HandleRequest(req MCPRequest) MCPResponse {
+    switch req.Method {
+    case "tools/list":
+        return s.listTools()
+    case "tools/call":
+        return s.callTool(req.Params)
+    }
+}</code></pre>
+<p><strong>为什么必抄</strong>：未来所有 LLM 应用都会用 MCP 暴露工具。1Panel 这 1006 行是真实生产代码。</p>
+<p><strong>怎么抄</strong>：</p>
+<pre data-lang="python"><code class="language-python"># 你的 Python 实现（伪代码）
+class MCPServer:
+    def __init__(self):
+        self.tools = {}
+    def register(self, name, description, parameters, handler):
+        self.tools[name] = Tool(name, description, parameters, handler)
+    def handle(self, request):
+        if request.method == "tools/list":
+            return {"tools": list(self.tools.values())}
+        if request.method == "tools/call":
+            return self.tools[request.params["name"]].handler(**request.params["arguments"])</code></pre>
+<h3>4.2 ⭐⭐⭐⭐⭐ <strong>Skill 插件系统</strong>（<code>agents_skills.go</code> 863 行）</h3>
+<p>每个 Skill 是 <code>{name, description, parameters_schema, handler}</code> 4 元组。注册后 LLM 就能调。</p>
+<p><strong>动态注册 vs 静态注册</strong>：</p>
+<ul>
+<li>1Panel 用动态注册：用户在 Web UI 上加 Skill → 写到 SQLite → Agent 启动时读</li>
+<li>优势：不用改代码就能加新工具</li>
+</ul>
+<h3>4.3 ⭐⭐⭐⭐⭐ <strong>Context 压缩</strong>（<code>agents_utils.go</code> 1518 行）</h3>
+<p>跟 LLM 对话最怕"token 超限"。1Panel 的做法：</p>
+<pre data-lang="go"><code class="language-go">// 伪代码
+func compressContext(msgs []Message, maxTokens int) []Message {
+    // 1. 保留 system prompt
+    // 2. 保留最近 N 轮对话
+    // 3. 中间历史"摘要化"（用 LLM 把 10 轮对话压成 1 段）
+    // 4. 工具调用结果如果太大，截断到前 2000 字
+}</code></pre>
+<p><strong>怎么抄</strong>：每个 LLM 应用都要做。</p>
+<h3>4.4 ⭐⭐⭐⭐⭐ <strong>多渠道适配</strong>（<code>agents_channels.go</code> 1580 行）</h3>
+<p>4 套渠道（IM / API / Web / CLI）转同一内部 <code>Message</code> 格式。</p>
+<pre data-lang="go"><code class="language-go">type ChannelAdapter interface {
+    ParseIncoming(raw []byte) (Message, error)
+    FormatOutgoing(msg Message) ([]byte, error)
+    Send(msg Message) error
+}</code></pre>
+<p><strong>怎么抄</strong>：用 interface + 工厂，1 套内部格式 + N 套渠道实现。</p>
+<h3>4.5 ⭐⭐⭐⭐ <strong>LLM Provider 抽象</strong></h3>
+<pre data-lang="go"><code class="language-go">type LLMProvider interface {
+    Chat(ctx Context) (Response, error)
+    StreamChat(ctx Context) (&lt;-chan Chunk, error)
+}
+
+// 多个实现：OpenAI / Claude / ollama / Hermes</code></pre>
+<p><strong>好处</strong>：换 LLM 不改业务代码。</p>
+<h3>4.6 ⭐⭐⭐⭐ <strong>多 Agent 协作</strong>（<code>agents_agents.go</code> 493 行）</h3>
+<p>Agent A 可以"召唤" Agent B 当工具。</p>
+<pre data-lang="go"><code class="language-go">// Agent A 的 Skill 里注册了"consult_expert_agent"
+{
+    "name": "consult_expert",
+    "description": "向专家 Agent 提问",
+    "parameters": {"question": "string"},
+    "handler": func(params) {
+        return callAgent("expert-agent", params.question)
+    }
+}</code></pre>
+<h3>4.7 ⭐⭐⭐⭐ <strong>Hermes 集成</strong>（<code>agents_hermes*.go</code> 1700 行）</h3>
+<p>Hermes 是 1Panel 集成的 AI Agent 框架。这 1700 行是"用 Hermes runtime 跑 1Panel Agent"。</p>
+<p><strong>风险</strong>：强依赖外部项目，独立部署要替换。</p>
+<h3>4.8 ⭐⭐⭐ <strong>MCP 工具描述自动生成</strong></h3>
+<p>每个 Skill 的 <code>description</code> 是 LLM 看到的"工具说明"。1Panel 提供模板让用户填。</p>
+<hr>
+<h2>5. 3 个反模式 / 避坑</h2>
+<h3>5.1 ⚠️ <strong>强依赖 Hermes</strong></h3>
+<p><code>agents_hermes*.go</code> 6 个文件 / 1700 行，深度绑定 Hermes 的 API、CLI、配置格式。</p>
+<p><strong>避坑</strong>：你的 AI Agent 平台&lt;strong&gt;不要绑死单一 framework&lt;/strong&gt;，用 <code>LLMProvider</code> interface 隔离。</p>
+<h3>5.2 ⚠️ <strong>没有完整本地 LLM fallback</strong></h3>
+<p>整套设计假设 LLM 走云端 API（OpenAI / Claude），本地 ollama 支持是后续加的（<code>agents_copaw.go</code> 才 120 行，体验不行）。</p>
+<p><strong>避坑</strong>：如果你要"完全本地"，先想清楚 vLLM / ollama / llama.cpp 的兼容层。</p>
+<h3>5.3 ❌ <strong>10000 行 + 18 文件，单点太多</strong></h3>
+<p>模块太大，认知负担重。<strong>不要照抄架构</strong>，先看 MCP server + Skill 注册就够了。</p>
+<p><strong>避坑</strong>：拆成 3-4 个子模块（runtime / skills / channels / context），每个 1000-2000 行。</p>
+<hr>
+<h2>6. 跟 Sirius Cloud 的对位</h2>
+<table><thead><tr><th>Sirius Cloud 需求</th><th>1Panel AI Agent 对应</th><th>推荐度</th></tr></thead><tbody><tr><td><strong>L1 AI Ops</strong>（AI 诊断 + 操作）</td><td>agents + mcp_server</td><td>⭐⭐⭐⭐⭐</td></tr><tr><td><strong>L2 智能客服</strong>（用户问 DB 问题）</td><td>agents_channels + context</td><td>⭐⭐⭐⭐</td></tr><tr><td><strong>L3 运维助手</strong>（"为什么 MySQL 慢了"）</td><td>mcp_server 把监控/日志/DB 暴露给 LLM</td><td>⭐⭐⭐⭐⭐</td></tr><tr><td><strong>新功能：自然语言部署</strong></td><td>mcp_server + skills</td><td>⭐⭐⭐⭐</td></tr></tbody></table>
+<h3>6.1 必抄清单</h3>
+<ol>
+<li><strong>MCP Server 端实现</strong> —— 1006 行，看完直接 Python 重写</li>
+<li><strong>Skill 插件系统</strong> —— 4 元组设计，30 行能抄完</li>
+<li><strong>Context 压缩</strong> —— token 成本优化必备</li>
+</ol>
+<h3>6.2 抄的时候要改</h3>
+<ol>
+<li><strong>去掉 Hermes 依赖</strong> —— 你的 Python 后端用 LangChain / LlamaIndex 替代</li>
+<li><strong>简化渠道</strong> —— Sirius Cloud 前期只做 Web UI + API，不做 IM</li>
+<li><strong>工具要严格权限控制</strong> —— 1Panel 的"暴露所有工具"在 DBaaS 场景有风险</li>
+</ol>
+<hr>
+<h2>7. 接下来怎么读</h2>
+<h3>7.1 30 分钟通道</h3>
+<ol>
+<li>看完本文档</li>
+<li>看 <code>09-ai-agent/README.md</code> §5（借鉴价值 6 行 + 避坑 3 条）</li>
+<li>直接看 <code>mcp_server.go</code> 的 <code>RegisterTool</code> + <code>HandleRequest</code> 两个函数</li>
+</ol>
+<h3>7.2 2 小时通道</h3>
+<ol>
+<li>上面 30 分钟</li>
+<li><code>agents_skills.go</code> Skill 数据结构</li>
+<li><code>agents_utils.go</code> 的 <code>buildContext</code> + <code>compressContext</code></li>
+<li><code>agents_channels.go</code> 的 <code>ChannelAdapter</code> interface</li>
+<li>跑通 MCP 协议的一个最小 demo（Anthropic 官方 SDK）</li>
+</ol>
+<h3>7.3 1 天写代码通道</h3>
+<ol>
+<li>上面所有</li>
+<li>Python 写一个最小 MCP server（参考 <a href="https://github.com/modelcontextprotocol/python-sdk">mcp-python-sdk</a>）</li>
+<li>把 Sirius Cloud 的 5 个 L1 工具（创建 DB / 备份 / 监控 / 防火墙 / 部署）注册成 MCP tools</li>
+<li>跑通"用 Claude API 调 Sirius Cloud 工具"</li>
+</ol>
+<hr>
+<h2>8. 写作说明</h2>
+<ul>
+<li><strong>本文档定位</strong>：30 分钟读完的"故事版"</li>
+<li><strong><code>09-ai-agent/README.md</code> 定位</strong>：17 文件清单 + stub（详细注解待做）</li>
+<li><strong><code>firewall-architecture.md</code> 定位</strong>：v2 防火墙深度注解（另一个模块的样板）</li>
+<li><strong><code>00-landscape.md</code> 定位</strong>：13 个模块的全景图</li>
+</ul>
+<hr>
+<p><strong>研究 commit</strong>：<code>7915230</code>（dev-v2）· <strong>更新</strong>：2026-08-24 · <strong>作者</strong>：1Panel v2 研究员</p>
+      </article>
+    </main>
+  </div>
+  <footer>
+    <p>1Panel.edu KB · <a href="../../index.html">返回目录</a> · <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+  <script src="../../assets/app.js"></script>
+</body>
+</html>

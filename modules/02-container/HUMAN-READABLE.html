@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker 容器管理 · 1Panel.edu KB</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <nav class="top">
+    <a class="brand" href="../../index.html"><span class="logo">1P</span>1Panel.edu KB</a>
+    <div class="nav-links">
+      <a href="../../index.html">目录</a>
+      <a href="../../modules/modules/02-container#">本模块</a>
+      <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+  <div class="layout">
+    <aside class="toc">
+      <h3>本文目录</h3>
+      <ul></ul>
+    </aside>
+    <main>
+      <header class="doc">
+        <h1>Docker 容器管理</h1>
+        <div class="meta">
+          <span class="pill pill-frozen">FROZEN</span>
+          <span>⭐⭐⭐</span>
+          <span>8.9 KB</span>
+          <span>2026-08-24</span>
+        </div>
+      </header>
+      <article>
+<blockquote>30 分钟搞懂 1Panel 怎么给 Docker Engine API 套个 Web UI。 详细代码注解在同目录 <code>README.md</code>（57 行 stub + 12 文件清单 / ~5400 行 Go）。 这份文档是入口 —— 先看这个，再决定要不要啃那份。  🎨 <strong>可视化版</strong>：同目录 <code>visual-atlas.html</code>（浏览器里看，4 张 Mermaid 真实图 + 4 个 Docker API 抽象层 + 2 个反模式卡片） 📋 <strong>研究 commit</strong>：<code>7915230</code>（dev-v2） ⚠️ <strong>状态</strong>：stub + 人话版，详细注解待做 🚫 <strong>Sirius Cloud 不抄整体架构</strong>（你不用 Docker），只学"CRUD 抽象模式"</blockquote>
+<hr>
+<h2>0. 这份文档回答 5 个问题</h2>
+<ol>
+<li><strong>1Panel 怎么"管 Docker 容器"？底层调什么？</strong></li>
+<li><strong>为什么不调 Docker CLI 命令行，而用 moby SDK？</strong></li>
+<li><strong>容器 CRUD 跟 compose 怎么协调？</strong></li>
+<li><strong>更新容器 / 拉镜像的策略是什么？</strong></li>
+<li><strong>对 Sirius Cloud L2 有什么借鉴价值？（提示：&lt;strong&gt;不抄整体&lt;/strong&gt;，只学模式）</strong></li>
+</ol>
+<hr>
+<h2>1. 一句话总结</h2>
+<p><strong>1Panel 把 Docker Engine API 1:1 包装成 Web UI，~5400 行 Go + 底层用 <a href="https://pkg.go.dev/github.com/docker/docker/client">moby/moby/client</a> Go SDK 直接调 unix socket。</strong></p>
+<p>跟其他模块（database / website）的"自己实现核心逻辑"不同，<strong>Container 模块基本是 Docker API 的薄代理</strong>。</p>
+<p>藏了 <strong>1 个核心抽象</strong>（Docker SDK 隔离） + <strong>2 个反模式</strong>（强依赖 Docker + 1:1 映射），下面拆。</p>
+<hr>
+<h2>2. 1Panel 凭什么"能管 Docker"</h2>
+<h3>2.1 Docker 提供的 4 类能力</h3>
+<table><thead><tr><th>能力</th><th>1Panel 怎么调</th><th>核心 SDK</th></tr></thead><tbody><tr><td><strong>容器 CRUD</strong></td><td><code>client.ContainerList/Create/Start/Stop/Remove</code></td><td><code>moby/client</code></td></tr><tr><td><strong>镜像管理</strong></td><td><code>client.ImagePull/Remove/Tag</code></td><td><code>moby/client</code></td></tr><tr><td><strong>网络管理</strong></td><td><code>client.NetworkCreate/Remove/Connect</code></td><td><code>moby/client</code></td></tr><tr><td><strong>卷管理</strong></td><td><code>client.VolumeCreate/Remove/List</code></td><td><code>moby/client</code></td></tr><tr><td><strong>compose</strong></td><td><code>client.StackDeploy</code> 或调 <code>docker-compose</code> 二进制</td><td>两种都支持</td></tr></tbody></table>
+<p><strong>所有操作都通过 <code>/var/run/docker.sock</code> 这个 unix socket 调</strong>。1Panel Agent 跟 Docker daemon 跑在同一台机器上。</p>
+<h3>2.2 1Panel 架构：薄代理</h3>
+<pre class="mermaid">flowchart LR
+    UI[Web UI] --&gt; API[container.go API 层&lt;br/&gt;891 行]
+    API --&gt; SVC[container.go Service 层&lt;br/&gt;1961 行]
+    SVC --&gt; SDK[moby/moby/client&lt;br/&gt;Go SDK]
+    SDK --&gt; Socket[/var/run/docker.sock&lt;br/&gt;unix socket]
+    Socket --&gt; Docker[Docker daemon]
+    Docker --&gt; Containers[真实容器]
+    style SVC fill:#2f6f5e,color:#fff
+    style SDK fill:#c97b3f,color:#fff</pre>
+<p><strong>1961 行的 container.go ≈ Docker Engine API 1:1 翻译</strong>：</p>
+<ul>
+<li><code>ContainerList()</code> → 调 SDK 的 <code>ContainerList()</code></li>
+<li><code>ContainerStart(id)</code> → 调 SDK 的 <code>ContainerStart()</code></li>
+<li><code>ContainerCreate(req)</code> → 调 SDK 的 <code>ContainerCreate()</code> + 翻译参数</li>
+</ul>
+<h3>2.3 类比：<strong>像电视机遥控器</strong></h3>
+<pre data-lang=""><code>普通做法：直接操作电视内部电路    ❌
+遥控器：   翻译按钮为电路指令      ✅
+
+1Panel 普通：让用户用 docker 命令 ❌
+1Panel 遥控器：UI 按钮 → 调 SDK → Docker daemon ✅</code></pre>
+<hr>
+<h2>3. 一个真实场景：用户重启容器</h2>
+<h3>3.1 流程图</h3>
+<pre class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant API as container.go API
+    participant SVC as container.go Service
+    participant SDK as moby SDK
+    participant D as Docker daemon
+    U-&gt;&gt;API: POST /containers/restart {id: "abc123"}
+    API-&gt;&gt;SVC: RestartContainer(req)
+    SVC-&gt;&gt;SDK: client.ContainerRestart(ctx, "abc123", timeout)
+    SDK-&gt;&gt;D: POST /v1.41/containers/abc123/restart
+    D--&gt;&gt;SDK: 202 Accepted
+    SDK--&gt;&gt;SVC: nil
+    SVC--&gt;&gt;API: nil
+    API--&gt;&gt;U: {code: 200, msg: "ok"}</pre>
+<p><strong>整个 3 步</strong>：API → Service → SDK → Docker。&lt;strong&gt;没有"1Panel 自己的逻辑"&lt;/strong&gt;，就是转发。</p>
+<hr>
+<h2>4. 4 大子模块</h2>
+<table><thead><tr><th>文件</th><th>行</th><th>核心能力</th></tr></thead><tbody><tr><td><code>container.go</code></td><td>1961</td><td>容器 CRUD + 重建 + inspect</td></tr><tr><td><code>container_compose.go</code></td><td>720</td><td>docker compose up/down</td></tr><tr><td><code>container_update.go</code></td><td>657</td><td>容器重建（拉新镜像 + 替换）</td></tr><tr><td><code>container_network.go</code> + <code>container_volume.go</code></td><td>305</td><td>自定义网络 + 卷管理</td></tr></tbody></table>
+<p><strong><code>container.go</code> 1961 行</strong>是单一热文件，<strong>几乎所有容器操作都过它</strong>。</p>
+<h3>4.1 容器更新（<code>container_update.go</code> 657 行）</h3>
+<p>最复杂的功能：用户点"更新容器" → 1Panel 拉新镜像 → 停老容器 → 用新镜像起新容器。</p>
+<pre data-lang="go"><code class="language-go">// 伪代码
+func (s *ContainerService) UpdateContainer(id string) error {
+    // 1. inspect 老容器（拿 env / volume / port / network 配置）
+    old, _ := s.client.ContainerInspect(ctx, id)
+    // 2. 拉新镜像
+    s.client.ImagePull(ctx, old.Config.Image, types.ImagePullOptions{})
+    // 3. 停老容器
+    s.client.ContainerStop(ctx, id, timeout)
+    // 4. 删老容器（保留 volume / network）
+    s.client.ContainerRemove(ctx, id, types.ContainerRemoveOptions{})
+    // 5. 用老配置 + 新镜像起新容器
+    newID, _ := s.client.ContainerCreate(ctx, old.Config, old.HostConfig, old.NetworkConfig, old.Name)
+    s.client.ContainerStart(ctx, newID, types.ContainerStartOptions{})
+    // 6. 写 metadata
+    return nil
+}</code></pre>
+<h3>4.2 compose 管理（<code>container_compose.go</code> 720 行）</h3>
+<p>两种实现路径：</p>
+<ul>
+<li><strong>路径 A</strong>：调 SDK 的 <code>StackDeploy</code>（Swarm 模式）</li>
+<li><strong>路径 B</strong>：拼 <code>docker-compose</code> 命令行执行（standalone 模式）</li>
+</ul>
+<p>1Panel 主要用路径 B，因为单机用户为主。</p>
+<pre data-lang="bash"><code class="language-bash">docker compose -f /path/to/docker-compose.yml up -d
+docker compose -f /path/to/docker-compose.yml down</code></pre>
+<hr>
+<h2>5. 1 个核心抽象 + 1 个借鉴模式</h2>
+<h3>5.1 ⭐⭐⭐⭐ <strong>Docker SDK 隔离层</strong>（核心）</h3>
+<p>不要直接调 Docker CLI（shell exec），用官方 Go SDK。</p>
+<p><strong>好处</strong>：</p>
+<ul>
+<li>性能更好（不走 shell）</li>
+<li>错误处理更结构化（不是 exit code + stderr 字符串）</li>
+<li>类型安全（编译时检查参数）</li>
+</ul>
+<pre data-lang="go"><code class="language-go">// 反例：调 shell
+out, err := exec.Command("docker", "restart", id).CombinedOutput()
+if err != nil { return err }
+
+// 正例：调 SDK
+err := client.ContainerRestart(ctx, id, timeout)
+if err != nil { return err }</code></pre>
+<h3>5.2 ⭐⭐⭐ <strong>CRUD 抽象模式</strong></h3>
+<p>不管底层是 Docker / K8s / Podman / MySQL，UI 层都只要 5 个操作：</p>
+<ul>
+<li><code>List</code> / <code>Get</code> / <code>Create</code> / <code>Update</code> / <code>Delete</code></li>
+</ul>
+<p><strong>Sirius Cloud 借鉴</strong>：你 L2 管的"MySQL 实例 / Redis 实例 / PostgreSQL 实例"都遵循这 5 个操作，UI 层不用关心底层实现。</p>
+<pre data-lang="python"><code class="language-python"># 你的 Python 抽象
+class ResourceService(ABC):
+    @abstractmethod
+    def list(self) -&gt; List[Resource]: ...
+    @abstractmethod
+    def get(self, id: str) -&gt; Resource: ...
+    @abstractmethod
+    def create(self, req: CreateReq) -&gt; Resource: ...
+    @abstractmethod
+    def update(self, id: str, req: UpdateReq) -&gt; Resource: ...
+    @abstractmethod
+    def delete(self, id: str) -&gt; None: ...</code></pre>
+<hr>
+<h2>6. 2 个反模式（必避）</h2>
+<h3>6.1 ❌ <strong>强依赖 Docker daemon</strong></h3>
+<p>整套 Container 模块假设 <code>/var/run/docker.sock</code> 存在。</p>
+<p><strong>Sirius Cloud 硬约束</strong>：你<strong>不用 Docker</strong>。所以这个模块&lt;strong&gt;整体不引入&lt;/strong&gt;。</p>
+<h3>6.2 ❌ <strong><code>container.go</code> 1961 行 = 1:1 映射</strong></h3>
+<p>几乎所有函数都是"调 SDK 一个方法 + 翻译参数"。手写价值不大，不如直接调 SDK。</p>
+<p><strong>避坑</strong>：不要自己手写"容器 CRUD 抽象层"，让前端直接调 Docker API（如果你的场景就是 Docker）或 K8s API。</p>
+<hr>
+<h2>7. 跟 Sirius Cloud 的对位</h2>
+<table><thead><tr><th>Sirius Cloud 需求</th><th>1Panel Container 对应</th><th>推荐度</th></tr></thead><tbody><tr><td><strong>L2 资源 CRUD 抽象</strong></td><td>整套 CRUD 模式</td><td>⭐⭐⭐⭐</td></tr><tr><td><strong>L2 容器管理</strong></td><td>整套</td><td>❌ 不用 Docker，不抄</td></tr><tr><td><strong>L2 K8s 集群管理</strong></td><td>类似模式但用 K8s API</td><td>⭐⭐⭐</td></tr><tr><td><strong>新功能：MySQL 实例 CRUD</strong></td><td>借鉴 List/Get/Create/Update/Delete</td><td>⭐⭐⭐⭐</td></tr></tbody></table>
+<h3>7.1 必抄清单</h3>
+<ol>
+<li><strong>CRUD 抽象模式</strong>（5 个操作覆盖所有资源）</li>
+</ol>
+<h3>7.2 不抄的</h3>
+<ol>
+<li><strong>整个 Container 模块</strong>（你不用 Docker，抄了也没用）</li>
+</ol>
+<h3>7.3 抄的时候要改</h3>
+<ol>
+<li><strong>不要绑死 Docker</strong>（你的场景是 K8s / 直接调 MySQL 客户端）</li>
+<li><strong>不要 1:1 映射 API</strong>（直接调 K8s client-go / MySQL driver）</li>
+</ol>
+<hr>
+<h2>8. 接下来怎么读</h2>
+<h3>8.1 30 分钟通道</h3>
+<ol>
+<li>看完本文档</li>
+<li>看 <code>02-container/README.md</code> §1（12 文件清单）</li>
+<li>直接看 <code>container.go</code> 的 <code>ListContainer</code> 函数</li>
+</ol>
+<h3>8.2 2 小时通道（如果以后用到 Docker）</h3>
+<ol>
+<li>上面 30 分钟</li>
+<li><code>container_update.go</code> 的 <code>UpdateContainer</code> 函数（看 volume 保留策略）</li>
+<li><code>container_compose.go</code> 的 compose up/down 实现</li>
+</ol>
+<h3>8.3 不建议深读</h3>
+<p><strong>Sirius Cloud 不用 Docker，整个模块&lt;strong&gt;只看模式&lt;/strong&gt;，不读实现</strong>。</p>
+<hr>
+<h2>9. 写作说明</h2>
+<ul>
+<li><strong>本文档定位</strong>：30 分钟读完的"故事版"</li>
+<li><strong><code>02-container/README.md</code> 定位</strong>：12 文件清单 + stub（详细注解待做）</li>
+<li><strong><code>firewall-architecture.md</code> 定位</strong>：v2 防火墙深度注解</li>
+<li><strong><code>00-landscape.md</code> 定位</strong>：13 个模块的全景图</li>
+</ul>
+<hr>
+<p><strong>研究 commit</strong>：<code>7915230</code>（dev-v2）· <strong>更新</strong>：2026-08-24 · <strong>作者</strong>：1Panel v2 研究员</p>
+      </article>
+    </main>
+  </div>
+  <footer>
+    <p>1Panel.edu KB · <a href="../../index.html">返回目录</a> · <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+  <script src="../../assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website 网站管理 · 1Panel.edu KB</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <nav class="top">
+    <a class="brand" href="../../index.html"><span class="logo">1P</span>1Panel.edu KB</a>
+    <div class="nav-links">
+      <a href="../../index.html">目录</a>
+      <a href="../../modules/modules/03-website#">本模块</a>
+      <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+  <div class="layout">
+    <aside class="toc">
+      <h3>本文目录</h3>
+      <ul></ul>
+    </aside>
+    <main>
+      <header class="doc">
+        <h1>Website 网站管理</h1>
+        <div class="meta">
+          <span class="pill pill-done">DONE v3</span>
+          <span>⭐⭐⭐</span>
+          <span>49.6 KB</span>
+          <span>2026-08-25</span>
+        </div>
+      </header>
+      <article>
+<blockquote>模块编号: 03-website 优先级: P3 源码版本: 1Panel core / agent 行数: ~4072 行 (8 源文件) + 周边 ~15000 行 (utils / ssl / proxy / lb / op) 文档生成: 2026-08-25</blockquote>
+<hr>
+<h2>1. 一句话作用 (普通读者视角)</h2>
+<p><strong>1Panel Website 模块 = 自带门卫 + 装修队的网店托管系统</strong>: 给一个域名, 它帮你"开"出可访问的网站 (静态/动态/PHP/反代/数据库), 自动写好 OpenResty (Nginx) 配置、自动申请 Let's Encrypt 证书、自动做 HTTPS 跳转、限流、防盗链、跨目录, 还能在 1Panel 面板里让你像用 cPanel 一样点点鼠标维护。</p>
+<h3>1.1 生活类比 — "24h 自动开门 + 物业一体的网店管家"</h3>
+<table><thead><tr><th>现实生活</th><th>1Panel Website</th><th>类比说明</th></tr></thead><tbody><tr><td>开一家实体店, 需要店面、招牌、营业执照、门卫</td><td>创建网站, 生成站点目录 + OpenResty server 块 + 网站元数据</td><td>一次性配齐所有"开业资料"</td></tr><tr><td>招牌"营业执照"(对外显示)</td><td>主域名 (PrimaryDomain)</td><td>顾客记住的就是这个</td></tr><tr><td>多块招牌 / 副招牌 (二级域名)</td><td>WebsiteDomain 表多条记录</td><td>一个站可绑多域名, 不同端口</td></tr><tr><td>门口保安检查来访者</td><td>Nginx 反向代理 / WAF / 防 CC</td><td>流量先到 OpenResty, 按规则过滤再转给后端</td></tr><tr><td>店内商品 (静态 HTML / PHP 动态 / 第三方接口)</td><td>Website.Type ∈ {Static, Runtime(PHP/Node/Java/Go/Python/.NET), Deployment(1Panel App), Stream(UDP/TCP 转发), Subsite(子站)}</td><td>同一个店面, 5 种业态</td></tr><tr><td>营业时间</td><td>Status (Running / Stopped) + ExpireDate</td><td>到期后自动停业</td></tr><tr><td>工商执照 (SSL 证书)</td><td>WebsiteSSL 表 + OpenResty ssl_certificate</td><td>锁了 https 才能让浏览器信任</td></tr><tr><td>门卫排班表</td><td>Nginx <code>upstream</code> + 负载均衡算法</td><td>多后端轮询</td></tr><tr><td>后厨账本 (MySQL/PG)</td><td>website.DbID / website.DbType</td><td>1Panel 创建网站时, 可一并开 DB</td></tr><tr><td>装修队 (O&amp;M 工人)</td><td>task.Task 子任务 (configNginx / enableSSL / createFtpUser)</td><td>异步编排, 失败回滚</td></tr><tr><td>物业报修 / 后台日志</td><td>AccessLog / ErrorLog 开关 + 日志查询</td><td>流量回放 / 排错</td></tr><tr><td>业主群通知</td><td>x-panel-log 审计日志</td><td>面板里能看到谁在何时创建/删除/修改了哪个站</td></tr></tbody></table>
+<p><strong>一句话</strong>: 1Panel Website = <strong>cPanel + OpenResty + Let's Encrypt + 1Panel 应用商店 + WAF</strong> 的"高度自动化合体"。</p>
+<hr>
+<h2>2. 模块职责 (6 大块)</h2>
+<ol>
+<li><strong>站点全生命周期</strong>: 创建 (Create) / 启动 (Start) / 停止 (Stop) / 删除 (Delete) / 搜索 (Page) / 详情 (Get) / 修改 (Update) / 默认 server 切换 / 分组迁移 / 批量操作 — <code>service/website.go</code> 里 <code>CreateWebsite / DeleteWebsite / OpWebsite / UpdateWebsite / ChangeDefaultServer / ChangeGroup / BatchOpWebsite</code> 等。</li>
+<li><strong>Nginx/OpenResty 配置生成</strong>: 通过自研 AST 库 (<code>utils/nginx/components</code> + <code>utils/nginx/parser</code>) 增删改 listen / server_name / location / ssl_protocols / add_header / access_log / error_log / valid_referers / rewrite / if / upstream / set_real_ip_from, 落盘后调用 <code>nginx -t</code> + <code>nginx -s reload</code> — <code>service/website_utils.go</code> 里 <code>configDefaultNginx / delNginxConfig / updateNginxConfig / deleteNginxConfig / applySSL / setListen / removeSSLListen / applyLocationProxyPass / createWafConfig</code> 等。</li>
+<li><strong>SSL/TLS 全套</strong>: 一键申请 Let's Encrypt / 自传证书 / 自签 CA / 手动粘贴 PEM / 主从节点推送 / 自动续签 / HSTS / HTTP3 (QUIC) / Alt-Svc — <code>service/website_ssl.go</code> + <code>service/website.go::OpWebsiteHTTPS</code>。</li>
+<li><strong>5 种业态分别处理</strong>:</li>
+</ol>
+<ul>
+<li><strong>Static</strong> (纯 HTML) → 直接 serve 目录</li>
+<li><strong>Runtime</strong> (PHP/Node/Java/Go/Python/.NET) → 反代到 127.0.0.1:port (或 unix socket)</li>
+<li><strong>Deployment</strong> (1Panel 应用商店安装的 App) → 反代到 App 容器的 exposed port</li>
+<li><strong>Stream</strong> (TCP/UDP 转发) → <code>stream { ... }</code> 块</li>
+<li><strong>Subsite</strong> (父站子目录) → root 路径调整</li>
+</ul>
+<ol>
+<li><strong>Web 防护与性能</strong>: 反向代理配置 (<code>proxies</code>) / 负载均衡 (<code>lbs</code>) / 缓存 (<code>proxy/config</code>) / 防盗链 (<code>leech</code>) / 跨域 CORS (<code>cors</code>) / 防跨站 (<code>crosssite</code> / open_basedir) / BasicAuth (<code>auths</code>) / 路径鉴权 (<code>auths/path</code>) / 默认 404 (<code>default/html</code>) / 真实 IP (<code>realip/config</code>) / PHP 版本切换 (<code>php/version</code>) / 重写规则 (<code>rewrite</code>) / 重定向 (<code>redirect</code>) / Composer 命令执行 (<code>exec/composer</code>)。</li>
+<li><strong>周边资源</strong>: DNS API 账号 (<code>websites/dns</code> 阿里云/腾讯云/Cloudflare…)、ACME 账号 (<code>websites/acme</code> Let's Encrypt / ZeroSSL)、自签 CA (<code>websites/ca</code>)、网站模板 (<code>websites/templates</code>, <code>outputs</code>)、WAF、日志 (access + error)、FTP 账号创建联动、数据库联动。</li>
+</ol>
+<hr>
+<h2>3. 目录结构 (源文件清单 + 行数)</h2>
+<pre data-lang=""><code>agent/
+├── router/                         # Gin 路由注册 (6 个文件)
+│   ├── ro_website.go              (103 行) — 核心网站 60+ endpoint
+│   ├── ro_website_ssl.go          ( 31 行) — SSL 证书 14 endpoint
+│   ├── ro_website_ca.go           ( 24 行) — 自签 CA 7 endpoint
+│   ├── ro_website_dns_account.go  ( 21 行) — DNS API 4 endpoint
+│   ├── ro_website_acme_account.go ( 21 行) — ACME 账号 4 endpoint
+│   └── ro_website_template.go     ( 28 行) — 网站模板 11 endpoint
+│
+├── app/api/v2/
+│   ├── website.go                 (1342 行) — 主站 handler 64 个 func
+│   ├── website_ssl.go             (~300 行) — SSL handler
+│   ├── website_acme_account.go
+│   ├── website_ca.go
+│   ├── website_dns_account.go
+│   ├── website_domain.go
+│   └── website_template.go
+│
+├── app/service/                    # 业务核心 (12 个文件)
+│   ├── website.go                 (2502 行) — 主站 service 41 个方法
+│   ├── website_utils.go           (~1500 行) — 工具: Nginx 解析/生成/WAF
+│   ├── website_ssl.go             (~1100 行) — ACME 申请/续签/推送
+│   ├── website_proxy.go           — 反向代理增删改查
+│   ├── website_lb.go              — 负载均衡 upstream
+│   ├── website_op.go              — 批量操作 (BatchOp/SetGroup/SetHttps)
+│   ├── website_rewrite.go         — 伪静态 rewrite
+│   ├── website_auth_basic.go      — BasicAuth + 路径鉴权
+│   ├── website_domain.go          — 多域名管理
+│   ├── website_acme_account.go
+│   ├── website_ca.go
+│   ├── website_dns_account.go
+│   └── website_template.go
+│
+├── app/dto/                        # 数据传输对象
+│   ├── nginx.go                   — NginxParam/Upstream 等通用
+│   └── request/website*.go        — 入参 (request.WebsiteCreate 等)
+│
+├── app/repo/                       # 仓储层 (8 个文件)
+│   ├── website.go
+│   ├── website_ssl.go
+│   ├── website_dns_account.go
+│   ├── website_acme_account.go
+│   ├── website_ca.go
+│   ├── website_domain.go
+│   └── website_template.go
+│
+├── app/model/                      # GORM 模型 (7 个文件)
+│   ├── website.go
+│   ├── website_ssl.go
+│   ├── website_dns_account.go
+│   ├── website_acme_account.go
+│   ├── website_ca.go
+│   ├── website_template.go
+│   └── website_domain.go
+│
+├── utils/
+│   ├── nginx/
+│   │   ├── parser/                — 手写 Nginx 配置 AST 解析
+│   │   └── components/            — Config/Server/Location/Upstream AST 节点
+│   ├── docker/                    — Docker Client (OpenResty 容器交互)
+│   ├── files/                     — 文件操作 + 权限
+│   └── cmd/                       — chown / docker exec 封装
+│
+└── cmd/server/nginx_conf/          — 编译期嵌入的 OpenResty 配置模板</code></pre>
+<hr>
+<h2>4. 调用链 (Router → Handler → Service → Repository → Model)</h2>
+<pre data-lang=""><code>[浏览器 / curl] → Gin Router (group("websites"))
+                    ↓
+              (b *BaseApi)  ← site/api/v2/website.go   # 64 个 handler
+                    ↓
+       websiteService (IWebsiteService)               # interface in website.go:72
+                    ↓
+        func (w WebsiteService) Method()              # service/website.go 等
+                    ↓
+       websiteRepo / websiteSSLRepo / websiteDomainRepo
+       appInstallRepo / runtimeRepo / databaseRepo   # repo/*.go (GORM CRUD)
+                    ↓
+       MySQL / SQLite (websites, website_ssls, website_domains, website_acme_accounts, website_dns_accounts, website_cas, website_templates, website_template_outputs)
+                    ↓
+       utils/nginx/parser + components                # AST 解析 / 生成
+                    ↓
+       OpenResty 容器 (1panel/openresty 镜像)
+       + Let's Encrypt 服务
+       + Docker API (镜像 / 容器操作)</code></pre>
+<h3>4.1 中间件链 (统一走 router/enter.go 注册的 SessionAuth + Casbin + ReqLog)</h3>
+<pre data-lang="go"><code class="language-go">// 1Panel 全局中间件 (简化):
+//   SessionAuth      — 校验 JWT / Cookie
+//   Casbin rbac       — casbin 策略 (rbac_model.conf) 决定 endpoint 权限
+//   ReqLog            — x-panel-log 审计日志
+//   ApiKeyAuth        — Swagger 文档用
+//   Timestamp         — 防重放</code></pre>
+<p><code>BaseApi</code> 是所有 handler 的"宿主", 嵌入了 <code>*gin.Context</code>, 通过 <code>helper.CheckBindAndValidate(&amp;req, c)</code> 统一做入参绑定 + binding tag 校验。</p>
+<h3>4.2 Service 接口契约 (IWebsiteService, 摘自 service/website.go:72-157)</h3>
+<pre data-lang="go"><code class="language-go">type IWebsiteService interface {
+    // 基础 CRUD
+    PageWebsite(req) (int64, []WebsiteRes, error)
+    GetWebsites() ([]WebsiteDTO, error)
+    CreateWebsite(create) error
+    OpWebsite(req) error
+    UpdateWebsite(req) error
+    DeleteWebsite(req) error
+    GetWebsite(id) (WebsiteDTO, error)
+    GetWebsiteOptions(req) ([]WebsiteOption, error)
+
+    // 运维
+    ChangePHPVersion(req) error
+    ChangeGroup(group, newGroup uint) error
+    ChangeDefaultServer(id uint) error
+    OpWebsiteLog(req) error
+    UpdateStream(req) error
+    OperateCrossSiteAccess(req) error
+    ExecComposer(req) error
+    PreInstallCheck(req) ([]WebsitePreInstallCheck, error)
+
+    // Nginx 配置
+    GetNginxConfigByScope(req) (*WebsiteNginxConfig, error)
+    UpdateNginxConfigByScope(req) error
+    GetWebsiteNginxConfig(id, type) (*FileInfo, error)
+    UpdateNginxConfigFile(req) error
+    GetWebsiteHTTPS(id) (WebsiteHTTPS, error)
+    OpWebsiteHTTPS(ctx, req) (*WebsiteHTTPS, error)
+
+    // 目录 / 权限
+    LoadWebsiteDirConfig(req) (*WebsiteDirConfig, error)
+    UpdateSiteDir(req) error
+    UpdateSitePermission(req) error
+
+    // 反代 / 负载均衡
+    OperateProxy(req) error
+    GetProxies(id) ([]WebsiteProxyConfig, error)
+    UpdateProxyFile(req) error
+    UpdateProxyCache(req) error
+    GetProxyCache(id) (NginxProxyCache, error)
+    ClearProxyCache(req) error
+    DeleteProxy(req) error
+    UpdateProxyStatus(req) error
+    GetLoadBalances(id) ([]NginxUpstream, error)
+    CreateLoadBalance(req) error
+    DeleteLoadBalance(req) error
+    UpdateLoadBalance(req) error
+    UpdateLoadBalanceFile(req) error
+
+    // 域名
+    CreateWebsiteDomain(create) ([]WebsiteDomain, error)
+    GetWebsiteDomain(websiteId) ([]WebsiteDomain, error)
+    DeleteWebsiteDomain(domainId) error
+    UpdateWebsiteDomain(req) error
+
+    // rewrite / auth / 防护
+    GetRewriteConfig(req) (*NginxRewriteRes, error)
+    UpdateRewriteConfig(req) error
+    OperateCustomRewrite(req) error
+    ListCustomRewrite() ([]string, error)
+    GetAuthBasics(req) (NginxAuthRes, error)
+    UpdateAuthBasic(req) error
+    GetPathAuthBasics(req) ([]NginxPathAuthRes, error)
+    UpdatePathAuthBasic(req) error
+    UpdateCors(req) error
+    GetCors(id) (*CorsConfig, error)
+    GetAntiLeech(id) (*NginxAntiLeechRes, error)
+    UpdateAntiLeech(req) error
+    OperateRedirect(req) error
+    GetRedirect(id) ([]NginxRedirectConfig, error)
+    UpdateRedirectFile(req) error
+    UpdateDefaultHtml(req) error
+    GetDefaultHtml(type) (*WebsiteHtmlRes, error)
+    SetRealIPConfig(req) error
+    GetRealIPConfig(id) (*WebsiteRealIP, error)
+
+    // 资源
+    GetWebsiteResource(id) ([]Resource, error)
+    ListDatabases() ([]Database, error)
+    ChangeDatabase(req) error
+
+    // 批量
+    BatchOpWebsite(req) error
+    BatchSetGroup(req) error
+    BatchSetHttps(ctx, req) error
+}</code></pre>
+<hr>
+<h2>5. 数据库表 (GORM 模型)</h2>
+<h3>5.1 <code>websites</code> (主表) — model/website.go</h3>
+<table><thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td>ID</td><td>uint (BaseModel)</td><td>主键</td></tr><tr><td>Protocol</td><td>string</td><td><code>HTTP</code> / <code>HTTPS</code> / <code>Stream</code></td></tr><tr><td>PrimaryDomain</td><td>string</td><td>主域名 (如 <code>example.com</code>)</td></tr><tr><td>Type</td><td>string</td><td><code>Static</code> / <code>Runtime</code> / <code>Deployment</code> / <code>Stream</code> / <code>Subsite</code></td></tr><tr><td>Alias</td><td>string</td><td>别名 (Punycode 编码后)</td></tr><tr><td>Remark</td><td>string</td><td>备注</td></tr><tr><td>Status</td><td>string</td><td><code>Running</code> / <code>Stopped</code></td></tr><tr><td>HttpConfig</td><td>string</td><td>HTTP→HTTPS 跳转策略 (<code>HTTPToHTTPS</code> 等)</td></tr><tr><td>ExpireDate</td><td>time.Time</td><td>到期时间</td></tr><tr><td>Proxy</td><td>string</td><td>反代目标 (如 <code>127.0.0.1:9000</code>)</td></tr><tr><td>ProxyType</td><td>string</td><td><code>Tcp</code> / <code>Unix</code></td></tr><tr><td>SiteDir</td><td>string</td><td>子目录 (相对路径)</td></tr><tr><td>ErrorLog / AccessLog</td><td>bool</td><td>错误 / 访问日志开关</td></tr><tr><td>DefaultServer</td><td>bool</td><td>是否为 OpenResty 默认 server</td></tr><tr><td>IPV6</td><td>bool</td><td>是否监听 IPv6</td></tr><tr><td>Rewrite</td><td>string</td><td>选中的 rewrite 模板</td></tr><tr><td>WebsiteGroupID</td><td>uint</td><td>所属网站分组</td></tr><tr><td>WebsiteSSLID</td><td>uint</td><td>绑定的 SSL 证书 ID</td></tr><tr><td>RuntimeID</td><td>uint</td><td>绑定的运行时 (PHP/Node/...)</td></tr><tr><td>AppInstallID</td><td>uint</td><td>绑定的 1Panel 应用安装</td></tr><tr><td>FtpID</td><td>uint</td><td>关联的 FTP 账号</td></tr><tr><td>ParentWebsiteID</td><td>uint</td><td>父站 ID (Subsite 用)</td></tr><tr><td>User / Group</td><td>string</td><td>文件系统所有者 (UID:GID)</td></tr><tr><td>DbType / DbID</td><td>string / uint</td><td>关联的数据库</td></tr><tr><td>Favorite</td><td>bool</td><td>收藏</td></tr><tr><td>StreamPorts</td><td>string</td><td>逗号分隔的 TCP/UDP 端口 (Stream 用)</td></tr></tbody></table>
+<h3>5.2 <code>website_ssls</code> — model/website_ssl.go</h3>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td>PrimaryDomain</td><td>主域名</td></tr><tr><td>PrivateKey / Pem</td><td>私钥 / 证书 (加密存储)</td></tr><tr><td>Domains</td><td>域名列表 (逗号分隔)</td></tr><tr><td>Type</td><td><code>existed</code> / <code>manual</code> / <code>acme</code> / <code>ca</code></td></tr><tr><td>Provider</td><td>Let's Encrypt / ZeroSSL / 自定义</td></tr><tr><td>DnsAccountID</td><td>DNS API 账号 (DNS-01 验证用)</td></tr><tr><td>AcmeAccountID</td><td>ACME 账号</td></tr><tr><td>CaID</td><td>自签 CA 引用</td></tr><tr><td>AutoRenew</td><td>自动续签</td></tr><tr><td>ExpireDate / StartDate</td><td>证书有效期</td></tr><tr><td>KeyType</td><td><code>RSA2048</code> / <code>RSA4096</code> / <code>EC256</code> / <code>EC384</code></td></tr><tr><td>PushDir / Dir</td><td>推送到节点 (多节点)</td></tr><tr><td>SkipDNS / Nameserver1/2</td><td>自定义 DNS</td></tr><tr><td>DisableCNAME</td><td>禁用 CNAME 跟随</td></tr><tr><td>ExecShell / Shell</td><td>申请成功后执行的脚本</td></tr><tr><td>MasterSSLID</td><td>主节点 SSL ID</td></tr><tr><td>Nodes / PushNode</td><td>推送节点配置</td></tr><tr><td>PrivateKeyPath / CertPath</td><td>实际文件路径 (OpenResty 读取)</td></tr><tr><td>IsIp</td><td>是否为 IP 证书</td></tr></tbody></table>
+<h3>5.3 <code>website_dns_accounts</code> — model/website_dns_account.go</h3>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td>Name</td><td>账号备注名 (如 "我的阿里云 DNS")</td></tr><tr><td>Type</td><td>厂商: <code>AliYun</code> / <code>Tencent</code> / <code>Cloudflare</code> / <code>Huawei</code> 等</td></tr><tr><td>Authorization</td><td>API token (加密存储, json:"-" 不返回)</td></tr></tbody></table>
+<h3>5.4 <code>website_acme_accounts</code> — model/website_acme_account.go</h3>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td>Email</td><td>ACME 注册邮箱</td></tr><tr><td>URL</td><td>ACME 服务 URL (默认 Let's Encrypt)</td></tr><tr><td>PrivateKey</td><td>账号私钥 (加密)</td></tr><tr><td>Type</td><td><code>letsencrypt</code> (默认) / <code>zerossl</code> / <code>buypass</code> / <code>google</code></td></tr><tr><td>EabKid / EabHmacKey</td><td>EAB (External Account Binding) 凭证 (ZeroSSL 等用)</td></tr><tr><td>KeyType</td><td><code>RSA2048</code> / <code>RSA4096</code> / <code>EC256</code> / <code>EC384</code></td></tr><tr><td>UseProxy / CaDirURL / UseEAB</td><td>代理 / 自定义 CA 目录 / 是否用 EAB</td></tr></tbody></table>
+<h3>5.5 <code>website_cas</code> — model/website_ca.go</h3>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td>CSR</td><td>证书签发请求</td></tr><tr><td>Name</td><td>CA 名称</td></tr><tr><td>PrivateKey</td><td>CA 私钥</td></tr><tr><td>KeyType</td><td>密钥类型</td></tr></tbody></table>
+<h3>5.6 <code>website_templates</code> / <code>website_template_outputs</code> — model/website_template.go</h3>
+<table><thead><tr><th>表</th><th>字段</th><th>说明</th></tr></thead><tbody><tr><td>website_templates</td><td>Name / Type / Content / FilePath / Variables / Remark</td><td>模板 (single / multi)</td></tr><tr><td>website_template_outputs</td><td>Name / TemplateID / TemplateType / VariableValues / OutputPath</td><td>模板输出实例</td></tr></tbody></table>
+<h3>5.7 <code>website_domains</code> — model/website_domain.go</h3>
+<table><thead><tr><th>字段</th><th>说明</th></tr></thead><tbody><tr><td>WebsiteID</td><td>关联的 website ID</td></tr><tr><td>Domain</td><td>域名</td></tr><tr><td>SSL</td><td>是否启用 SSL</td></tr><tr><td>Port</td><td>监听端口 (默认 80 / 443)</td></tr></tbody></table>
+<hr>
+<h2>6. 关键函数 4 段讲解 (8 个)</h2>
+<h3>6.1 <code>CreateWebsite</code> (service/website.go:268-601)</h3>
+<p><strong>Purpose</strong>: 创建网站的"总入口", 编排所有子任务 (OpenResty 配置 + SSL + FTP + DB + 反代), 是 1Panel Website 模块"最复杂的函数"。</p>
+<p><strong>Params</strong>:</p>
+<ul>
+<li><code>create request.WebsiteCreate</code> — 前端入参, 必含: <code>Type</code>, <code>Alias</code>, <code>Domains[]</code>, <code>WebsiteGroupID</code>, <code>Proxy</code>, <code>IPV6</code>, <code>CreateDb</code> (可选), <code>EnableSSL</code> (可选), <code>FtpUser/FtpPassword</code> (可选), <code>TaskID</code> (用于进度上报)</li>
+</ul>
+<p><strong>Flow</strong> (简化):</p>
+<ol>
+<li><strong>校验 alias</strong>: 拒绝 "default" / 中文 Punycode 编码 / 重名校验 (line 269-281)</li>
+<li><strong>base64 解密 FTP 密码</strong> (line 282-288)</li>
+<li><strong>获取 OpenResty 容器配置</strong> (默认 HTTP/HTTPS 端口) — <code>getAppInstallByKey(constant.AppOpenresty)</code> (line 290-294)</li>
+<li><strong>构建 website 对象</strong> (Status=Running, SiteDir="/", AccessLog/ErrorLog=true) (line 297-309)</li>
+<li><strong>分支处理</strong>:</li>
+</ol>
+<ul>
+<li><strong>Stream 类型</strong> (line 317-330): 解析 StreamPorts, 检查端口冲突</li>
+<li><strong>普通类型</strong> (line 331-342): 解析多域名, 默认 HTTP 端口</li>
+</ul>
+<ol>
+<li><strong>创建 task 编排</strong> (line 344-347): <code>task.NewTaskWithOps(primaryDomain, TaskCreate, TaskScopeWebsite, create.TaskID, 0)</code></li>
+<li><strong>可选子任务</strong>:</li>
+</ol>
+<ul>
+<li><code>createDataBase</code> (line 349-399): 若 CreateDb=true, 调用 MySQL/PG service 创库</li>
+<li><strong>Deployment 类型</strong> (line 401-450): 若是 NewApp → 调 <code>NewIAppService().Install()</code>; 若选已有 → 查 <code>appInstallRepo</code></li>
+<li><strong>Runtime 类型</strong> (line 451-482): 查 <code>runtimeRepo</code>, PHP 用 unix socket, 其它用 TCP</li>
+<li><strong>Subsite 类型</strong> (line 483-490): 查父站, 设置 <code>ParentWebsiteID + SiteDir</code></li>
+</ul>
+<ol>
+<li><strong>核心 configNginx 子任务</strong> (line 492-543):</li>
+</ol>
+<ul>
+<li>调 <code>configDefaultNginx(website, domains, appInstall, runtime, create.StreamConfig)</code> 写 OpenResty 配置</li>
+<li>若 Static + TemplateOutputID, 复制模板输出到 site 根目录</li>
+<li>非 Stream 时: <code>createWafConfig</code> (生成 WAF conf) + <code>createOpenBasedirConfig</code> (PHP 安全)</li>
+<li><strong>DB 事务</strong>: <code>websiteRepo.Create</code> + <code>websiteDomainRepo.BatchCreate</code> → 提交</li>
+</ul>
+<ol>
+<li><strong>deleteWebsite 回滚 hook</strong> (line 545-549): 失败时自动删目录</li>
+<li><strong>可选子任务</strong>:</li>
+</ol>
+<ul>
+<li><code>enableSSL</code> (line 551-579): 选已有证书 + 调 <code>applySSL</code> 写 ssl_certificate 块</li>
+<li><code>createFtpUser</code> (line 581-592): 调 <code>NewIFtpService().CreateWebsite</code> 创建 FTP 账号</li>
+</ul>
+<ol>
+<li><strong>task.Execute()</strong> (line 594-596): 串行/并行执行子任务</li>
+<li><strong>绑定到 Agent</strong> (line 597-599): 多节点场景, 通过 <code>bindDeploymentWebsiteToAgentByAppInstall</code> 同步到子节点</li>
+</ol>
+<p><strong>Callees</strong>:</p>
+<ul>
+<li><code>task.NewTaskWithOps / AddSubTask / Execute</code> (agent/app/task)</li>
+<li><code>getAppInstallByKey</code> (utils)</li>
+<li><code>getWebsiteDomains / configDefaultNginx / createWafConfig / createOpenBasedirConfig / applySSL</code> (website_utils.go)</li>
+<li><code>NewIAppService().Install</code> (app/service/app.go)</li>
+<li><code>NewIMysqlService().Create / NewIPostgresqlService().Create</code> (database 服务)</li>
+<li><code>NewIFtpService().CreateWebsite</code> (ftp service)</li>
+<li><code>bindDeploymentWebsiteToAgentByAppInstall</code> (agent 同步)</li>
+<li>Repo: <code>websiteRepo</code>, <code>websiteDomainRepo</code>, <code>appInstallRepo</code>, <code>runtimeRepo</code>, <code>appDetailRepo</code>, <code>appRepo</code>, <code>databaseRepo</code>, <code>websiteSSLRepo</code>, <code>websiteTemplateOutputRepo</code>, <code>mysqlRepo</code>, <code>postgresqlRepo</code></li>
+</ul>
+<h3>6.2 <code>DeleteWebsite</code> (service/website.go:715-815)</h3>
+<p><strong>Purpose</strong>: 删除网站, 含子站保护、DB 联动、App 联动、文件清理, 全部走 DB 事务。</p>
+<p><strong>Params</strong>:</p>
+<ul>
+<li><code>req request.WebsiteDelete</code> — 含 <code>ID</code>, <code>DeleteDB</code> (是否联删数据库), <code>DeleteApp</code> (是否联删 1Panel App), <code>DeleteBackup</code> (是否删备份), <code>ForceDelete</code> (是否强制)</li>
+</ul>
+<p><strong>Flow</strong>:</p>
+<ol>
+<li><strong>查 website</strong> (line 716-719)</li>
+<li><strong>子站保护</strong>: 若有子站, 直接返回错误 <code>ErrParentWebsite</code> (line 720-729)</li>
+<li><strong>联删 DB</strong> (line 731-765): 仅 Runtime + DeleteDB=true, 按 <code>DbType</code> 走 MySQL 或 PG 删库逻辑, 强错误用 <code>ForceDelete</code> 标志</li>
+<li><strong>删 Nginx 配置</strong>: <code>delNginxConfig(website, force)</code> (line 767-769)</li>
+<li><strong>删 WAF 配置</strong>: 非 Stream 调 <code>delWafConfig</code> (line 771-775)</li>
+<li><strong>联删 App</strong>: <code>checkIsLinkApp(website) &amp;&amp; DeleteApp</code> 走 <code>deleteAppInstall</code> (line 777-790)</li>
+<li><strong>DB 事务</strong> (line 792-808):</li>
+</ol>
+<ul>
+<li><code>agentRepo.ClearWebsiteIDByWebsiteIDWithCtx</code> (清 agent 关联)</li>
+<li><code>websiteRepo.DeleteBy</code> (删主表)</li>
+<li><code>websiteDomainRepo.DeleteBy</code> (删多域名)</li>
+<li><code>tx.Commit()</code></li>
+</ul>
+<ol>
+<li><strong>异步删备份</strong>: <code>go NewIBackupRecordService().DeleteRecordByName(...)</code> (line 795-797)</li>
+<li><strong>清理上传目录</strong>: <code>os.RemoveAll(dataDir/uploads/website/{alias})</code> (line 810-813)</li>
+</ol>
+<p><strong>Callees</strong>:</p>
+<ul>
+<li><code>delNginxConfig / delWafConfig / checkIsLinkApp</code> (website_utils.go)</li>
+<li><code>deleteMysqlDatabaseForResourceOwner / NewIPostgresqlService().Delete</code> (db service)</li>
+<li><code>deleteAppInstall</code> (app service)</li>
+<li><code>NewIBackupRecordService().DeleteRecordByName</code> (backup)</li>
+<li>Repo: <code>websiteRepo</code>, <code>websiteDomainRepo</code>, <code>agentRepo</code>, <code>mysqlRepo</code>, <code>postgresqlRepo</code>, <code>appInstallRepo</code></li>
+</ul>
+<h3>6.3 <code>OpWebsiteHTTPS</code> (service/website.go:976-1088)</h3>
+<p><strong>Purpose</strong>: 切换一个网站的 HTTPS 状态 (开启 / 关闭 / 更换证书), 写入 OpenResty 的 <code>ssl_certificate</code> / <code>ssl_certificate_key</code> 等指令, 含 HSTS/HTTP3 高级选项。</p>
+<p><strong>Params</strong>:</p>
+<ul>
+<li><code>ctx context.Context</code> — DB 事务 context</li>
+<li><code>req request.WebsiteHTTPSOp</code> — 含 <code>WebsiteID</code>, <code>Enable</code>, <code>WebsiteSSLID</code>, <code>Type</code> (<code>existed</code> / <code>manual</code>), <code>HttpConfig</code>, <code>SSLProtocol []string</code>, <code>Algorithm</code>, <code>Hsts</code>, <code>HstsIncludeSubDomains</code>, <code>Http3</code></li>
+</ul>
+<p><strong>Flow</strong>:</p>
+<ol>
+<li><strong>查 website</strong> (line 977-980)</li>
+<li><strong>HSTS / HTTP3 切换</strong>: 调 <code>ChangeHSTSConfig(req.Hsts, req.HstsIncludeSubDomains, req.Http3, website)</code> (line 985-987)</li>
+<li><strong>填充 res 返回值</strong> (line 988-991)</li>
+<li><strong>关闭 HTTPS 分支</strong> (line 992-1050):</li>
+</ol>
+<ul>
+<li>协议改 <code>HTTP</code>, 清 <code>WebsiteSSLID</code></li>
+<li>遍历所有域名的端口, 调 <code>removeSSLListen</code> 移除 ssl listen</li>
+<li>清理 HttpsPort 占位 listen</li>
+<li>从 static file 模板拿 SSL 相关 nginx param (<code>ssl_certificate</code> / <code>ssl_protocols</code> / <code>http2</code> / HSTS), 调 <code>deleteNginxConfig</code> 全删</li>
+<li><code>websiteRepo.Save</code> 落库</li>
+</ul>
+<ol>
+<li><strong>开启 HTTPS 分支</strong> (line 1052+):</li>
+</ol>
+<ul>
+<li><code>Type == SSLExisted</code>: 查 <code>websiteSSLRepo</code>, 校验 <code>Pem != ""</code>, 写到 <code>res.SSL</code></li>
+<li><code>Type == SSLManual</code>: 调 <code>getManualWebsiteSSL(req)</code> 生成 SSL 对象</li>
+</ul>
+<ol>
+<li><strong>调 <code>applySSL</code></strong>: 写 <code>ssl_certificate</code> / <code>ssl_certificate_key</code> / <code>ssl_protocols</code> / <code>ssl_ciphers</code> / <code>add_header Strict-Transport-Security</code> / <code>listen 443 ssl http2</code> (line 1072-1075)</li>
+<li><strong><code>websiteSSL.ID == 0</code></strong>: 新证书 → <code>websiteSSLRepo.Create</code> (line 1078-1083)</li>
+<li><strong><code>websiteRepo.Save</code></strong> 持久化 (line 1084-1086)</li>
+</ol>
+<p><strong>Callees</strong>:</p>
+<ul>
+<li><code>ChangeHSTSConfig</code> (website_utils.go)</li>
+<li><code>removeSSLListen / deleteListenAndServerName / setListen / applySSL / deleteNginxConfig</code> (website_utils.go)</li>
+<li><code>getAppInstallByKey</code> (utils)</li>
+<li><code>getManualWebsiteSSL</code> (website_utils.go)</li>
+<li><code>getNginxParamsFromStaticFile(dto.SSL, nil)</code> (dto.SSL 模板)</li>
+<li>Repo: <code>websiteRepo</code>, <code>websiteDomainRepo</code>, <code>websiteSSLRepo</code></li>
+</ul>
+<h3>6.4 <code>GetNginxConfigByScope</code> (service/website.go:849-868)</h3>
+<p><strong>Purpose</strong>: 按"作用域" (Scope) 读 OpenResty 配置里的参数列表, 用于面板做"开关 + 表格"形式的高级配置 UI。</p>
+<p><strong>Params</strong>:</p>
+<ul>
+<li><code>req request.NginxScopeReq</code> — 含 <code>Scope</code> (如 <code>cors</code> / <code>auth_basic</code> / <code>leech</code> / <code>realip</code>), <code>WebsiteID</code></li>
+</ul>
+<p><strong>Flow</strong>:</p>
+<ol>
+<li><strong>scope → keys 映射</strong>: 查 <code>dto.ScopeKeyMap[req.Scope]</code>, 若不存在或空 → 返回 nil (line 850-853)</li>
+<li><strong>查 website</strong> (line 854-858)</li>
+<li><strong>按 keys 解析</strong>: 调 <code>getNginxParamsByKeys(constant.NginxScopeServer, keys, &amp;website)</code> 走 AST 解析, 返回该 server 块下指定 name 的 directive 列表 (line 859-863)</li>
+<li><strong>判断 enable</strong>: 第一个 param 列表非空 → enable=true (line 864-865)</li>
+</ol>
+<p><strong>Callees</strong>:</p>
+<ul>
+<li><code>dto.ScopeKeyMap</code> (dto/nginx.go 静态映射)</li>
+<li><code>getNginxParamsByKeys</code> (website_utils.go)</li>
+<li><code>utils/nginx/parser</code> 解析器</li>
+</ul>
+<h3>6.5 <code>UpdateAntiLeech</code> (service/website.go:1477-1602)</h3>
+<p><strong>Purpose</strong>: 生成"防盗链 + 缓存"组合 location 块, 写到 server 内的 <code>include</code> 之前。</p>
+<p><strong>Params</strong>:</p>
+<ul>
+<li><code>req request.NginxAntiLeechUpdate</code> — 含 <code>WebsiteID</code>, <code>Enable</code>, <code>Cache</code>, <code>CacheTime/CacheUint</code>, <code>Extends</code> (后缀列表, 逗号分隔), <code>ServerNames</code>, <code>NoneRef</code>, <code>Blocked</code>, <code>Return</code>, <code>LogEnable</code></li>
+</ul>
+<p><strong>Flow</strong>:</p>
+<ol>
+<li><strong>查 website + 读完整 Nginx 配置</strong> (line 1478-1490)</li>
+<li><strong>遍历 server.location</strong>, 删除已有的防盗链 location (<code>location ~ .*\\.(...)$</code>) (line 1491-1501)</li>
+<li><strong>若 Enable 或 Cache=true</strong> (line 1502+):</li>
+</ol>
+<ul>
+<li>解析 exts, 拼出正则 <code>.*\.(ext1|ext2|ext3)$</code></li>
+<li>构建新 location block:</li>
+<li>若 <code>Cache</code>: 加 <code>expires {CacheTime}{CacheUint}</code></li>
+<li>若 <code>!LogEnable</code>: 加 <code>access_log off; log_not_found off;</code></li>
+<li>若 <code>Enable</code>: 加 <code>valid_referers none blocked server_names...</code>, 加 <code>if ($invalid_referer) { return {Return}; }</code></li>
+<li>若 Type=Deployment: 加 <code>getRootProxyDirectives(website.Proxy)</code> (反代块)</li>
+</ul>
+<ol>
+<li><strong>插入到 include 之前</strong> (line 1580-1591)</li>
+<li><strong>写回 + reload</strong>: <code>nginx.WriteConfig</code> → <code>updateNginxConfig</code> → 若失败回滚文件 (line 1594-1601)</li>
+</ol>
+<p><strong>Callees</strong>:</p>
+<ul>
+<li><code>getNginxFull</code> (读 server 配置)</li>
+<li><code>nginx.WriteConfig</code> (AST → 文本)</li>
+<li><code>updateNginxConfig</code> (落盘 + reload)</li>
+<li><code>components.Directive / Block / IDirective</code> (AST 节点)</li>
+</ul>
+<h3>6.6 <code>PreInstallCheck</code> (service/website.go:1090-1134)</h3>
+<p><strong>Purpose</strong>: 创建网站前, 校验依赖 (OpenResty 容器必须 Running, 其它 Install 列表也都健康)。</p>
+<p><strong>Params</strong>:</p>
+<ul>
+<li><code>req request.WebsiteInstallCheckReq</code> — <code>InstallIds []uint</code> (额外要校验的 app install ID)</li>
+</ul>
+<p><strong>Flow</strong>:</p>
+<ol>
+<li><strong>查 OpenResty App</strong> (line 1097-1100)</li>
+<li><strong>查 appInstall</strong> (line 1101-1112):</li>
+</ol>
+<ul>
+<li>空 → 加错误 <code>ErrNotInstall</code> 项, showErr=true</li>
+<li>存在 → 拼到 checkIds</li>
+</ul>
+<ol>
+<li><strong>遍历 installList</strong> (line 1113-1129):</li>
+</ol>
+<ul>
+<li>调 <code>syncAppInstallStatus(&amp;install, false)</code> 强制同步状态</li>
+<li>任一非 Running → showErr=true</li>
+</ul>
+<ol>
+<li><strong>showErr=true</strong> → 返回 res; <strong>否则返回 nil</strong> (line 1130-1133)</li>
+</ol>
+<p><strong>Callees</strong>:</p>
+<ul>
+<li><code>appRepo / appInstallRepo.GetFirst / ListBy</code></li>
+<li><code>syncAppInstallStatus</code> (utils/docker)</li>
+<li><code>buserr.WithDetail</code> (错误码)</li>
+</ul>
+<h3>6.7 <code>ChangePHPVersion</code> (service/website.go:1303-1384)</h3>
+<p><strong>Purpose</strong>: 切换 PHP 网站的 PHP 版本 (Runtime 切换), 写 <code>proxy_pass</code> 和默认首页 (index.php)。</p>
+<p><strong>Params</strong>:</p>
+<ul>
+<li><code>req request.WebsitePHPVersionReq</code> — <code>WebsiteID</code>, <code>RuntimeID</code> (0 表示回到 Static)</li>
+</ul>
+<p><strong>Flow</strong>:</p>
+<ol>
+<li><strong>校验 PHP Runtime</strong> (line 1304-1324):</li>
+</ol>
+<ul>
+<li><code>Resource == ResourceLocal</code> → 报错 <code>ErrPHPResource</code> (本地 PHP 不支持切换)</li>
+<li>检查 image 是否存在</li>
+</ul>
+<ol>
+<li><strong>读 server 配置</strong> + 解析 (line 1325-1338)</li>
+<li><strong>分两支</strong>:</li>
+</ol>
+<ul>
+<li><strong><code>req.RuntimeID &gt; 0</code></strong> (切到 PHP) (line 1342-1360):</li>
+<li><code>server.UpdateDirective("index", [...])</code> 设置 index 顺序</li>
+<li>移除旧的 <code>location ~ .php</code> 块</li>
+<li>查新 runtime, 写 <code>proxy_pass 127.0.0.1:{port}</code></li>
+<li>若无 <code>index.php</code>, 写入 <code>nginx_conf.IndexPHP</code> 模板</li>
+<li><strong><code>req.RuntimeID == 0</code></strong> (回 Static) (line 1361-1370):</li>
+<li><code>proxy = ""</code></li>
+<li>移除 <code>location ~ .php</code> 块</li>
+<li>写 <code>index.html</code> 模板</li>
+</ul>
+<ol>
+<li><strong><code>nginx.WriteConfig</code></strong> 落盘 + <code>nginxCheckAndReload</code> reload (line 1372-1382)</li>
+<li><strong><code>websiteRepo.Save</code></strong> 持久化 (line 1383)</li>
+</ol>
+<p><strong>Callees</strong>:</p>
+<ul>
+<li><code>parser.NewStringParser</code> (AST 解析)</li>
+<li><code>nginx.WriteConfig</code> (生成)</li>
+<li><code>nginxCheckAndReload</code> (test + reload)</li>
+<li><code>docker.NewDockerClient</code> (校验 image)</li>
+<li><code>cmd/server/nginx_conf.IndexPHP / Index</code> (内置模板)</li>
+</ul>
+<h3>6.8 <code>UpdateStream</code> (service/website.go:2443-2501)</h3>
+<p><strong>Purpose</strong>: Stream 类型网站改 stream ports / UDP 开关 / 负载算法 / upstream 节点, 重写 stream 块。</p>
+<p><strong>Params</strong>:</p>
+<ul>
+<li><code>req request.StreamUpdate</code> — <code>WebsiteID</code>, <code>StreamConfig.StreamPorts</code>, <code>UDP</code>, <code>Algorithm</code>, <code>Servers []NginxUpstreamServer</code></li>
+</ul>
+<p><strong>Flow</strong>:</p>
+<ol>
+<li><strong>校验</strong> (line 2444-2446): <code>StreamPorts</code> 必填</li>
+<li><strong>查 website + 读 stream 配置</strong> (line 2447-2453)</li>
+<li><strong>检查端口冲突</strong> (line 2455-2462): 遍历每个 port, 调 <code>checkWebsitePort</code></li>
+<li><strong>重写 listen</strong> (line 2464-2480): 清空所有 listen, 按 UDP 决定参数, IPv6 补 <code>[::]:port</code></li>
+<li><strong>构建 / 更新 upstream</strong> (line 2481-2491):</li>
+</ol>
+<ul>
+<li>默认 <code>Algorithm="default"</code> 不写 directive, 其它 (<code>ip_hash</code> / <code>least_conn</code> / <code>random</code>) 写</li>
+<li><code>parseUpstreamServers(req.Servers)</code> 转 AST 节点</li>
+<li>替换同 alias 的 upstream 块</li>
+</ul>
+<ol>
+<li><strong>写盘 + reload</strong> (line 2493-2498)</li>
+<li><strong>持久化</strong> (line 2500-2501)</li>
+</ol>
+<p><strong>Callees</strong>:</p>
+<ul>
+<li><code>getNginxFull</code> / <code>parser.NewParser</code></li>
+<li><code>checkWebsitePort</code> (website_utils.go)</li>
+<li><code>parseUpstreamServers / getNginxUpstreamServers</code> (website_utils.go)</li>
+<li><code>nginx.WriteConfig / nginxCheckAndReload</code></li>
+</ul>
+<hr>
+<h2>7. 其他函数 1 句话列表 (service/website.go 其他 30+)</h2>
+<table><thead><tr><th>函数</th><th>作用</th></tr></thead><tbody><tr><td><code>PageWebsite</code></td><td>搜索网站列表, 支持按 Name / Group / Type / Order 过滤</td></tr><tr><td><code>GetWebsites</code></td><td>全量列表 (按主域名升序)</td></tr><tr><td><code>GetWebsiteOptions</code></td><td>给前端下拉框用 (types 过滤)</td></tr><tr><td><code>UpdateWebsite</code></td><td>改主域名 / 备注 / 分组 / IPV6 / 收藏 / 过期时间</td></tr><tr><td><code>GetWebsite</code></td><td>详情: 含日志路径、Runtime 信息 (PHP open_basedir)、Stream 配置</td></tr><tr><td><code>UpdateWebsiteDomain</code></td><td>改多域名的 SSL 标志, 同步 listen</td></tr><tr><td><code>UpdateNginxConfigByScope</code></td><td>按 scope 增/删 OpenResty 指令</td></tr><tr><td><code>GetWebsiteNginxConfig</code></td><td>读 OpenResty 站点配置文件 (整文件)</td></tr><tr><td><code>GetWebsiteHTTPS</code></td><td>查 HTTPS 配置 (端口 / 协议 / 算法 / HSTS)</td></tr><tr><td><code>UpdateNginxConfigFile</code></td><td>整文件覆盖写 OpenResty conf</td></tr><tr><td><code>GetWebsiteLog</code></td><td>读 access / error 日志 (分页)</td></tr><tr><td><code>OpWebsiteLog</code></td><td>启用 / 禁用 / 清空日志</td></tr><tr><td><code>ChangeDefaultServer</code></td><td>设置 / 取消默认 server (Nginx <code>default_server</code> 标志)</td></tr><tr><td><code>UpdateSiteDir</code></td><td>改网站根目录 (root 指令)</td></tr><tr><td><code>UpdateSitePermission</code></td><td>chown 网站目录 (Linux)</td></tr><tr><td><code>UpdateCors</code></td><td>改 CORS (Access-Control-Allow-*)</td></tr><tr><td><code>GetCors</code></td><td>读 CORS 配置</td></tr><tr><td><code>GetAntiLeech</code></td><td>反向解析 <code>valid_referers</code> 指令</td></tr><tr><td><code>OperateRedirect</code></td><td>增 / 改 / 删 / 启 / 停 redirect conf 文件</td></tr><tr><td><code>GetRedirect</code></td><td>列出所有 redirect conf (.conf + .bak)</td></tr><tr><td><code>UpdateRedirectFile</code></td><td>改 redirect conf 内容 (含回滚)</td></tr><tr><td><code>LoadWebsiteDirConfig</code></td><td>列出网站目录 (3 层深) + 权限校验</td></tr><tr><td><code>GetDefaultHtml</code></td><td>读内置默认 HTML (404 / index / php / domain404 / stop)</td></tr><tr><td><code>UpdateDefaultHtml</code></td><td>改默认 HTML (404 可批量同步)</td></tr><tr><td><code>ChangeGroup</code></td><td>改网站分组 (group / newGroup)</td></tr><tr><td><code>SetRealIPConfig</code></td><td>配置 <code>set_real_ip_from</code> + <code>real_ip_header</code> (CDN 场景)</td></tr><tr><td><code>GetRealIPConfig</code></td><td>反向解析 RealIP 配置</td></tr><tr><td><code>GetWebsiteResource</code></td><td>列关联资源 (Runtime / App / DB)</td></tr><tr><td><code>ListDatabases</code></td><td>列所有 MySQL/PG 库 (供前端关联)</td></tr><tr><td><code>ChangeDatabase</code></td><td>切换网站绑定的 DB</td></tr><tr><td><code>OperateCrossSiteAccess</code></td><td>启用 / 禁用 PHP <code>open_basedir</code> (跨站防护)</td></tr><tr><td><code>ExecComposer</code></td><td>在 PHP 容器里跑 Composer (异步)</td></tr><tr><td><code>BatchOpWebsite</code></td><td>批量启停 (在 service/website_op.go)</td></tr><tr><td><code>BatchSetGroup</code></td><td>批量改分组</td></tr><tr><td><code>BatchSetHttps</code></td><td>批量设 HTTPS</td></tr><tr><td><code>UpdateStream</code></td><td>(上面 6.8 详解)</td></tr></tbody></table>
+<hr>
+<h2>8. 结构体 (Struct) 字段说明</h2>
+<h3>8.1 <code>Website</code> (model/website.go:5)</h3>
+<p>主表实体, 已于 5.1 详述。核心要点:</p>
+<ul>
+<li><code>BaseModel</code>: 内嵌 ID/CreatedAt/UpdatedAt (gorm 默认)</li>
+<li>关系字段 <code>Domains []WebsiteDomain</code> 和 <code>WebsiteSSL WebsiteSSL</code> 都打了 <code>gorm:"-:migration"</code>, 不建外键约束, 仅供 JSON 返回时关联展示</li>
+<li><code>TableName() = "websites"</code></li>
+</ul>
+<h3>8.2 <code>WebsiteSSL</code> (model/website_ssl.go:11)</h3>
+<p>最"重"的一行 (<code>website_ssls</code> 表), 字段 25+。要点:</p>
+<ul>
+<li><code>PrivateKey/Pem</code> 加密存储 (utils/encrypt 包裹)</li>
+<li><code>DnsAccountID/AcmeAccountID/CaID/MasterSSLID</code> 是外键 (但 db 不强约束)</li>
+<li><code>GetLogPath()</code> 方法返回 ACME 申请日志路径: <code>{SSLLogDir}/{primaryDomain}-ssl-{id}.log</code></li>
+<li>含 ACME 的所有"边界条件": <code>SkipDNS / Nameserver1/2 / DisableCNAME / ExecShell / Shell / PushNode / Nodes / PushDir / Dir</code></li>
+<li>含备用字段: <code>IsIp</code> (IP 证书), <code>CertURL</code> (Let's Encrypt 返回的证书 URL)</li>
+</ul>
+<h3>8.3 <code>IWebsiteService</code> (service/website.go:72)</h3>
+<p>接口 (69 个方法), 上面 4.2 全列。设计动机:</p>
+<ul>
+<li><strong>解耦 Handler 与 Service</strong>: 方便单测时 mock</li>
+<li><strong>拆分实现</strong>: 主 service.go + 4 个内嵌小文件 (op/proxy/lb) 通过同 struct 提供, 避免单文件过大</li>
+<li><code>NewIWebsiteService()</code> 工厂返回 <code>&amp;WebsiteService{}</code></li>
+</ul>
+<h3>8.4 <code>NginxParam</code> / <code>NginxUpstream</code> (dto/nginx.go)</h3>
+<p>配置操作的核心 DTO:</p>
+<pre data-lang="go"><code class="language-go">type NginxParam struct {
+    Name   string   `json:"name"`
+    Params []string `json:"params"`
+}
+
+type NginxUpstream struct {
+    Name     string                `json:"name"`
+    Servers  []NginxUpstreamServer `json:"servers"`
+    Algorithm string               `json:"algorithm"`
+}</code></pre>
+<h3>8.5 <code>WebsiteHTTPS</code> (response)</h3>
+<p>返回给前端的 HTTPS 详情, 含:</p>
+<ul>
+<li><code>Enable bool</code></li>
+<li><code>HttpsPort string</code> (逗号分隔)</li>
+<li><code>HttpConfig string</code> (<code>HTTPToHTTPS</code> / <code>HTTPSOnly</code> / <code>HTTP</code>)</li>
+<li><code>SSL WebsiteSSL</code> (完整证书)</li>
+<li><code>SSLProtocol []string</code> (<code>TLSv1.2</code> / <code>TLSv1.3</code> ...)</li>
+<li><code>Algorithm string</code> (OpenSSL 密码套件字符串)</li>
+<li><code>Hsts / HstsIncludeSubDomains / Http3 bool</code></li>
+</ul>
+<hr>
+<h2>9. Mermaid 时序图</h2>
+<h3>9.1 创建网站 (CreateWebsite 全流程)</h3>
+<pre class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 用户 (浏览器)
+    participant R as Gin Router
+    participant H as BaseApi.CreateWebsite
+    participant Sv as WebsiteService
+    participant T as task.Task
+    participant N as Nginx/OpenResty 容器
+    participant DB as MySQL (websites)
+    participant L as Let's Encrypt (SSL 时)
+    participant A as 1Panel App 安装 (Deployment 时)
+
+    U-&gt;&gt;R: POST /websites {type, alias, domains, ...}
+    R-&gt;&gt;H: CreateWebsite(c)
+    H-&gt;&gt;H: helper.CheckBindAndValidate(&amp;req, c)
+    H-&gt;&gt;Sv: CreateWebsite(req)
+    Sv-&gt;&gt;Sv: alias 校验 (含 Punycode 编码)
+    Sv-&gt;&gt;Sv: getAppInstallByKey(AppOpenresty) 取默认端口
+    Sv-&gt;&gt;T: task.NewTaskWithOps(domain, TaskCreate, TaskScopeWebsite)
+    alt CreateDb = true
+        Sv-&gt;&gt;T: AddSubTask("创库", createDataBase)
+        T-&gt;&gt;DB: mysqlRepo.Get / postgresqlRepo.Get
+        T-&gt;&gt;DB: Create MySQL/PG db
+    end
+    alt Type = Deployment
+        alt NewApp
+            Sv-&gt;&gt;A: NewIAppService().Install(req, true)
+            A--&gt;&gt;Sv: appInstall
+        else Existing
+            Sv-&gt;&gt;DB: appInstallRepo.GetFirst(id)
+        end
+        Sv-&gt;&gt;T: AddSubTask("ConfigApp", configApp)
+    else Type = Runtime
+        Sv-&gt;&gt;DB: runtimeRepo.GetFirst(id)
+        Sv-&gt;&gt;Sv: 决定 proxy (127.0.0.1:port / unix:/path)
+    end
+    Sv-&gt;&gt;T: AddSubTask("ConfigOpenresty", configNginx, deleteWebsite 回滚)
+    T-&gt;&gt;N: configDefaultNginx(website, domains, ...) 写 .conf
+    T-&gt;&gt;N: createWafConfig(website) 写 waf .conf
+    T-&gt;&gt;DB: websiteRepo.Create(website)
+    T-&gt;&gt;DB: websiteDomainRepo.BatchCreate(domains)
+    alt EnableSSL = true
+        Sv-&gt;&gt;T: AddSubTaskWithIgnoreErr("EnableSSL", enableSSL)
+        T-&gt;&gt;DB: websiteSSLRepo.GetFirst(id)
+        T-&gt;&gt;N: applySSL → 写 ssl_certificate / listen 443 ssl
+    end
+    alt FTP 账号
+        Sv-&gt;&gt;T: AddSubTaskWithIgnoreErr("ConfigFTP", createFtpUser)
+        T-&gt;&gt;DB: NewIFtpService().CreateWebsite(...)
+    end
+    Sv-&gt;&gt;T: task.Execute()
+    T--&gt;&gt;Sv: 执行结果
+    Sv--&gt;&gt;H: nil / err
+    H--&gt;&gt;R: helper.Success(c) / InternalServer(c, err)
+    R--&gt;&gt;U: HTTP 200 / 500</pre>
+<h3>9.2 申请 SSL (ObtainSSL 流程)</h3>
+<pre class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant R as Router
+    participant H as BaseApi.ApplyWebsiteSSL
+    participant Sv as WebsiteSSLService
+    participant A as ACME Provider
+    participant D as DNS Provider (API)
+    participant L as Lego Library
+    participant N as OpenResty 容器
+    participant DB as MySQL
+
+    U-&gt;&gt;R: POST /websites/ssl/obtain {id, dnsAccountId, acmeAccountId, ...}
+    R-&gt;&gt;H: ApplyWebsiteSSL(c)
+    H-&gt;&gt;Sv: ApplyWebsiteSSL(req)
+    Sv-&gt;&gt;DB: websiteSSLRepo.GetFirst(id)
+    Sv-&gt;&gt;Sv: 校验必填 (DNS / ACME)
+    Sv-&gt;&gt;Sv: newWebsiteSSLLogger (创建日志文件)
+    Sv-&gt;&gt;Sv: withLegoLoggerTimeout (20min 超时)
+    Sv-&gt;&gt;L: newWebsiteSSLLegoClient(ctx, acmeAccount)
+    alt DNS 验证 (DnsAccountID &gt; 0)
+        Sv-&gt;&gt;D: DNS API 客户端 (Aliyun/Tencent/CF/...)
+        Sv-&gt;&gt;L: 注册 DNS-01 challenge 提供方
+    else HTTP 验证
+        Sv-&gt;&gt;L: 注册 HTTP-01 challenge 提供方
+    end
+    L-&gt;&gt;A: 注册账号 (若未注册)
+    A-&gt;&gt;L: 注册成功, 返回 Account
+    L-&gt;&gt;A: Order 创建 (for 域名)
+    A--&gt;&gt;L: Order + Authorizations
+    L-&gt;&gt;A: 满足所有 challenge (DNS-01 添加 TXT 记录 / HTTP-01 写 .well-known)
+    L-&gt;&gt;A: 等待验证
+    A--&gt;&gt;L: All challenges valid
+    L-&gt;&gt;A: Finalize Order (CSR)
+    A--&gt;&gt;L: Certificate (PEM)
+    Sv-&gt;&gt;Sv: saveCertificateFile (写 /www/sites/{alias}/ssl/...)
+    Sv-&gt;&gt;Sv: reloadSystemSSL (重载 OpenResty 容器)
+    Sv-&gt;&gt;N: nginx -s reload
+    Sv-&gt;&gt;DB: websiteSSLRepo.Save (ExpireDate, Status=Success)
+    Sv--&gt;&gt;H: nil
+    H--&gt;&gt;R: Success
+    R--&gt;&gt;U: HTTP 200</pre>
+<h3>9.3 反向代理配置 (OperateProxy 流程)</h3>
+<pre class="mermaid">sequenceDiagram
+    participant U as 用户
+    participant H as UpdateProxyConfig
+    participant Sv as WebsiteService.OperateProxy
+    participant P as website_proxy.go
+    participant N as OpenResty
+
+    U-&gt;&gt;H: POST /websites/proxies/update {websiteId, name, proxyPass, ...}
+    H-&gt;&gt;Sv: OperateProxy(req)
+    Sv-&gt;&gt;P: 操作 (create / update / delete)
+    P-&gt;&gt;P: 读现有 .conf 列表
+    P-&gt;&gt;P: 找到对应 location 块 (by name)
+    alt create / update
+        P-&gt;&gt;P: 更新 proxy_pass / headers / websocket
+    else delete
+        P-&gt;&gt;P: 移除 location
+    end
+    P-&gt;&gt;N: nginx -t
+    P-&gt;&gt;N: nginx -s reload
+    Sv--&gt;&gt;H: nil
+    H--&gt;&gt;U: 200</pre>
+<h3>9.4 模块整体架构图</h3>
+<pre class="mermaid">graph TB
+    subgraph Frontend[1Panel 前端]
+        UI[Web UI&lt;br/&gt;Vue 3 + Element Plus]
+    end
+
+    subgraph Backend[1Panel Backend]
+        Router[Router&lt;br/&gt;ro_website*.go]
+        Handler[Handler&lt;br/&gt;api/v2/website*.go]
+        Service[Service&lt;br/&gt;service/website*.go]
+        Repo[Repository&lt;br/&gt;repo/website*.go]
+        Model[GORM Model&lt;br/&gt;model/website*.go]
+    end
+
+    subgraph External[外部依赖]
+        MySQL[(MySQL/SQLite)]
+        OpenResty[OpenResty 容器&lt;br/&gt;1panel/openresty]
+        Docker[Docker Engine]
+        LetsEncrypt[Let's Encrypt&lt;br/&gt;ZeroSSL]
+        DNSAPI[DNS API&lt;br/&gt;Aliyun/Tencent/CF]
+    end
+
+    UI --&gt;|HTTPS REST| Router
+    Router --&gt;|Gin Context| Handler
+    Handler --&gt;|interface| Service
+    Service --&gt;|GORM| Repo
+    Repo --&gt; Model
+    Repo --&gt; MySQL
+    Service --&gt;|AST 解析/生成| OpenResty
+    Service --&gt;|docker exec| Docker
+    Service --&gt;|Lego ACME| LetsEncrypt
+    Service --&gt;|DNS-01| DNSAPI
+    Docker --&gt;|容器管理| OpenResty
+
+    style Service fill:#ffe0b2
+    style OpenResty fill:#b2dfdb</pre>
+<h3>9.5 网站状态机</h3>
+<pre class="mermaid">stateDiagram-v2
+    [*] --&gt; Creating: CreateWebsite
+    Creating --&gt; Running: task.Execute() OK
+    Creating --&gt; Failed: 任一子任务失败
+    Failed --&gt; [*]: deleteWebsite 回滚
+    Running --&gt; Stopped: OpWebsite(Stop)
+    Stopped --&gt; Running: OpWebsite(Start)
+    Running --&gt; Expired: 当前时间 &gt; ExpireDate
+    Expired --&gt; Running: UpdateWebsite(续期)
+    Running --&gt; Running: UpdateWebsite / UpdateProxy / OpWebsiteHTTPS
+    Running --&gt; [*]: DeleteWebsite
+    Stopped --&gt; [*]: DeleteWebsite</pre>
+<hr>
+<h2>10. Docker / OpenResty / 外部依赖</h2>
+<h3>10.1 OpenResty 容器 (核心)</h3>
+<ul>
+<li><strong>镜像</strong>: <code>1panel/openresty</code> (1Panel 维护的定制版, 集成 WAF / Lua 脚本)</li>
+<li><strong>端口</strong>: 容器对外暴露 80 / 443 (可自定义), 由 <code>appInstall.HttpPort/HttpsPort</code> 决定</li>
+<li><strong>配置文件位置</strong> (容器内): <code>/www/server/openresty/conf/vhost/{alias}.conf</code> + <code>/www/server/openresty/conf/vhost/{alias}.include/*.conf</code></li>
+<li><strong>WAF</strong>: <code>/www/server/openresty/conf/waf/{alias}.conf</code> (由 <code>createWafConfig</code> 生成)</li>
+<li><strong>数据持久化</strong>: <code>/www/sites/{alias}/</code> (HTML / 日志 / SSL / 上传) — 宿主机挂载</li>
+</ul>
+<h3>10.2 Let's Encrypt (SSL)</h3>
+<ul>
+<li>客户端: <strong>Lego</strong> (<code>github.com/go-acme/lego/v4</code>), 由 <code>service/website_ssl.go</code> 包装</li>
+<li>验证方式:</li>
+<li><strong>HTTP-01</strong> (默认): 写 <code>.well-known/acme-challenge/{token}</code> 到 site 根目录</li>
+<li><strong>DNS-01</strong>: 通过 <code>WebsiteDnsAccount</code> 调用厂商 API 加 TXT 记录 (用于泛域名)</li>
+<li>支持 ACME CA: Let's Encrypt / ZeroSSL / BuyPass / Google (通过 <code>WebsiteAcmeAccount.URL</code>)</li>
+<li>自动续签: 定时任务 (cron) 调 <code>AutoRenewSSL(id)</code>, 提前 30 天续</li>
+</ul>
+<h3>10.3 Docker 依赖 (utils/docker)</h3>
+<p><code>utils/docker.NewDockerClient()</code> 拿 Docker SDK client, 用于:</p>
+<ul>
+<li>校验 runtime 镜像是否存在 (<code>checkImageLike</code>)</li>
+<li>Composer exec (<code>docker exec -u {user} {container} composer ...</code>)</li>
+<li>启停 1Panel App / Runtime 容器</li>
+<li>重载 OpenResty (exec <code>nginx -s reload</code> / <code>nginx -t</code>)</li>
+</ul>
+<h3>10.4 数据库 (MySQL / PostgreSQL)</h3>
+<ul>
+<li>Website 创建时, 若 <code>CreateDb=true</code>, 调 <code>NewIMysqlService().Create</code> 或 <code>NewIPostgresqlService().Create</code></li>
+<li>关联存到 <code>website.DbID/DbType</code></li>
+<li>详情查 <code>GetWebsiteResource</code> 把 DB 信息附到返回</li>
+</ul>
+<h3>10.5 第三方库</h3>
+<table><thead><tr><th>库</th><th>用途</th><th>引入位置</th></tr></thead><tbody><tr><td><code>github.com/gin-gonic/gin</code></td><td>HTTP 框架</td><td>router/handler</td></tr><tr><td><code>github.com/jinzhu/copier</code></td><td>struct → DTO 转换</td><td>service</td></tr><tr><td><code>github.com/spf13/afero</code></td><td>文件系统抽象</td><td>service (LoadWebsiteDirConfig)</td></tr><tr><td><code>github.com/go-acme/lego/v4</code></td><td>ACME 客户端</td><td>service/website_ssl.go</td></tr><tr><td>1Panel 自研 <code>utils/nginx/parser</code> + <code>components</code></td><td>Nginx conf AST</td><td>全站</td></tr></tbody></table>
+<hr>
+<h2>11. 关键文件清单 + 行号索引 (Step 1 提取的 20+ file:line)</h2>
+<table><thead><tr><th>file:line</th><th>元素</th><th>说明</th></tr></thead><tbody><tr><td><code>agent/router/ro_website.go:16</code></td><td><code>POST /websites/search</code></td><td>搜索网站</td></tr><tr><td><code>agent/router/ro_website.go:17</code></td><td><code>GET /websites/list</code></td><td>全量列表</td></tr><tr><td><code>agent/router/ro_website.go:18</code></td><td><code>POST /websites</code></td><td>创建</td></tr><tr><td><code>agent/router/ro_website.go:19</code></td><td><code>POST /websites/operate</code></td><td>启停</td></tr><tr><td><code>agent/router/ro_website.go:25</code></td><td><code>GET /websites/:id</code></td><td>详情</td></tr><tr><td><code>agent/router/ro_website.go:39</code></td><td><code>GET /websites/:id/config/:type</code></td><td>读 conf 文件</td></tr><tr><td><code>agent/router/ro_website.go:45</code></td><td><code>POST /websites/:id/https</code></td><td>改 HTTPS</td></tr><tr><td><code>agent/router/ro_website.go:71</code></td><td><code>POST /websites/cors/update</code></td><td>改 CORS</td></tr><tr><td><code>agent/router/ro_website.go:89</code></td><td><code>POST /websites/php/version</code></td><td>切 PHP 版本</td></tr><tr><td><code>agent/router/ro_website.go:96</code></td><td><code>POST /websites/databases</code></td><td>改 DB 关联</td></tr><tr><td><code>agent/router/ro_website_ssl.go:18</code></td><td><code>POST /websites/ssl</code></td><td>创建证书</td></tr><tr><td><code>agent/router/ro_website_ssl.go:26</code></td><td><code>POST /websites/ssl/obtain</code></td><td>申请证书</td></tr><tr><td><code>agent/router/ro_website_ssl.go:28</code></td><td><code>POST /websites/ssl/import</code></td><td>导入主节点证书</td></tr><tr><td><code>agent/router/ro_website_ca.go:19</code></td><td><code>POST /websites/ca/obtain</code></td><td>申请 CA 证书</td></tr><tr><td><code>agent/router/ro_website_dns_account.go:17</code></td><td><code>POST /websites/dns</code></td><td>创 DNS API 账号</td></tr><tr><td><code>agent/router/ro_website_acme_account.go:17</code></td><td><code>POST /websites/acme</code></td><td>创 ACME 账号</td></tr><tr><td><code>agent/router/ro_website_template.go:21</code></td><td><code>POST /websites/templates/upload</code></td><td>上传模板 zip</td></tr><tr><td><code>agent/api/v2/website.go:77</code></td><td><code>func (b *BaseApi) CreateWebsite</code></td><td>handler 入口</td></tr><tr><td><code>agent/api/v2/website.go:121</code></td><td><code>func (b *BaseApi) DeleteWebsite</code></td><td>handler 入口</td></tr><tr><td><code>agent/api/v2/website.go:276</code></td><td><code>func (b *BaseApi) UpdateHTTPSConfig</code></td><td>handler 入口</td></tr><tr><td><code>agent/app/service/website.go:47</code></td><td><code>type WebsiteService struct{}</code></td><td>service 主结构</td></tr><tr><td><code>agent/app/service/website.go:72</code></td><td><code>type IWebsiteService interface</code></td><td>service 接口 (69 方法)</td></tr><tr><td><code>agent/app/service/website.go:159</code></td><td><code>func NewIWebsiteService()</code></td><td>工厂</td></tr><tr><td><code>agent/app/service/website.go:268</code></td><td><code>func CreateWebsite</code></td><td>创建入口</td></tr><tr><td><code>agent/app/service/website.go:492</code></td><td><code>configNginx 子任务</code></td><td>Nginx 配置子任务</td></tr><tr><td><code>agent/app/service/website.go:551</code></td><td><code>enableSSL 子任务</code></td><td>SSL 子任务</td></tr><tr><td><code>agent/app/service/website.go:603</code></td><td><code>func OpWebsite</code></td><td>启停 / 删</td></tr><tr><td><code>agent/app/service/website.go:715</code></td><td><code>func DeleteWebsite</code></td><td>删除</td></tr><tr><td><code>agent/app/service/website.go:849</code></td><td><code>func GetNginxConfigByScope</code></td><td>读 scope 配置</td></tr><tr><td><code>agent/app/service/website.go:917</code></td><td><code>func GetWebsiteHTTPS</code></td><td>读 HTTPS</td></tr><tr><td><code>agent/app/service/website.go:976</code></td><td><code>func OpWebsiteHTTPS</code></td><td>切 HTTPS</td></tr><tr><td><code>agent/app/service/website.go:1090</code></td><td><code>func PreInstallCheck</code></td><td>依赖校验</td></tr><tr><td><code>agent/app/service/website.go:1303</code></td><td><code>func ChangePHPVersion</code></td><td>切 PHP</td></tr><tr><td><code>agent/app/service/website.go:1477</code></td><td><code>func UpdateAntiLeech</code></td><td>防盗链</td></tr><tr><td><code>agent/app/service/website.go:2443</code></td><td><code>func UpdateStream</code></td><td>Stream 配置</td></tr><tr><td><code>agent/app/model/website.go:5</code></td><td><code>type Website struct</code></td><td>主表 GORM</td></tr><tr><td><code>agent/app/model/website.go:46</code></td><td><code>func TableName() "websites"</code></td><td>表名</td></tr><tr><td><code>agent/app/model/website_ssl.go:11</code></td><td><code>type WebsiteSSL struct</code></td><td>证书表</td></tr><tr><td><code>agent/app/model/website_dns_account.go:3</code></td><td><code>type WebsiteDnsAccount struct</code></td><td>DNS API 表</td></tr><tr><td><code>agent/app/model/website_acme_account.go:3</code></td><td><code>type WebsiteAcmeAccount struct</code></td><td>ACME 表</td></tr><tr><td><code>agent/app/model/website_ca.go:3</code></td><td><code>type WebsiteCA struct</code></td><td>CA 表</td></tr><tr><td><code>agent/app/model/website_template.go:3</code></td><td><code>type WebsiteTemplate struct</code></td><td>模板表</td></tr></tbody></table>
+<hr>
+<h2>12. 5 大设计点 (从源码看 1Panel 思路)</h2>
+<h3>12.1 异步任务编排 (Task Pipeline)</h3>
+<p><strong>现象</strong>: <code>CreateWebsite</code> 一次创站可能有 5+ 子任务 (ConfigOpenresty / EnableSSL / ConfigFTP / ConfigApp / CreateDatabase), 串行 + 失败回滚。</p>
+<p><strong>实现</strong>: <code>agent/app/task</code> 包提供 <code>Task</code> + <code>SubTask</code>, 串行/并行调度, 子任务可注册回滚函数 (<code>AddSubTask(name, fn, rollback)</code>)。进度通过 <code>task_id</code> 上报, 前端轮询 <code>websites/search</code> 或订阅 WebSocket。</p>
+<p><strong>好处</strong>: 创站"长流程"不阻塞 API 响应, 失败可回滚, 进度可视化。</p>
+<h3>12.2 OpenResty 配置 AST 解析 (而非字符串拼接)</h3>
+<p><strong>现象</strong>: 1Panel 自己实现了 <code>utils/nginx/parser</code> + <code>utils/nginx/components</code>, 能 <code>Parse</code> 现有 conf, <code>FindServers</code> / <code>FindDirectives("listen")</code> / <code>UpdateDirective(...)</code> / <code>WriteConfig</code> 重新生成。</p>
+<p><strong>实现</strong>: 词法 + 语法分析器 (类似 mini-nginx-conf), 把每条 directive 抽象成 <code>Name + Parameters + (Block | nil)</code>, location 块用 <code>Block</code> 嵌套。</p>
+<p><strong>好处</strong>:</p>
+<ul>
+<li>改 <code>ssl_protocols</code> 不破坏其他指令</li>
+<li>反盗链 / CORS / RealIP 等"插入式"操作, 不需要重写整个 conf</li>
+<li>自动 <code>include</code> 嵌套 include 文件 (<code><em>.include/</em>.conf</code>)</li>
+</ul>
+<h3>12.3 5 种业态统一抽象 (<code>Website.Type</code>)</h3>
+<p><strong>现象</strong>: 1Panel 把 PHP / Node / Java / Go / 1Panel App / Static / TCP-UDP 转发 / 子站都抽象成"一个 Website", 通过 <code>Type</code> 字段区分。</p>
+<p><strong>好处</strong>:</p>
+<ul>
+<li>前端 UI 统一一套 (列表 / 详情 / 删除)</li>
+<li>后端 service 统一一套 (CRUD + 启停)</li>
+<li>仅在创建 + Nginx 配置生成时分发到不同逻辑 (<code>switch website.Type</code>)</li>
+</ul>
+<h3>12.4 多节点推送 (<code>MasterSSLID</code> / <code>Nodes</code> / <code>PushNode</code>)</h3>
+<p><strong>现象</strong>: 集群场景下, 1Panel 节点的 SSL 证书可"主从同步", 通过 <code>MasterSSLID</code> + <code>PushNode</code> + <code>Nodes</code> 字段, 调 <code>pushSSLToNode</code> HTTP API 推送到子节点。</p>
+<p><strong>好处</strong>: 一个 1Panel 集群的证书/配置/网站, 全部统一管理, 子节点无需重复申请。</p>
+<h3>12.5 审计日志与操作可追溯 (x-panel-log)</h3>
+<p><strong>现象</strong>: 几乎所有"会改数据"的 handler 上方都有 <code>@x-panel-log</code> 注释, 含 <code>bodyKeys</code> / <code>BeforeFunctions</code> / <code>formatZH</code> / <code>formatEN</code> 4 个字段。</p>
+<p><strong>效果</strong>:</p>
+<ul>
+<li>面板的"操作日志"页能直接展示: "2026-08-25 10:23 皮卡丘 创建网站 [example.com]"</li>
+<li><code>BeforeFunctions</code> 让日志能在 <code>id → primary_domain</code> 这样的"用户友好"转换, 而不是冰冷的数字</li>
+<li>失败 / 成功都记录, 出问题能复盘</li>
+</ul>
+<hr>
+<h2>13. 调用方依赖 (谁会调 Website 模块)</h2>
+<table><thead><tr><th>调用方</th><th>场景</th><th>调用点</th></tr></thead><tbody><tr><td><strong>前端 (Vue)</strong></td><td>用户在面板点点</td><td>所有 router</td></tr><tr><td><strong>App Store (1Panel App 安装流程)</strong></td><td>安装 WordPress / Ghost 等"带站点的 App"</td><td><code>bindDeploymentWebsiteToAgentByAppInstall</code></td></tr><tr><td><strong>多节点同步 (Agent)</strong></td><td>主节点 push 证书 / 配置</td><td><code>PushWebsiteSSLToNode</code></td></tr><tr><td><strong>定时任务 (Cron)</strong></td><td>SSL 自动续签 / 过期清理</td><td><code>AutoRenewSSL</code> / 定期清理日志</td></tr><tr><td><strong>WAF / Firewall 模块</strong></td><td>联动创建 WAF conf</td><td><code>createWafConfig</code></td></tr><tr><td><strong>FTP 模块</strong></td><td>创建网站时联动开 FTP</td><td><code>NewIFtpService().CreateWebsite</code></td></tr><tr><td><strong>Database 模块</strong></td><td>创建网站时联动创 MySQL/PG</td><td><code>NewIMysqlService().Create</code></td></tr><tr><td><strong>Backup 模块</strong></td><td>删站时删备份</td><td><code>NewIBackupRecordService().DeleteRecordByName</code></td></tr></tbody></table>
+<hr>
+<h2>14. 已知陷阱 / 注意点 (从源码看)</h2>
+<ol>
+<li><strong><code>alias = "default"</code> 是保留字</strong> (CreateWebsite:270): 1Panel 自身用 <code>default</code> 作为兜底, 用户不能用</li>
+<li><strong>中文 alias 需 Punycode</strong> (CreateWebsite:273): <code>common.PunycodeEncode</code></li>
+<li><strong>PHP Runtime 必须是 Appstore 镜像</strong> (CreateWebsite:460): 本地 PHP 不支持 OpenResty 联动</li>
+<li><strong>OpenResty 必须先安装</strong>: PreInstallCheck 第一关就是 <code>AppOpenresty</code> (CreateWebsite:290 也会拿不到端口)</li>
+<li><strong>Stream 类型不能创 WAF</strong> (CreateWebsite:511): WAF 只对 HTTP 有意义</li>
+<li><strong>Subsite 有子站时不能删</strong> (DeleteWebsite:720-729): 保护</li>
+<li><strong>证书是 IP 时 <code>IsIp=true</code></strong> (website_ssl.go): 影响 <code>valid_referers</code> 等</li>
+<li><strong>WAF 失败不回滚</strong> (<code>createWafConfig</code> 内部 <code>os.WriteFile</code> 错误只 log): 偶发小问题, 站能跑</li>
+<li><strong><code>PageWebsite</code> 缺 Name 时</strong> 会先查 <code>websiteDomainRepo.GetBy(WithDomainLike)</code> (line 175-181), 命中后再用 <code>WithSearchKeyword</code> 关联, 性能: 数据多时 N+1</li>
+<li><strong>Composer 必须先有 <code>composer.json</code></strong> (ExecComposer:2385): 严格校验</li>
+</ol>
+<hr>
+<h2>15. 与其他模块的对比 / 边界</h2>
+<ul>
+<li><strong>vs App Store (1Panel 应用商店)</strong>: App 是"独立容器" (WordPress 装在容器里), Website 是"挂在 OpenResty 后面的站点", App 可以"挂"在 Website (Deployment type) 也可不挂。</li>
+<li><strong>vs Firewall</strong>: Firewall 控端口, Website 控站点, 二者通过 OpenResty 的 listen 端口重叠。</li>
+<li><strong>vs Database</strong>: Database 是独立服务, Website 只"引用" DbID/DbType, 不存库结构。</li>
+<li><strong>vs Backup</strong>: Backup 备份文件, Website 删除时联动删备份。</li>
+</ul>
+<hr>
+<h2>16. 总结 (Take-away)</h2>
+<p>1Panel Website 模块 ≈ <strong>cPanel + OpenResty + Let's Encrypt + 1Panel App + WAF</strong> 的高度自动化合体, 6 个 router 文件 + 1342 行 handler + 2502 行 service + 7 个 GORM 表 + 8 个子文件 (utils / ssl / proxy / lb / op / domain / auth_basic / template), 通过自研 Nginx AST 解析器 + 任务编排 + 5 种业态统一抽象, 实现了"一站式开网店"。</p>
+<p><strong>核心入口</strong>: <code>service/website.go::CreateWebsite</code> (line 268), 一处编排 5+ 子任务, 失败自动回滚。</p>
+<p><strong>读源码建议顺序</strong>:</p>
+<ol>
+<li><code>model/website.go</code> (5.1 表结构) — 先看数据</li>
+<li><code>service/website.go:72-157</code> (IWebsiteService 接口) — 看能力清单</li>
+<li><code>service/website.go:268-601</code> (CreateWebsite) — 看主流程</li>
+<li><code>utils/nginx/parser</code> — 看怎么解析 conf</li>
+<li><code>service/website_utils.go</code> — 看所有 helper</li>
+<li><code>service/website_ssl.go</code> — 看 ACME / 续签</li>
+</ol>
+<p>— 完 —</p>
+      </article>
+    </main>
+  </div>
+  <footer>
+    <p>1Panel.edu KB · <a href="../../index.html">返回目录</a> · <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+  <script src="../../assets/app.js"></script>
+</body>
+</html>

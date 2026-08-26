@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nginx (12-security 拆) · 1Panel.edu KB</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <nav class="top">
+    <a class="brand" href="../../index.html"><span class="logo">1P</span>1Panel.edu KB</a>
+    <div class="nav-links">
+      <a href="../../index.html">目录</a>
+      <a href="../../modules/modules/12-security#">本模块</a>
+      <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+  <div class="layout">
+    <aside class="toc">
+      <h3>本文目录</h3>
+      <ul></ul>
+    </aside>
+    <main>
+      <header class="doc">
+        <h1>Nginx (12-security 拆)</h1>
+        <div class="meta">
+          <span class="pill pill-todo">TODO</span>
+          <span>⭐⭐</span>
+          <span>12.1 KB</span>
+          <span>2026-08-25</span>
+        </div>
+      </header>
+      <article>
+<blockquote>30 分钟搞懂 1Panel 怎么管"防火墙以外的安全套件"（SSH / fail2ban / ClamAV / 端口转发）。 详细代码注解在同目录 <code>README.md</code>（77 行 stub + 13 文件清单 / ~6300 行 Go）。 这份文档是入口 —— 先看这个，再决定要不要啃那份。  🎨 <strong>可视化版</strong>：同目录 <code>visual-atlas.html</code>（浏览器里看，4 张 Mermaid 真实图 + 5 个 SSH 内部组件图 + 4 个反模式卡片） 📋 <strong>研究 commit</strong>：<code>7915230</code>（dev-v2） ⚠️ <strong>状态</strong>：stub + 人话版，详细注解待做（<strong>重点</strong>：<code>ssh.go</code> 1603 行浏览器 SSH 终端） 🔥 <strong>关联已研究</strong>：<code>firewall-architecture.md</code>（防火墙 v2 深度注解，3350 行）</blockquote>
+<hr>
+<h2>0. 这份文档回答 5 个问题</h2>
+<ol>
+<li><strong>怎么在浏览器里直接 SSH 进被管机器？WebSocket 怎么转 SSH？</strong></li>
+<li><strong>fail2ban 怎么自动封禁暴力破解 IP？</strong></li>
+<li><strong>ClamAV 病毒扫描怎么集成？上传时实时扫吗？</strong></li>
+<li><strong>端口转发怎么配？跟 iptables NAT 什么关系？</strong></li>
+<li><strong>对 Sirius Cloud L2 资产管理 / 终端访问有什么借鉴价值？</strong></li>
+</ol>
+<hr>
+<h2>1. 一句话总结</h2>
+<p><strong>1Panel 把"浏览器 SSH 终端 + 自动防爆破 + 病毒扫描"做成 3 个独立 service，组合成完整的"被管机器安全套件"。</strong></p>
+<p>藏了 <strong>3 个必抄的设计</strong>（重点是 SSH WebSocket 转发） + <strong>4 个反模式</strong>（重点是凭据存储策略），下面一一拆。</p>
+<hr>
+<h2>2. 模块全景（不含防火墙）</h2>
+<pre class="mermaid">flowchart TB
+    User[用户/浏览器] --&gt; WebUI[1Panel Web UI]
+    WebUI --&gt; SSH[ssh.go&lt;br/&gt;1603 行]
+    WebUI --&gt; F2B[fail2ban.go&lt;br/&gt;230 行]
+    WebUI --&gt; AV[clam.go&lt;br/&gt;477 行]
+    WebUI --&gt; FW[forward_service.go&lt;br/&gt;473 行]
+
+    SSH --&gt; WSS[WebSocket]
+    WSS --&gt; SSHConn[SSH 客户端&lt;br/&gt;连接池]
+    SSHConn --&gt; RealServer[真实机器&lt;br/&gt;:22]
+
+    F2B --&gt; F2Bsvc[fail2ban 服务]
+    F2Bsvc --&gt; Logs[监控 /var/log/secure]
+    F2Bsvc --&gt; Iptables[iptables 封禁]
+
+    AV --&gt; Clam[clamav-daemon]
+    Clam --&gt; Quarantine[隔离区]
+
+    FW --&gt; IptablesNAT[iptables NAT 转发]
+
+    style SSH fill:#2f6f5e,color:#fff
+    style F2B fill:#c97b3f,color:#fff
+    style AV fill:#b06367,color:#fff
+    style FW fill:#5b8c5a,color:#fff</pre>
+<p><strong>4 个子模块独立</strong>：SSH（最大 1603 行）/ fail2ban（230 行）/ ClamAV（477 行）/ 端口转发（473 行）。加起来 ~2800 行（不含防火墙 3350 行）。</p>
+<hr>
+<h2>3. 核心：浏览器 SSH 终端（<code>ssh.go</code> 1603 行）</h2>
+<h3>3.1 为什么浏览器能 SSH？</h3>
+<p>普通 SSH 协议是 TCP 直连到 22 端口。浏览器只能发 HTTP/WebSocket，<strong>没法直接发 TCP</strong>。所以需要"WebSocket ↔ SSH"双向桥接：</p>
+<pre class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 用户(浏览器)
+    participant B as 1Panel Backend
+    participant S as SSH Server(:22)
+    U-&gt;&gt;B: WebSocket: ssh.connect(host, port, user, key)
+    B-&gt;&gt;S: TCP: SSH handshake
+    S--&gt;&gt;B: SSH version exchange
+    B--&gt;&gt;U: WebSocket: connected
+    loop 双向数据流
+        U-&gt;&gt;B: WebSocket: input data (xterm.js keystrokes)
+        B-&gt;&gt;S: TCP: SSH encrypt + send
+        S--&gt;&gt;B: TCP: SSH output
+        B-&gt;&gt;U: WebSocket: output data (xterm.js render)
+    end</pre>
+<p><strong>关键点</strong>：</p>
+<ul>
+<li>浏览器端用 <a href="https://xtermjs.org/">xterm.js</a> 渲染终端 + 接收键盘事件</li>
+<li>WebSocket 是全双工通道，可以反向"推"数据给浏览器</li>
+<li>后端做 WebSocket ↔ TCP 的双向桥</li>
+</ul>
+<h3>3.2 SSH 模块内部结构（推测 4 块）</h3>
+<pre data-lang="go"><code class="language-go">// ssh.go（推测）
+type SSHService struct {
+    connPool map[string]*ssh.Client  // 连接池：key = "host:port:user"
+    credStore *CredentialStore        // 凭据存储
+    knownHosts *KnownHosts            // 已知主机白名单
+    sessions map[string]*WebShellSession  // 活跃会话
+}
+
+type CredentialStore interface {
+    Save(host, user string, key []byte) error  // 加密存
+    Get(host, user string) ([]byte, error)     // 解密读
+    Delete(host, user string) error
+}</code></pre>
+<table><thead><tr><th>子模块</th><th>大概行数</th><th>职责</th></tr></thead><tbody><tr><td><strong>连接池</strong></td><td>300-400</td><td>复用 SSH 连接，避免每次新建</td></tr><tr><td><strong>WebSocket 适配</strong></td><td>500-600</td><td>双向桥 + xterm.js 协议解析</td></tr><tr><td><strong>凭据管理</strong></td><td>400-500</td><td>公私钥 + 密码加密存盘</td></tr><tr><td><strong>known_hosts</strong></td><td>200-300</td><td>防中间人攻击白名单</td></tr></tbody></table>
+<h3>3.3 类比：<strong>像快递柜刷脸取件</strong></h3>
+<pre data-lang=""><code>普通 SSH：每次都要拿钥匙开柜门，钥匙丢了就完了 ❌
+快递柜刷脸：第一次录入脸，之后刷脸就行    ✅
+
+1Panel SSH：第一次连输入密码/私钥，之后从连接池取         ✅
+           凭据加密存盘，下次直接用</code></pre>
+<hr>
+<h2>4. fail2ban 集成（<code>fail2ban.go</code> 230 行）</h2>
+<h3>4.1 工作原理</h3>
+<pre class="mermaid">flowchart LR
+    A[SSH / 1Panel 登录] --&gt; B[写日志&lt;br/&gt;/var/log/secure]
+    B --&gt; C[fail2ban 服务&lt;br/&gt;正则匹配]
+    C --&gt;|5 分钟内 5 次失败| D[iptables 封禁&lt;br/&gt;该 IP 1 小时]
+    C --&gt;|白名单| E[放行]
+    D --&gt; F[到期自动解封]
+    style C fill:#c97b3f,color:#fff
+    style D fill:#b06367,color:#fff</pre>
+<p><strong>1Panel 怎么集成</strong>：</p>
+<ul>
+<li>启动 fail2ban 服务（systemctl start fail2ban）</li>
+<li>写配置文件 <code>/etc/fail2ban/jail.local</code></li>
+<li>配置监控 SSH + 1Panel 自身登录日志</li>
+<li>5 次失败 → 封 1 小时（可配）</li>
+</ul>
+<h3>4.2 配置示例</h3>
+<pre data-lang="ini"><code class="language-ini"># /etc/fail2ban/jail.local
+[sshd]
+enabled  = true
+port     = ssh
+filter   = sshd
+logpath  = /var/log/secure
+maxretry = 5
+bantime  = 3600
+findtime = 600
+
+[1panel]
+enabled  = true
+port     = http,https
+filter   = 1panel
+logpath  = /opt/1panel/log/1panel.log
+maxretry = 5
+bantime  = 3600</code></pre>
+<hr>
+<h2>5. ClamAV 集成（<code>clam.go</code> 477 行）</h2>
+<h3>5.1 两种使用模式</h3>
+<p><strong>A. 上传时实时扫描</strong></p>
+<pre data-lang="go"><code class="language-go">func (s *ClamService) ScanUpload(file io.Reader) (bool, error) {
+    // 1. 上传到临时文件
+    tmpFile := saveTmp(file)
+    defer os.Remove(tmpFile)
+    // 2. 调 clamdscan
+    out, err := exec.Command("clamdscan", "--no-summary", tmpFile).CombinedOutput()
+    // 3. 解析结果
+    if strings.Contains(string(out), "FOUND") {
+        return false, fmt.Errorf("infected: %s", out)
+    }
+    return true, nil
+}</code></pre>
+<p><strong>B. 定时全盘扫描</strong></p>
+<pre data-lang="go"><code class="language-go">func (s *ClamService) FullScan() (ScanResult, error) {
+    // 1. 启动后台扫描任务
+    // 2. 进度推到前端（SSE 或 WebSocket）
+    // 3. 扫描完返回结果（感染文件列表）
+    // 4. 用户选择"隔离"或"删除"
+}</code></pre>
+<h3>5.2 隔离区</h3>
+<pre data-lang="go"><code class="language-go">// 隔离区 = 一个特殊目录 + 权限 000
+const QuarantineDir = "/opt/1panel/clamav/quarantine"
+
+func (s *ClamService) Quarantine(file string) error {
+    // 1. 移动到隔离区
+    // 2. 改权限 000
+    // 3. 记日志
+    return os.Rename(file, filepath.Join(QuarantineDir, filepath.Base(file)))
+}</code></pre>
+<hr>
+<h2>6. 端口转发（<code>forward_service.go</code> 473 行）</h2>
+<p>跟 iptables NAT 配合，把外部端口转到内部服务：</p>
+<pre data-lang="go"><code class="language-go">type Forward struct {
+    Protocol  string  // "tcp" / "udp"
+    ListenIP  string  // "0.0.0.0"
+    ListenPort uint
+    TargetIP   string  // "127.0.0.1"
+    TargetPort uint
+}</code></pre>
+<p>实际是用 iptables：</p>
+<pre data-lang="bash"><code class="language-bash">iptables -t nat -A PREROUTING -p tcp --dport 8080 -j DNAT --to-destination 127.0.0.1:80</code></pre>
+<p>跟防火墙模块用同一套 iptables 操作 API（详见 <code>firewall-architecture.md</code>）。</p>
+<hr>
+<h2>7. 3 个必抄的设计</h2>
+<h3>7.1 ⭐⭐⭐⭐⭐ <strong>WebSocket ↔ SSH 双向桥</strong>（<code>ssh.go</code> 核心）</h3>
+<p><strong>为什么必抄</strong>：1Panel 这 1603 行是生产级实现，直接抄能省 1-2 周。</p>
+<p><strong>怎么抄（Python 简化版）</strong>：</p>
+<pre data-lang="python"><code class="language-python">import asyncio
+import paramiko  # SSH 库
+from fastapi import WebSocket
+
+async def ssh_bridge(ws: WebSocket, host: str, user: str, key: str):
+    await ws.accept()
+    # 1. 建 SSH 连接
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(host, username=user, pkey=key)
+    # 2. 开 shell
+    chan = client.invoke_shell(term='xterm-256color')
+    # 3. 双向转发
+    async def ws_to_ssh():
+        async for msg in ws.iter_text():
+            chan.send(msg)
+    async def ssh_to_ws():
+        loop = asyncio.get_event_loop()
+        while True:
+            data = await loop.run_in_executor(None, chan.recv, 1024)
+            if not data: break
+            await ws.send_text(data.decode('utf-8', errors='replace'))
+    await asyncio.gather(ws_to_ssh(), ssh_to_ws())</code></pre>
+<h3>7.2 ⭐⭐⭐⭐ <strong>凭据加密存储</strong></h3>
+<p>1Panel 怎么存 SSH 私钥和密码是&lt;strong&gt;安全核心&lt;/strong&gt;，需要看代码确认（推测用 AES-GCM + 机器级 master key）。</p>
+<p><strong>避坑</strong>：<strong>不要明文存盘</strong>（即使在 SQLite 里），不要用可逆 Base64 编码。</p>
+<h3>7.3 ⭐⭐⭐⭐ <strong>fail2ban jail.local 模板化</strong></h3>
+<p>1Panel 生成 <code>jail.local</code> 用模板，新加监控项只改模板不改代码。</p>
+<p><strong>怎么抄</strong>：用 Jinja2 / Go template 渲染配置，跟 03-website 的 nginx.conf 渲染模式一样。</p>
+<hr>
+<h2>8. 4 个反模式 / 避坑</h2>
+<h3>8.1 ⚠️ <strong>凭据存储策略待确认</strong></h3>
+<p>1Panel 说是加密，但具体怎么加密、master key 在哪、能不能恢复，需要看 <code>ssh.go</code> 的 <code>CredentialStore</code> 实现。</p>
+<p><strong>避坑</strong>：你的 Sirius Cloud 凭据管理用 HashiCorp Vault 或 AWS Secrets Manager，&lt;strong&gt;不要自己实现&lt;/strong&gt;。</p>
+<h3>8.2 ⚠️ <strong>WebSocket 鉴权如果不做，攻击者可以蹭</strong></h3>
+<p>WebSocket 一旦建立，就可以发 SSH 命令。如果鉴权只在 HTTP 层（JWT 在 query string），容易被截取或滥用。</p>
+<p><strong>避坑</strong>：WebSocket 握手时严格校验 JWT + IP 白名单 + 短时 token。</p>
+<h3>8.3 ⚠️ <strong>ClamAV 启动慢（~10 秒）+ 吃内存（~1GB）</strong></h3>
+<p><code>clamav-daemon</code> 服务启动慢，且常驻 ~1GB 内存。</p>
+<p><strong>避坑</strong>：按需启动（用 <code>clamscan</code> 命令行模式而非 <code>clamdscan</code> 服务模式），或者用云病毒扫描 API（<a href="https://www.virustotal.com">VirusTotal</a>）。</p>
+<h3>8.4 ❌ <strong>fail2ban 配置分散在 3 个文件</strong></h3>
+<p><code>fail2ban.go</code> 230 行 + <code>jail.local</code> 模板 + systemd 服务文件，分散管理。</p>
+<p><strong>避坑</strong>：所有 fail2ban 相关配置收 1 个 <code>JailConfig</code> struct。</p>
+<hr>
+<h2>9. 跟 Sirius Cloud 的对位</h2>
+<table><thead><tr><th>Sirius Cloud 需求</th><th>1Panel Security 对应</th><th>推荐度</th></tr></thead><tbody><tr><td><strong>L2 资产管理 - 终端</strong></td><td>ssh.go 1603 行</td><td>⭐⭐⭐⭐⭐</td></tr><tr><td><strong>L1 自动防爆破</strong></td><td>fail2ban.go + jail.local</td><td>⭐⭐⭐⭐</td></tr><tr><td><strong>L2 文件上传病毒扫描</strong></td><td>clam.go ScanUpload</td><td>⭐⭐⭐⭐</td></tr><tr><td><strong>L2 端口转发</strong></td><td>forward_service.go</td><td>⭐⭐⭐</td></tr><tr><td><strong>新功能：凭据保险柜</strong></td><td>SSH CredentialStore 设计</td><td>⭐⭐⭐⭐</td></tr></tbody></table>
+<h3>9.1 必抄清单</h3>
+<ol>
+<li><strong>WebSocket ↔ SSH 桥</strong>（1603 行直接抄）</li>
+<li><strong>凭据加密存储</strong>（设计模式抄，实现用 Vault 替代）</li>
+<li><strong>fail2ban 集成</strong>（避免重复造轮子）</li>
+</ol>
+<h3>9.2 抄的时候要改</h3>
+<ol>
+<li><strong>不要明文存凭据</strong>（用 Vault）</li>
+<li><strong>WebSocket 严格鉴权</strong>（不要只看 query string JWT）</li>
+<li><strong>ClamAV 按需启动</strong>（不用常驻 daemon）</li>
+</ol>
+<hr>
+<h2>10. 接下来怎么读</h2>
+<h3>10.1 30 分钟通道</h3>
+<ol>
+<li>看完本文档</li>
+<li>看 <code>12-security/README.md</code> §2（SSH 模块 4 块结构推测）</li>
+<li>直接看 <code>ssh.go</code> 的 <code>SSHService</code> struct 定义</li>
+</ol>
+<h3>10.2 2 小时通道</h3>
+<ol>
+<li>上面 30 分钟</li>
+<li><code>ssh.go</code> 的 WebSocket handler（<code>HandleWS</code> / <code>Bridge</code> 函数）</li>
+<li><code>fail2ban.go</code> 的 jail.local 模板生成</li>
+<li><code>clam.go</code> 的 ScanUpload 函数</li>
+</ol>
+<h3>10.3 1 天写代码通道</h3>
+<ol>
+<li>上面所有</li>
+<li>Python 用 <code>paramiko</code> + FastAPI WebSocket 写一个最小 SSH 桥（200 行）</li>
+<li>集成 fail2ban 模板渲染</li>
+<li>集成 clamscan 做上传扫描</li>
+<li>用 Vault 存 SSH 凭据</li>
+</ol>
+<hr>
+<h2>11. 写作说明</h2>
+<ul>
+<li><strong>本文档定位</strong>：30 分钟读完的"故事版"</li>
+<li><strong><code>12-security/README.md</code> 定位</strong>：13 文件清单 + stub（详细注解待做）</li>
+<li><strong><code>firewall-architecture.md</code> 定位</strong>：v2 防火墙深度注解（<strong>已研究</strong>）</li>
+<li><strong><code>00-landscape.md</code> 定位</strong>：13 个模块的全景图</li>
+</ul>
+<hr>
+<p><strong>研究 commit</strong>：<code>7915230</code>（dev-v2）· <strong>更新</strong>：2026-08-24 · <strong>作者</strong>：1Panel v2 研究员</p>
+      </article>
+    </main>
+  </div>
+  <footer>
+    <p>1Panel.edu KB · <a href="../../index.html">返回目录</a> · <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+  <script src="../../assets/app.js"></script>
+</body>
+</html>

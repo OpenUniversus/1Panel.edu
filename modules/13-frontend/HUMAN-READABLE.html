@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frontend 前端 (Vue 3) · 1Panel.edu KB</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <nav class="top">
+    <a class="brand" href="../../index.html"><span class="logo">1P</span>1Panel.edu KB</a>
+    <div class="nav-links">
+      <a href="../../index.html">目录</a>
+      <a href="../../modules/modules/13-frontend#">本模块</a>
+      <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+  <div class="layout">
+    <aside class="toc">
+      <h3>本文目录</h3>
+      <ul></ul>
+    </aside>
+    <main>
+      <header class="doc">
+        <h1>Frontend 前端 (Vue 3)</h1>
+        <div class="meta">
+          <span class="pill pill-todo">TODO</span>
+          <span>-</span>
+          <span>9.8 KB</span>
+          <span>2026-08-24</span>
+        </div>
+      </header>
+      <article>
+<blockquote>30 分钟搞懂 1Panel 的 Vue 3 SPA 是怎么组织的。 详细代码注解在同目录 <code>README.md</code>（98 行 stub + 14 业务域 / 488 view 文件）。 这份文档是入口 —— 先看这个，再决定要不要啃那份。  🎨 <strong>可视化版</strong>：同目录 <code>visual-atlas.html</code>（浏览器里看，4 张 Mermaid 真实图 + 4 层前端架构 + 4 个可借鉴模式 + 3 个反模式卡片） 📋 <strong>研究 commit</strong>：<code>7915230</code>（dev-v2） ⚠️ <strong>状态</strong>：stub + 人话版，详细注解待做 ⭐ <strong>借鉴价值 ★★★★</strong>：你 React 19 + Ant Design 5 栈可借鉴</blockquote>
+<hr>
+<h2>0. 这份文档回答 5 个问题</h2>
+<ol>
+<li><strong>1Panel 前端 488 个 view 文件怎么组织的？</strong></li>
+<li><strong>路由权限怎么统一管？</strong>（不是每页面检查）</li>
+<li><strong>API 类型怎么跟后端 DTO 一一对应？</strong></li>
+<li><strong>xterm.js / monaco-editor / noVNC 怎么集成？</strong></li>
+<li><strong>对 Sirius Cloud React 前端有什么借鉴价值？</strong></li>
+</ol>
+<hr>
+<h2>1. 一句话总结</h2>
+<p><strong>1Panel 前端是 Vue 3 + TS + Element Plus + Pinia + Vite 的 488 view 大仓，按 14 业务域目录组织。技术栈新，组件复用充分，路由 RBAC 统一。</strong></p>
+<p>藏了 <strong>4 个必抄的模式</strong>（重点是路由 RBAC + API 类型生成） + <strong>3 个反模式</strong>（重点是不要照搬 UI 风格 + 单点过多），下面拆。</p>
+<hr>
+<h2>2. 4 层前端架构</h2>
+<pre class="mermaid">flowchart TB
+    A[views/ 488 个文件&lt;br/&gt;14 业务域] --&gt; B[routers/&lt;br/&gt;路由 + 权限守卫]
+    B --&gt; C[components/ 97 个&lt;br/&gt;可复用 UI 组件]
+    C --&gt; D[api/ 51 个 .ts&lt;br/&gt;HTTP 客户端 + 类型]
+    D --&gt; E[后端 /api/v2/*]
+    A --&gt; F[store/ Pinia&lt;br/&gt;用户 / 全局状态 / 主题]
+    A --&gt; G[utils/ 42 个 .ts&lt;br/&gt;工具函数]
+    A --&gt; H[lang/ 14 个&lt;br/&gt;i18n 多语言]
+    style B fill:#2f6f5e,color:#fff
+    style D fill:#c97b3f,color:#fff
+&lt;/pre&gt;
+
+**4 层职责**：
+- **views/**：页面级（488 个，按业务域目录）
+- **routers/**：路由 + 权限守卫
+- **components/**：可复用 UI 组件
+- **api/**：HTTP 客户端 + 类型
+
+---
+
+## 3. 14 业务域目录
+
+| 目录 | 文件 | 对应后端 |
+|---|---:|---|
+| `ai/` | 64 | 09-ai-agent |
+| `website/` | 120 | 03-website |
+| `host/` | 76 | 10-host-monitor + 12-security |
+| `database/` | 47 | 04-database |
+| `container/` | 44 | 02-container |
+| `setting/` | 41 | 基础 |
+| `toolbox/` | 35 | 多个 |
+| `app-store/` | 23 | 01-app-store |
+| `terminal/` | 12 | 12-security/ssh |
+| `cronjob/` | 11 | 06-cronjob |
+| `log/` | 8 | 多个 |
+| `home/` | 4 | dashboard |
+| `login/` | 2 | 基础 |
+| `share/` | 1 | 08-file |
+
+**跟后端 1:1 对位**。每个业务域一个目录，跟后端 service 文件夹对应。
+
+---
+
+## 4. 4 个必抄的模式
+
+### 4.1 ⭐⭐⭐⭐⭐ **路由级 RBAC**（核心）
+
+**为什么必抄**：不是每个页面单独检查权限，是&lt;strong&gt;路由守卫统一管&lt;/strong&gt;。
+</pre>
+<p>// routers/index.ts const routes = [ { path: '/database', component: DatabaseLayout, meta: { requiresAuth: true, permission: 'database:read' }, children: [ { path: 'mysql', component: MysqlList, meta: { permission: 'database:mysql:read' } }, { path: 'redis', component: RedisList, meta: { permission: 'database:redis:read' } }, ] }, { path: '/admin', component: AdminLayout, meta: { requiresAuth: true, permission: 'admin:*' },  // 通配 } ]</p>
+<p>// 全局路由守卫 router.beforeEach((to, from, next) =&gt; { if (!to.meta.requiresAuth) return next() if (!userStore.hasPermission(to.meta.permission)) { return next({ path: '/403' }) } next() })</p>
+<pre data-lang=""><code>
+**好处**：
+- 权限集中在 `meta.permission`
+- 路由 + 权限 1:1 绑定，&lt;strong&gt;新增页面只加路由&lt;/strong&gt;
+- 整棵树遍历，O(1) 鉴权
+
+### 4.2 ⭐⭐⭐⭐⭐ **API 类型从后端 DTO 自动生成**
+
+**为什么必抄**：你已经有 FastAPI + Pydantic V2，TypeScript 类型可以从 OpenAPI 自动生成，&lt;strong&gt;不用手写 DTO 类型&lt;/strong&gt;。
+</code></pre>
+<h1>用 openapi-typescript 从 FastAPI 自动生成</h1>
+<p>npx openapi-typescript http://localhost:8000/openapi.json -o src/api/types.ts</p>
+<pre data-lang=""><code></code></pre>
+<p>// 自动生成（不用手写） export interface Database { id: number name: string type: 'mysql' | 'postgres' | 'redis' | 'mongodb' from: 'local' | 'remote' address: string port: number // ... }</p>
+<pre data-lang=""><code></code></pre>
+<p>// api/database.ts（手写业务函数，类型从生成文件来） import type { Database, CreateDatabaseReq } from './types'</p>
+<p>export const createDatabase = (req: CreateDatabaseReq) =&gt; axios.post&lt;Database&gt;('/api/v2/databases', req)</p>
+<p>export const listDatabases = () =&gt; axios.get&lt;Database[]&gt;('/api/v2/databases')</p>
+<pre data-lang=""><code>
+**好处**：
+- 后端改 DTO → 前端&lt;strong&gt;自动&lt;/strong&gt;拿到新类型
+- TypeScript 编译时阻止调用错误
+- 不用维护两套类型
+
+### 4.3 ⭐⭐⭐⭐ **xterm.js / monaco-editor / noVNC 集成**
+
+1Panel 用 3 个强大的开源库：
+- **[@xterm/xterm](https://xtermjs.org/)**：浏览器 SSH 终端（跟 12-security 的 ssh.go 配合）
+- **[monaco-editor](https://microsoft.github.io/monaco-editor/)**：VS Code 同款代码编辑器（编辑 nginx.conf / my.cnf）
+- **[@novnc/novnc](https://github.com/novnc/noVNC)**：浏览器 VNC 远程桌面（VM 纳管）
+
+**Sirius Cloud 价值**：你的 L2 资产管理 + L3 部署 / 终端都要这些。
+</code></pre>
+<p>// terminal.vue（伪代码） import { Terminal } from '@xterm/xterm' import { FitAddon } from '@xterm/addon-fit' import { WebLinksAddon } from '@xterm/addon-web-links' import { AttachAddon } from '@xterm/addon-attach' import '@xterm/xterm/css/xterm.css'</p>
+<p>const term = new Terminal() const fit = new FitAddon() term.loadAddon(fit) term.open(el.value) const ws = new WebSocket(<code>/api/v2/ssh/ws?host=${host}&amp;token=${jwt}</code>) const attach = new AttachAddon(ws) term.loadAddon(attach) fit.fit()</p>
+<pre data-lang=""><code>
+### 4.4 ⭐⭐⭐⭐ **Element Plus 扩展机制**
+
+1Panel 不直接用 Element Plus，&lt;strong&gt;包了一层&lt;/strong&gt;：
+- `directives/`：自定义指令（如 `v-permission`、`v-copy`）
+- `extensions/`：扩展组件（按业务封装的 Table / Form / Dialog）
+- `components/`：业务组件
+</code></pre>
+<p>// directives/permission.ts app.directive('permission', { mounted(el, binding) { if (!userStore.hasPermission(binding.value)) { el.parentNode?.removeChild(el) } } })</p>
+<p>// 用法 &lt;el-button v-permission="'database:delete'"&gt;删除&lt;/el-button&gt;</p>
+<pre data-lang=""><code>
+**Sirius Cloud 对位**：你用 Ant Design 5，可以包一层类似的封装（自定义 hooks + 业务组件）。
+
+---
+
+## 5. 关键技术栈版本
+</code></pre>
+<p>{ "vue": "^3.5.40", "element-plus": "2.14.3", "pinia": "^3.0.4", "vue-router": "^5.2.0", "axios": "^1.17.0", "typescript": "^6.0.3", "vite": "^8.2.0", "tailwindcss": "^4.3.3", "echarts": "^6.1.0", "xterm": "^5.5.0", "monaco-editor": "^0.56.0", "codemirror": "^6.0.2", "novnc": "^1.7.0" }</p>
+<pre data-lang=""><code>
+⚠️ vue-router 5 / Vite 8 / TS 6 都是较新版本，&lt;strong&gt;生产兼容性需注意&lt;/strong&gt;。
+
+---
+
+## 6. 3 个反模式 / 避坑
+
+### 6.1 ❌ **不要照搬 UI 风格**（GPL v3 + 设计系统）
+
+1Panel 用 Element Plus，视觉风格具体（淡蓝主色、圆角）。
+
+**避坑**：
+- 你 Sirius Cloud 用 Ant Design 5，&lt;strong&gt;风格自动不同&lt;/strong&gt;
+- 抄&lt;strong&gt;模式&lt;/strong&gt;（目录结构 / 路由权限 / API 抽象），不抄&lt;strong&gt;样式&lt;/strong&gt;
+- 即使抄了也有 GPL v3 风险
+
+### 6.2 ⚠️ **488 view 文件 = 单点过多**
+
+hot reload 慢，&lt;strong&gt;1Panel 自己也有这个问题&lt;/strong&gt;。
+
+**避坑**：你的 Sirius Cloud 前端&lt;strong&gt;不要上来就拆 14 业务域&lt;/strong&gt;。先按"核心 5 个 + 工具箱"拆：
+</code></pre>
+<p>src/views/ ├── database/      # 核心 1 ├── host/          # 核心 2 ├── alert/         # 核心 3 ├── settings/      # 核心 4 ├── auth/          # 核心 5 └── misc/          # 工具箱</p>
+<pre data-lang=""><code>
+### 6.3 ⚠️ **Element Plus 2.14 是较老版本**
+
+部分组件 API 有变化（最新 2.9 / 2.10 / 2.14+ 各有不同）。
+
+**避坑**：不要 pin Element Plus 老版本，&lt;strong&gt;跟着 Ant Design 5 升级&lt;/strong&gt;（你用 Ant Design）。
+
+---
+
+## 7. 跟 Sirius Cloud 对位
+
+| Sirius Cloud 需求 | 1Panel 对应 | 推荐度 |
+|---|---|---|
+| **前端路由 RBAC** | routers/ 守卫 | ⭐⭐⭐⭐⭐ |
+| **API 类型自动生成** | api/interface/ | ⭐⭐⭐⭐⭐ |
+| **L2 终端（SSH 客户端）** | xterm.js + WebSocket | ⭐⭐⭐⭐ |
+| **L2 配置编辑** | monaco-editor | ⭐⭐⭐⭐ |
+| **L3 VM 远程桌面** | noVNC | ⭐⭐⭐ |
+| **业务组件封装** | components/ 97 个 | ⭐⭐⭐⭐ |
+
+### 7.1 必抄清单
+
+1. **路由 RBAC**（meta.permission + 全局守卫）
+2. **API 类型自动生成**（openapi-typescript）
+3. **xterm.js / monaco-editor / noVNC 集成**
+4. **业务组件封装**（Ant Design 5 包一层）
+
+### 7.2 不抄的
+
+1. **UI 视觉风格**（GPL v3 + 你有自己的设计系统）
+2. **488 view 文件组织**（拆太细，hot reload 慢）
+3. **Element Plus 老版本**（你用 Ant Design 5）
+
+---
+
+## 8. 接下来怎么读
+
+### 8.1 30 分钟通道
+
+1. 看完本文档
+2. 看 `13-frontend/README.md` §1（14 业务域目录）
+3. 看 `routers/index.ts` 的路由守卫
+
+### 8.2 2 小时通道
+
+1. 上面 30 分钟
+2. `api/interface/` 类型生成机制
+3. `store/` Pinia 拆分（user / app / theme）
+4. `directives/permission.ts` 自定义权限指令
+
+### 8.3 1 天写代码通道
+
+1. 上面所有
+2. React Router v6 写路由守卫 + meta.permission
+3. `openapi-typescript` 跑通自动生成
+4. Ant Design 5 包一层业务组件（Table / Form / Dialog）
+5. 集成 xterm.js + monaco-editor
+
+---
+
+## 9. 写作说明
+
+- **本文档定位**：30 分钟读完的"故事版"
+- **`13-frontend/README.md` 定位**：14 业务域目录 + 技术栈（详细注解待做）
+- **`firewall-architecture.md` 定位**：v2 防火墙深度注解
+- **`00-landscape.md` 定位**：13 个模块的全景图
+
+---
+
+**研究 commit**：`7915230`（dev-v2）· **更新**：2026-08-24 · **作者**：1Panel v2 研究员
+</code></pre>
+      </article>
+    </main>
+  </div>
+  <footer>
+    <p>1Panel.edu KB · <a href="../../index.html">返回目录</a> · <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+  <script src="../../assets/app.js"></script>
+</body>
+</html>

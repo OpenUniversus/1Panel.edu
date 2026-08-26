@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File 文件管理 · 1Panel.edu KB</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <nav class="top">
+    <a class="brand" href="../../index.html"><span class="logo">1P</span>1Panel.edu KB</a>
+    <div class="nav-links">
+      <a href="../../index.html">目录</a>
+      <a href="../../modules/modules/08-file#">本模块</a>
+      <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+  <div class="layout">
+    <aside class="toc">
+      <h3>本文目录</h3>
+      <ul></ul>
+    </aside>
+    <main>
+      <header class="doc">
+        <h1>File 文件管理</h1>
+        <div class="meta">
+          <span class="pill pill-todo">TODO</span>
+          <span>⭐⭐</span>
+          <span>10.4 KB</span>
+          <span>2026-08-24</span>
+        </div>
+      </header>
+      <article>
+<blockquote>30 分钟搞懂 1Panel 怎么"在浏览器里管文件"。 详细代码注解在同目录 <code>README.md</code>（55 行 stub + 7 文件清单 / ~4600 行 Go）。 这份文档是入口 —— 先看这个，再决定要不要啃那份。  🎨 <strong>可视化版</strong>：同目录 <code>visual-atlas.html</code>（浏览器里看，4 张 Mermaid 真实图 + 5 步分片上传流程 + 3 个反模式卡片） 📋 <strong>研究 commit</strong>：<code>7915230</code>（dev-v2） ⚠️ <strong>状态</strong>：stub + 人话版，详细注解待做 🔔 <strong>对位</strong>：跟 Sirius Cloud L1/L2 资产管理需求对位</blockquote>
+<hr>
+<h2>0. 这份文档回答 5 个问题</h2>
+<ol>
+<li><strong>浏览器里"右键删除"在 1Panel 内部怎么落地？</strong></li>
+<li><strong>"撤销刚才的修改"怎么实现？文件历史快照是什么？</strong></li>
+<li><strong>大文件（10GB）怎么上传/下载？分片怎么搞？</strong></li>
+<li><strong>分享链接（带过期时间）怎么生成？</strong></li>
+<li><strong>对 Sirius Cloud L1/L2 资产管理有什么借鉴价值？</strong></li>
+</ol>
+<hr>
+<h2>1. 一句话总结</h2>
+<p><strong>1Panel 把"文件管理"做成 Web 端 Finder：list / upload / download / edit / delete + 撤销 + 分享。~4600 行 Go。前端用 monaco-editor 编辑代码 + vue-office 预览 docx/excel。</strong></p>
+<p>藏了 <strong>3 个必抄的设计</strong>（重点是分片 + 历史快照 + 分享链接） + <strong>3 个反模式</strong>（重点是权限检查散落），下面拆。</p>
+<hr>
+<h2>2. 5 大核心能力</h2>
+<pre class="mermaid">flowchart TB
+    A[Web 端文件管理器] --&gt; B[List&lt;br/&gt;树形目录]
+    A --&gt; C[Upload&lt;br/&gt;分片上传]
+    A --&gt; D[Download&lt;br/&gt;分片下载]
+    A --&gt; E[Edit&lt;br/&gt;monaco-editor]
+    A --&gt; F[Delete&lt;br/&gt;回收站]
+    C --&gt; G[file_transfer.go&lt;br/&gt;分片 66 行]
+    F --&gt; H[file_history.go&lt;br/&gt;快照 688 行]
+    A --&gt; I[Share&lt;br/&gt;临时 URL]
+    I --&gt; J[file_share.go&lt;br/&gt;350 行]
+    style G fill:#c97b3f,color:#fff
+    style H fill:#2f6f5e,color:#fff</pre>
+<hr>
+<h2>3. 分片上传 / 下载机制</h2>
+<h3>3.1 为什么需要分片？</h3>
+<pre data-lang=""><code>100MB 文件 = 一次 HTTP POST = 网络断了就重来       ❌
+100MB 文件 = 5MB × 20 分片 = 每片独立 HTTP POST  ✅
+                ↑ 断了哪片重传哪片，不全重来</code></pre>
+<h3>3.2 分片上传 5 步</h3>
+<pre class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant API as file API 1761 行
+    participant SVC as file.go 1587 行
+    participant FS as 文件系统
+    U-&gt;&gt;API: POST /file/upload/init&lt;br/&gt;{filename, size, chunkSize}
+    API-&gt;&gt;SVC: initUpload(req)
+    SVC-&gt;&gt;FS: 创建 /tmp/upload-{uploadID}/
+    SVC--&gt;&gt;U: {uploadID, chunkSize: 5MB}
+    loop 每个分片
+        U-&gt;&gt;API: POST /file/upload/chunk&lt;br/&gt;{uploadID, index, data}
+        API-&gt;&gt;SVC: uploadChunk(req)
+        SVC-&gt;&gt;FS: 写 /tmp/upload-{uploadID}/{index}
+    end
+    U-&gt;&gt;API: POST /file/upload/merge&lt;br/&gt;{uploadID, totalChunks}
+    API-&gt;&gt;SVC: mergeChunks(req)
+    SVC-&gt;&gt;FS: cat /tmp/upload-{uploadID}/* &gt; /target/{filename}
+    SVC-&gt;&gt;FS: rm /tmp/upload-{uploadID}/
+    SVC--&gt;&gt;U: {ok: true, path: "/target/filename"}</pre>
+<p><strong>3 阶段</strong>：init（创建 uploadID）→ chunk（并发上传）→ merge（合并 + 清理）。</p>
+<h3>3.3 大文件下载（HTTP Range）</h3>
+<pre data-lang="go"><code class="language-go">// 浏览器请求 Range: bytes=0-5242879
+func (s *FileService) Download(req DownloadReq) (io.ReadCloser, error) {
+    f, _ := os.Open(req.Path)
+    if req.Range != "" {
+        // 解析 Range 头，只读指定字节范围
+        start, end := parseRange(req.Range, f.Stat().Size())
+        f.Seek(start, 0)
+        return &amp;LimitedReader{Reader: f, N: end - start + 1}, nil
+    }
+    return f, nil
+}</code></pre>
+<p><strong>好处</strong>：用户拖到一半不想下了，&lt;strong&gt;只下载了一半&lt;/strong&gt;，不浪费带宽。</p>
+<hr>
+<h2>4. 文件历史快照（撤销功能）</h2>
+<h3>4.1 全量快照（不是 diff）</h3>
+<pre data-lang="go"><code class="language-go">// file_history.go 688 行
+func (s *FileHistoryService) SaveSnapshot(file string) error {
+    // 1. 读当前文件内容
+    content, _ := os.ReadFile(file)
+    // 2. 计算 hash
+    hash := sha256(content)
+    // 3. 查 DB 看这个 hash 有没有
+    if s.existsByHash(hash) {
+        return nil  // 增量复用，不存
+    }
+    // 4. 存快照
+    snapshot := &amp;FileSnapshot{
+        FileID:   s.getFileID(file),
+        Hash:     hash,
+        Content:  content,  // ⚠️ 全量存
+        SavedAt:  time.Now(),
+    }
+    s.db.Save(snapshot)
+    return nil
+}</code></pre>
+<p><strong>关键</strong>：</p>
+<ul>
+<li><strong>全量存</strong>（不是 diff）</li>
+<li>同一内容只存一份（按 hash 去重）</li>
+<li>用户点"撤销" → 找上一个不同 hash 的快照恢复</li>
+</ul>
+<h3>4.2 触发时机</h3>
+<p>每次"保存文件"前自动存快照。Web UI 看到"文件历史"列表。</p>
+<h3>4.3 避坑：全量存盘的代价</h3>
+<p>100MB 文件改 10 次 = 10 × 100MB = 1GB 快照（即使去重后改的是 1 行）。</p>
+<p><strong>Sirius Cloud 改进</strong>：用 git 风格 diff 存（增量），或 zfs snapshot（块级）。</p>
+<hr>
+<h2>5. 分享链接机制</h2>
+<pre data-lang="go"><code class="language-go">// file_share.go 350 行
+type FileShare struct {
+    Token     string  // URL 中的随机 token
+    FilePath  string
+    ExpiresAt time.Time
+    Password  string  // 可选密码
+    MaxDownloads int  // 可选下载次数限制
+}
+
+func (s *FileShareService) CreateShare(file string, ttl time.Duration) (string, error) {
+    token := randString(32)
+    s.db.Save(&amp;FileShare{
+        Token:     token,
+        FilePath:  file,
+        ExpiresAt: time.Now().Add(ttl),
+    })
+    return fmt.Sprintf("https://panel.example.com/share/%s", token), nil
+}
+
+func (s *FileShareService) GetFile(token string) (string, error) {
+    share := s.db.FindByToken(token)
+    if time.Now().After(share.ExpiresAt) { return "", errExpired }
+    return share.FilePath, nil
+}</code></pre>
+<p><strong>用户场景</strong>：</p>
+<ul>
+<li>选文件 → 选"生成分享链接" → 选 7 天过期 → 复制 URL 发给同事</li>
+<li>同事点 URL → 浏览器下载（&lt;strong&gt;不需要登录&lt;/strong&gt;）</li>
+</ul>
+<hr>
+<h2>6. 3 个必抄的设计</h2>
+<h3>6.1 ⭐⭐⭐⭐ <strong>分片上传 / 下载</strong></h3>
+<p><strong>为什么必抄</strong>：你 L1/L2 资产管理让用户上传大文件是必然。Sirius Cloud 必用。</p>
+<pre data-lang="python"><code class="language-python"># 你的 Python 简化（FastAPI）
+@app.post("/upload/init")
+def init_upload(filename: str, size: int, chunk_size: int = 5_000_000):
+    upload_id = str(uuid4())
+    os.makedirs(f"/tmp/upload-{upload_id}", exist_ok=True)
+    return {"upload_id": upload_id, "chunk_size": chunk_size}
+
+@app.post("/upload/chunk")
+async def upload_chunk(upload_id: str, index: int, data: UploadFile):
+    path = f"/tmp/upload-{upload_id}/{index}"
+    with open(path, "wb") as f:
+        await data.read_into(f)
+    return {"ok": True}
+
+@app.post("/upload/merge")
+def merge_upload(upload_id: str, total_chunks: int, target_path: str):
+    # cat /tmp/upload-{upload_id}/* &gt; target_path
+    chunks = sorted(os.listdir(f"/tmp/upload-{upload_id}"), key=int)
+    with open(target_path, "wb") as out:
+        for chunk in chunks:
+            with open(f"/tmp/upload-{upload_id}/{chunk}", "rb") as f:
+                shutil.copyfileobj(f, out)
+    shutil.rmtree(f"/tmp/upload-{upload_id}")
+    return {"ok": True, "path": target_path}</code></pre>
+<h3>6.2 ⭐⭐⭐⭐ <strong>文件历史快照（防误删）</strong></h3>
+<p><strong>必抄</strong>：用户删错文件是必然事件。</p>
+<pre data-lang="python"><code class="language-python"># 简化版
+def save_snapshot(file_id: str, content: bytes):
+    h = hashlib.sha256(content).hexdigest()
+    # 去重：同 hash 不重复存
+    if not db.exists(FileSnapshot, hash=h):
+        db.save(FileSnapshot(file_id=file_id, hash=h, content=content))
+    return h
+
+def rollback(file_id: str, target_hash: str):
+    snap = db.find(FileSnapshot, file_id=file_id, hash=target_hash)
+    open(get_path(file_id), "wb").write(snap.content)</code></pre>
+<h3>6.3 ⭐⭐⭐⭐ <strong>分享链接</strong></h3>
+<p><strong>必抄</strong>：让用户安全分享文件给外部人。</p>
+<pre data-lang="python"><code class="language-python">def create_share(file_id: str, ttl: int, password: str = None):
+    token = secrets.token_urlsafe(32)
+    db.save(Share(token=token, file_id=file_id, expires_at=now()+ttl, password=hash_password(password)))
+    return f"https://your-domain/share/{token}"</code></pre>
+<hr>
+<h2>7. 3 个反模式 / 避坑</h2>
+<h3>7.1 ❌ <strong><code>file.go</code> 1587 + <code>file_history.go</code> 688 = 2275 行单点</strong></h3>
+<p>文件 CRUD + 编辑 + 移动 + 重命名 + 搜索 + 历史全堆一起。</p>
+<p><strong>避坑</strong>：拆成 <code>file_list.go</code> + <code>file_upload.go</code> + <code>file_edit.go</code> + <code>file_history.go</code> 4 个文件。</p>
+<h3>7.2 ⚠️ <strong>全量快照（不是 diff）</strong></h3>
+<p>100MB 文件改 10 次 = 1GB（即使去重后改的是 1 行）。</p>
+<p><strong>避坑</strong>：用 git 风格 diff（每次存 vs 上次的 diff），或者用 ZFS/Btrfs 文件系统 snapshot。</p>
+<h3>7.3 ⚠️ <strong>权限检查散落</strong></h3>
+<p>每函数自己写 <code>if user.HasPermission(file, "write") { ... }</code>，&lt;strong&gt;不是统一 RBAC 中间件&lt;/strong&gt;。</p>
+<p><strong>避坑</strong>：FastAPI Depends / Casbin / OPA 做统一权限中间件：</p>
+<pre data-lang="python"><code class="language-python">@app.get("/file/{path}")
+@requires_permission("file", "read")  # 统一检查
+def read_file(path: str): ...</code></pre>
+<hr>
+<h2>8. 跟 Sirius Cloud 的对位</h2>
+<table><thead><tr><th>Sirius Cloud 需求</th><th>1Panel File 对应</th><th>推荐度</th></tr></thead><tbody><tr><td><strong>L1 资产管理 - 文件浏览</strong></td><td>file.go List</td><td>⭐⭐⭐⭐</td></tr><tr><td><strong>L1 文件分片上传 / 下载</strong></td><td>file_transfer.go + Range</td><td>⭐⭐⭐⭐⭐</td></tr><tr><td><strong>L1 文件历史快照</strong></td><td>file_history.go</td><td>⭐⭐⭐⭐</td></tr><tr><td><strong>L1 分享链接</strong></td><td>file_share.go</td><td>⭐⭐⭐</td></tr><tr><td><strong>L1 统一权限检查</strong></td><td>❌ 改用 RBAC 中间件</td><td>⭐⭐⭐⭐</td></tr></tbody></table>
+<h3>8.1 必抄清单</h3>
+<ol>
+<li><strong>分片上传 / 下载</strong>（5MB × N 片）</li>
+<li><strong>文件历史快照</strong>（防误删）</li>
+<li><strong>分享链接</strong>（带过期 + 可选密码）</li>
+</ol>
+<h3>8.2 抄的时候要改</h3>
+<ol>
+<li><strong>加 RBAC 中间件</strong>（不要权限散落）</li>
+<li><strong>改用 diff 快照</strong>（不用全量）</li>
+<li><strong>加病毒扫描</strong>（上传时调 ClamAV）</li>
+</ol>
+<hr>
+<h2>9. 接下来怎么读</h2>
+<h3>9.1 30 分钟通道</h3>
+<ol>
+<li>看完本文档</li>
+<li>看 <code>08-file/README.md</code> §1（7 文件清单）</li>
+<li>直接看 <code>file_transfer.go</code> 的分片上传 init 函数</li>
+</ol>
+<h3>9.2 2 小时通道</h3>
+<ol>
+<li>上面 30 分钟</li>
+<li><code>file.go</code> 的 List + Upload + Edit</li>
+<li><code>file_history.go</code> 的快照保存 + 回滚</li>
+<li><code>file_share.go</code> 的 token 生成 + 验证</li>
+</ol>
+<h3>9.3 1 天写代码通道</h3>
+<ol>
+<li>上面所有</li>
+<li>Python FastAPI 写分片上传 init / chunk / merge 3 个 endpoint</li>
+<li>加文件历史快照（用 hash 去重）</li>
+<li>加 RBAC 权限检查（FastAPI Depends）</li>
+<li>跑通"上传 100MB 文件 → 存盘 → 列出历史 → 删文件 → 恢复"</li>
+</ol>
+<hr>
+<h2>10. 写作说明</h2>
+<ul>
+<li><strong>本文档定位</strong>：30 分钟读完的"故事版"</li>
+<li><strong><code>08-file/README.md</code> 定位</strong>：7 文件清单 + stub（详细注解待做）</li>
+<li><strong><code>firewall-architecture.md</code> 定位</strong>：v2 防火墙深度注解</li>
+<li><strong><code>00-landscape.md</code> 定位</strong>：13 个模块的全景图</li>
+</ul>
+<hr>
+<p><strong>研究 commit</strong>：<code>7915230</code>（dev-v2）· <strong>更新</strong>：2026-08-24 · <strong>作者</strong>：1Panel v2 研究员</p>
+      </article>
+    </main>
+  </div>
+  <footer>
+    <p>1Panel.edu KB · <a href="../../index.html">返回目录</a> · <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+  <script src="../../assets/app.js"></script>
+</body>
+</html>

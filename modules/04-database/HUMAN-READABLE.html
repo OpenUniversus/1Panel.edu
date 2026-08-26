@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Database 数据库 · 1Panel.edu KB</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <nav class="top">
+    <a class="brand" href="../../index.html"><span class="logo">1P</span>1Panel.edu KB</a>
+    <div class="nav-links">
+      <a href="../../index.html">目录</a>
+      <a href="../../modules/modules/04-database#">本模块</a>
+      <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+  <div class="layout">
+    <aside class="toc">
+      <h3>本文目录</h3>
+      <ul></ul>
+    </aside>
+    <main>
+      <header class="doc">
+        <h1>Database 数据库</h1>
+        <div class="meta">
+          <span class="pill pill-todo">TODO</span>
+          <span>-</span>
+          <span>21.5 KB</span>
+          <span>2026-08-25</span>
+        </div>
+      </header>
+      <article>
+<p>﻿# 1Panel Database 模块 — 人话版</p>
+<blockquote>30 分钟搞懂 1Panel 怎么管 4 种数据库。<strong>详细代码注解在同目录 <code>README.md</code>（99 KB / 2192 行）</strong>。 这份文档是入口 —— 先看这个，再决定要不要啃那份。  🎨 <strong>可视化版</strong>：同目录 <code>visual-atlas.html</code>（浏览器里看，4 张 Mermaid 真实图 + 5 个反模式卡片 + 9 步时序） 📋 <strong>审查报告</strong>：<code>REVIEW.md</code>（本目录，2026-08-24 校对）</blockquote>
+<hr>
+<h2>0. 这份文档回答 5 个问题</h2>
+<ol>
+<li><strong>1Panel 怎么"远程接入"一台已经存在的 MySQL？</strong></li>
+<li><strong>为什么"本地"和"远端"用完全不同的代码？</strong></li>
+<li><strong>怎么保证"UI 显示的 DB 列表"跟"真实 MySQL 里的 DB 列表"不脱节？</strong></li>
+<li><strong>为什么备份用 Docker 容器跑 mysqldump？</strong></li>
+<li><strong>哪些设计值得抄，哪些必须避开？</strong></li>
+</ol>
+<hr>
+<h2>1. 一句话总结</h2>
+<p><strong>1Panel 把"DB 接入 / DB 操作 / DB 备份 / DB 配置 / DB 同步"五件事，全部抽象成 4 张表 + 1 个 Adapter interface，在 Agent 进程里跑，用户在 Core Web UI 上点鼠标。</strong></p>
+<p>仅此而已。但这套抽象做了 ~4800 行 Go + 4 张 SQLite 表（<code>database</code> / <code>database_mysql</code> / <code>database_postgresql</code> / <code>database_mongodb</code>）+ 1 张 user 镜像表（<code>database_user</code> + <code>database_user_grant</code>）+ 1 个 Adapter interface，藏了 <strong>7 个值得抄的设计</strong> + <strong>5 个反模式</strong>，下面一一拆。</p>
+<hr>
+<h2>2. 1Panel 凭什么能管 4 种数据库</h2>
+<h3>2.1 先想象 4 种场景</h3>
+<p>用户用 1Panel 管理数据库时，会面对这 4 种情况：</p>
+<table><thead><tr><th>场景</th><th>例子</th></tr></thead><tbody><tr><td><strong>A. 装一个全新的</strong></td><td>1Panel 在这台机器上起个 MySQL 8.0 容器，用户在 UI 上点"装"</td></tr><tr><td><strong>B. 接入已有的远端</strong></td><td>公司机房有台老 MySQL 5.7，1Panel Agent 装在新机器上，要远程管理老 MySQL</td></tr><tr><td><strong>C. 接入同机已有的</strong></td><td>机器上跑着裸 MySQL，没用 Docker，1Panel Agent 装上去后想接管</td></tr><tr><td><strong>D. 多个类型混用</strong></td><td>同时管 MySQL 8.0、PostgreSQL 15、Redis 7、MongoDB 6</td></tr></tbody></table>
+<p><strong>4 种场景 × 5 种 DB 类型（MySQL / MariaDB / PostgreSQL / Redis / MongoDB）= 20 种组合。</strong> 你要写 20 套代码吗？</p>
+<h3>2.2 1Panel 的解法：<strong><code>From</code> 字段二分</strong></h3>
+<p>只分两类 —— <strong>"local"</strong> 和 <strong>"remote"</strong>，其他都是细节。</p>
+<pre data-lang="go"><code class="language-go">// agent/app/model/database.go
+type Database struct {
+    Name     string
+    Type     string   // mysql / mariadb / postgresql / redis / mongodb
+    From     string   // "local" 或 "remote"   ← 整个抽象就靠这一字段
+    Address  string   // 远端是 IP；本地是容器名
+    Port     uint
+    Username string
+    Password string
+    // ...
+}</code></pre>
+<p><strong><code>From</code> 决定接下来走哪条路</strong>（Mermaid 渲染）：</p>
+<pre class="mermaid">flowchart LR
+    A[service.MysqlService.Create] --&gt; B[LoadMysqlClientByFrom]
+    B --&gt; C{From = ?}
+    C --&gt;|local| D[Local Client&lt;br/&gt;docker exec&lt;br/&gt;mysql -e 'SQL']
+    C --&gt;|remote| E[Remote Client&lt;br/&gt;database/sql&lt;br/&gt;TCP 直连]
+    D --&gt; F[真实 MySQL]
+    E --&gt; F
+    style B fill:#2f6f5e,color:#fff
+    style C fill:#c97b3f,color:#fff
+    style F fill:#14171e,color:#fff</pre>
+<p>调用方（<code>MysqlService.Create</code> / <code>RedisService.UpdateConf</code> 等）只调 <code>LoadMysqlClientByFrom(name)</code>，拿到一个 <code>MysqlClient</code> interface，<strong>不知道也不关心是 local 还是 remote</strong>。</p>
+<h3>2.3 类比：<strong>像万能钥匙</strong></h3>
+<pre data-lang=""><code>普通钥匙匠：每个品牌的锁要配不同的钥匙     ❌
+万能钥匙匠：只看"齿形规格"，不挑品牌        ✅
+
+1Panel 普通：每个 DB 类型写一套 service    ❌
+1Panel 万能：用 Adapter interface + 2 套实现 ✅</code></pre>
+<p><strong><code>MysqlClient</code> interface</strong>（<code>agent/utils/mysql/client.go</code>）：</p>
+<pre data-lang="go"><code class="language-go">type MysqlClient interface {
+    Create(info CreateInfo) error
+    CreateUser(info CreateInfo, withDeleteDB bool) error
+    DeleteDatabase(info DeleteInfo) error
+    ListUsers(timeout uint) ([]UserInfo, error)
+    Backup(info BackupInfo) error
+    // ... 20+ 方法
+}</code></pre>
+<p>两个实现（<code>Local</code> / <code>Remote</code>）都实现这个 interface，service 层只跟 interface 打交道。</p>
+<hr>
+<h2>3. 一个真实场景走查：用户点"创建 MySQL DB"</h2>
+<p>想象你登录 1Panel Core Web UI，点"添加数据库"，填表：</p>
+<pre data-lang=""><code>┌──────────────────────────────────────────────┐
+│ 添加远程 MySQL 数据库                            │
+├──────────────────────────────────────────────┤
+│ 实例名:  [my-company-db          ]              │
+│ 类型:    [MySQL 8.0 ▼]                         │
+│ 地址:    [10.10.10.100            ]              │
+│ 端口:    [3306                  ]              │
+│ 用户名:  [root                  ]              │
+│ 密码:    [********              ]  ← base64 编码 │
+│   ☐ 启用 SSL                                │
+│ [测试连接]  [确定]                              │
+└──────────────────────────────────────────────┘</code></pre>
+<h3>3.1 点"确定"后 1Panel 内部 9 步</h3>
+<p><strong>1. 前端 base64 解码密码</strong>（<code>api/v2/database_mysql.go:27-34</code>）</p>
+<pre data-lang="go"><code class="language-go">if len(req.Password) != 0 {
+    password, err := base64.StdEncoding.DecodeString(req.Password)
+    // 防止 JSON 传输 / 日志泄露
+}</code></pre>
+<p><strong>2. service 层校验合法性</strong>（<code>service/database_mysql.go:436-441</code>）</p>
+<pre data-lang="go"><code class="language-go">if cmd.CheckIllegal(req.Name, req.Username, req.Password, ...) {
+    return buserr.New("ErrCmdIllegal")  // 黑名单防 SQL 注入
+}</code></pre>
+<p><strong>3. 解析 host 列表</strong>（<code>user@host1,host2</code> 拆开）</p>
+<pre data-lang="go"><code class="language-go">permissionHosts, _ := parseMysqlHosts(req.Permission, true)
+// 内部: "%,192.168.1.%" → ["%", "192.168.1.%"]</code></pre>
+<p><strong>4. 查重名</strong></p>
+<pre data-lang="go"><code class="language-go">mysql, _ := mysqlRepo.Get(...)  // 在 1Panel 自己的 SQLite 查
+if mysql.ID != 0 { return buserr.New("ErrRecordExist") }</code></pre>
+<p><strong>5. 准备写入数据</strong> —— 敏感字段清空</p>
+<pre data-lang="go"><code class="language-go">var createItem model.DatabaseMysql
+copier.Copy(&amp;createItem, &amp;req)
+createItem.Username = ""   // 不存到 1Panel 自己的 SQLite
+createItem.Password = ""   // 真实 MySQL 上有，1Panel 镜像里没有
+createItem.Permission = "" // 同上</code></pre>
+<blockquote><strong>为什么清空？</strong> 1Panel 不接管用户没授权的 user，<strong>最小权限原则</strong>。</blockquote>
+<p><strong>6. 拿到 MySQL client</strong>（<strong>关键一步</strong>）</p>
+<pre data-lang="go"><code class="language-go">cli, version, err := LoadMysqlClientByFrom(req.Database)
+//                  ↑ 注意：只看 From 字段，不知道是 local/remote</code></pre>
+<p><strong><code>LoadMysqlClientByFrom</code> 内部</strong>（<code>database_mysql.go:1533-1576</code>）：</p>
+<pre data-lang="go"><code class="language-go">if dbInfo.From != "local" {
+    // 远端：用 databaseItem 的 IP/Port/User/Password
+    dbInfo.Address = databaseItem.Address
+    // ...
+} else {
+    // 本地：从 app_install 表拿容器名 + root 凭据
+    dbInfo.Address = app.ContainerName  // 容器名当 "Address"！
+    dbInfo.Username = "root"
+    dbInfo.Password = app.Password
+}</code></pre>
+<p><strong>7. 在真实 MySQL 上建库 + 建 user + 授权</strong></p>
+<pre data-lang="go"><code class="language-go">// Remote 走 database/sql + prepared statement
+if err := cli.Create(CreateInfo{
+    Name: req.Name, Format: "utf8mb4", Collation: "utf8mb4_general_ci",
+    Username: req.Username, Password: req.Password,
+    Permission: req.Permission, Version: version, Timeout: 300,
+}); err != nil {
+    return err
+}</code></pre>
+<p><strong><code>Remote.Create</code> 内部</strong>（<code>utils/mysql/client/remote.go:46-59</code>）：</p>
+<pre data-lang="go"><code class="language-go">// 第 1 步：CREATE DATABASE
+if err := r.CreateDatabase(info); err != nil { return err }
+// 第 2 步：CREATE USER（如果指定了 username）
+if len(info.Username) == 0 { return nil }
+if err := r.CreateUser(info, true); err != nil {
+    // ⚠️ 失败回滚：drop database
+    _ = r.ExecSQL(fmt.Sprintf("drop database if exists `%s`", info.Name), info.Timeout)
+    return err
+}</code></pre>
+<p><strong>8. 镜像 user 凭据到 1Panel 自己的 SQLite</strong></p>
+<pre data-lang="go"><code class="language-go">saveDatabaseUserCredentials(dbType, req.Database, req.Username, req.Permission, req.Password, "")
+// 1Panel 自己的 database_user 表存一份"哪些 user 是 1Panel 管的"</code></pre>
+<p><strong>9. 写 1Panel SQLite 主表</strong></p>
+<pre data-lang="go"><code class="language-go">if err := mysqlRepo.Create(ctx, &amp;createItem); err != nil { return err }
+return &amp;createItem, nil</code></pre>
+<h3>3.2 完整时序图（Mermaid 渲染）</h3>
+<pre class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 浏览器
+    participant C as Core (主控)
+    participant A as Agent (被管机器)
+    participant D as 真实 MySQL
+
+    U-&gt;&gt;C: POST /databases/db (password base64)
+    C-&gt;&gt;A: POST /databases
+    A-&gt;&gt;A: 1. base64 解码密码
+    A-&gt;&gt;A: 2. CheckIllegal 防 SQL 注入
+    A-&gt;&gt;A: 3. parseMysqlHosts 拆 host 列表
+    A-&gt;&gt;A: 4. 查重名 (SQLite)
+    A-&gt;&gt;A: 5. 准备写入数据 (清空敏感字段)
+    A-&gt;&gt;A: 6. LoadMysqlClientByFrom 工厂
+    A-&gt;&gt;D: 7a. CREATE DATABASE
+    A-&gt;&gt;D: 7b. CREATE USER
+    A-&gt;&gt;D: 7c. GRANT (失败 → 回滚 DROP DATABASE)
+    A-&gt;&gt;A: 8. 镜像 user 到 1Panel SQLite
+    A-&gt;&gt;A: 9. mysqlRepo.Create 写主表
+    A--&gt;&gt;C: 200 OK
+    C--&gt;&gt;U: 200 OK</pre>
+<h3>3.3 关键点：所有 SQL 失败都"会回滚部分成功"</h3>
+<p>看第 7 步：</p>
+<table><thead><tr><th>步骤</th><th>失败</th><th>回滚</th></tr></thead><tbody><tr><td>CREATE DATABASE</td><td>失败</td><td>不需要（之前什么都没建）</td></tr><tr><td>CREATE USER</td><td>失败</td><td><strong>drop database</strong>（去掉已建库）</td></tr><tr><td>GRANT</td><td>失败</td><td><strong>drop database</strong>（再 drop user 在外层）</td></tr></tbody></table>
+<p><strong>这套 partial rollback 是 1Panel 最值得抄的设计</strong>。<strong>不是 Saga，没有分布式事务</strong>，但用业务逻辑兜住了"半成功"状态。</p>
+<hr>
+<h2>4. 7 个值得抄的设计模式</h2>
+<p>每个模式：<strong>一句话 → 类比 → 1Panel 怎么做的 → 借鉴度</strong>。</p>
+<h3>模式 1：<strong><code>From</code> 字段二分法</strong>（⭐⭐⭐⭐⭐ 必抄）</h3>
+<p><strong>一句话</strong>：用一个 enum 字段（<code>local</code> / <code>remote</code>）把两套实现统一在一个 interface 后。</p>
+<p><strong>类比</strong>：快递柜有"大件柜"和"小件柜"，用户只看尺寸选，不关心是几号柜子。</p>
+<p><strong>1Panel 怎么做的</strong>：</p>
+<pre data-lang="go"><code class="language-go">type Database struct {
+    From string  // "local" | "remote"  ← 就这一个字段
+    // ...
+}</code></pre>
+<p>然后 <code>LoadMysqlClientByFrom(name)</code> 内部 switch 选 client 实现。</p>
+<p><strong>借鉴度</strong>：⭐⭐⭐⭐⭐ — 任何"多形态对象管理"都能套（K8s Node、CI Runner、CDN Edge）。</p>
+<hr>
+<h3>模式 2：<strong>UUID marker 标识自己的规则</strong></h3>
+<p><strong>一句话</strong>：在 <code>iptables -m comment --comment "&lt;UUID&gt;"</code> 里塞 UUID 当 ID，避免误删别人的规则。</p>
+<p><strong>类比</strong>：共享会议室里贴便签"今天 3 点张三用"，别人不会动你的东西。</p>
+<p><strong>1Panel 怎么做的</strong>：</p>
+<ul>
+<li>防火墙规则加 <code>-m comment --comment "&lt;UUID&gt;"</code></li>
+<li>改/删规则时按 UUID 找，不按位置</li>
+<li>别人手动加的规则 UUID 是空，<strong>1Panel 不会动</strong></li>
+</ul>
+<p><strong>借鉴度</strong>：⭐⭐⭐⭐ — 任何"系统级共享资源管理"都用得上（iptables / nftables / crontab / systemd timer）。</p>
+<p><strong>详细位置</strong>：<code>firewall-architecture.md</code> 4.1.1 + 4.4.5 + 4.6 节。</p>
+<hr>
+<h3>模式 3：<strong>三向合并同步</strong>（⭐⭐⭐⭐⭐ 必抄）</h3>
+<p><strong>一句话</strong>：把"真实 DB 状态"同步到"控制台 SQLite"时，<strong>不删了重建</strong>，用 diff + 软删恢复。</p>
+<p><strong>类比</strong>：跟 git pull 一样 —— 不冲突的留下，冲突的合并，远端删了的本地打上"已删除"标记但<strong>不真删</strong>。</p>
+<p><strong>1Panel 怎么做的</strong>（<code>MysqlService.LoadFromRemote</code>）：</p>
+<table><thead><tr><th>真实 DB</th><th>1Panel SQLite</th><th>行为</th></tr></thead><tbody><tr><td>有</td><td>有</td><td>保留（软删则恢复为 <code>is_delete=false</code>）</td></tr><tr><td>有</td><td>无</td><td>插入（敏感字段清空）</td></tr><tr><td>无</td><td>有</td><td>软删除（<code>is_delete=true</code>）</td></tr><tr><td>无</td><td>无</td><td>无操作</td></tr></tbody></table>
+<p><strong>借鉴度</strong>：⭐⭐⭐⭐⭐ — 任何"控制台 ← 真实资源"同步场景都适用。</p>
+<p><strong>注意</strong>：1Panel 用 slice <code>append(deleteList[:i], deleteList[i+1:]...)</code> 删除，<strong>O(n²)</strong>，100+ 资源会卡。<strong>你改用 map 索引</strong>。</p>
+<hr>
+<h3>模式 4：<strong>配置所有权 marker 改写</strong>（⭐⭐⭐⭐ 抄一半）</h3>
+<p><strong>一句话</strong>：改配置文件时用 comment 标记"自己的领地"，领地内的 key 才动，领地外不碰。</p>
+<p><strong>类比</strong>：合租公寓 —— 你的房间你随便改，公共区域（客厅、厨房）不动。</p>
+<p><strong>1Panel 怎么做的</strong>（<code>RedisService.confSet</code>，217-293 行）：</p>
+<ul>
+<li>找 <code># Redis configuration rewrite by 1Panel</code> / <code># End Redis configuration rewrite by 1Panel</code> 区间</li>
+<li>区间内的 key 改/加</li>
+<li>区间外的 key 原样保留</li>
+<li>改完重启容器</li>
+</ul>
+<p><strong>借鉴度</strong>：⭐⭐⭐⭐ — 适合 Redis / nginx / my.cnf 这种"用户也想改"的配置。</p>
+<p><strong>⚠️ 1Panel 的 my.cnf 改写器（<code>updateMyCnf</code>）是另一种风格</strong>：用 <code>[mysqld]</code> group 边界识别，<strong>5 状态机</strong>。两种风格看你场景。</p>
+<hr>
+<h3>模式 5：<strong>多步操作 + 3 层 rollback 闭包</strong>（⭐⭐⭐⭐⭐ 必抄）</h3>
+<p><strong>一句话</strong>：复杂的多步操作（创建 user + 镜像 + 授权），每步定义一个"回滚闭包"，失败时按 LIFO 顺序撤销。</p>
+<p><strong>类比</strong>：魔术表演 —— 每个动作准备一个"撤销道具"，表演失败时按反序收场。</p>
+<p><strong>1Panel 怎么做的</strong>（<code>MysqlService.CreateUser</code>，617-740 行，120+ 行）：</p>
+<pre data-lang="go"><code class="language-go">// 3 层 rollback 闭包定义
+rollbackCreatedHosts := func() { /* 删 user */ }
+rollbackSavedHosts   := func() { /* 删 SQLite 镜像 */ }
+rollbackGrantedItems := func() { /* 撤销 grant */ }
+rollbackAll := func() {  // master rollback，按 LIFO
+    rollbackGrantedItems()
+    rollbackSavedHosts()
+    rollbackCreatedHosts()
+}
+
+// 步骤 5：逐 host CREATE USER
+for _, host := range hosts {
+    if err := cli.CreateUserOnly(...); err != nil {
+        rollbackCreatedHosts()   // 失败只回滚本步
+        return err
+    }
+    createdHosts = append(createdHosts, host)
+}
+
+// 步骤 6-7：镜像 + 授权
+for ... {
+    if err := ...; err != nil {
+        rollbackAll()              // 失败回滚全部
+        return err
+    }
+}</code></pre>
+<p><strong>借鉴度</strong>：⭐⭐⭐⭐⭐ — 任何"多步分布式操作"（K8s apply、Cloud API 创建资源链）都需要。</p>
+<hr>
+<h3>模式 6：<strong>改密自动同步到 app + 删 user 前查占用</strong>（⭐⭐⭐⭐⭐ 必抄）</h3>
+<p><strong>一句话</strong>：改 MySQL user 密码后，<strong>所有用此 user 的 app</strong>（WordPress 等）的环境变量 <code>DB_PASSWORD</code> 自动更新；删 user 前<strong>先查谁在用</strong>。</p>
+<p><strong>类比</strong>：公司换门锁 —— 同步更新所有员工的门禁卡（不能只换锁不更新卡），查谁拿了旧钥匙再决定能不能换。</p>
+<p><strong>1Panel 怎么做的</strong>：</p>
+<table><thead><tr><th>操作</th><th>1Panel 行为</th></tr></thead><tbody><tr><td>改 MySQL user 密码</td><td>1. 改 MySQL 自己的 user 表&lt;br&gt;2. 改 1Panel SQLite 镜像&lt;br&gt;3. <strong>遍历所有 app</strong>（通过 <code>app_install_resource</code> + <code>app_install.Env.PANEL_DB_USER</code> 反查），更新 env 里的 <code>DB_PASSWORD</code></td></tr><tr><td>删 MySQL user 之前</td><td>调 <code>checkMysqlUserAppUsage</code> 查"还有哪些 app 用这个 user"&lt;br&gt;如果有，<strong>返回 <code>ErrMysqlUserUsedByApps</code></strong> 阻止删除</td></tr></tbody></table>
+<p><strong>借鉴度</strong>：⭐⭐⭐⭐⭐ — DBaaS 控制台必备。</p>
+<hr>
+<h3>模式 7：<strong>sidecar 容器跑 mysqldump</strong>（⭐⭐⭐⭐⭐ 必抄）</h3>
+<p><strong>一句话</strong>：备份时拉个 <code>mysql:8.0</code> 临时容器跑 <code>mysqldump</code>，<strong>跑完即删</strong>（<code>--rm</code>）。</p>
+<p><strong>类比</strong>：装修时雇临时工 —— 不给正式工编制，用完走人。</p>
+<p><strong>1Panel 怎么做的</strong>（<code>Remote.Backup</code>，280-336 行）：</p>
+<pre data-lang="go"><code class="language-go">backupArgs := []string{
+    "run", "--rm", "--net=host", "-i",    // 关键三连
+    imageTag,                            // mysql:8.0
+    "mysqldump",                         // 跑啥
+    "-h", r.Address, "-P", ..., "-u", r.User, "-p", r.Password,
+    info.Name,
+}
+cmdMgr.RunPipeToFile(targetFile,
+    PipeCommand{Name: "docker", Args: backupArgs},
+    PipeCommand{Name: "gzip", Args: []string{"-cf"}},   // 直接 pipe 到 gzip
+)</code></pre>
+<p><strong>借鉴度</strong>：⭐⭐⭐⭐⭐ — 任何需要"专用工具但又不想污染主环境"的场景。</p>
+<p><strong>⚠️ 1Panel 的隐患</strong>：</p>
+<ul>
+<li>密码明文 <code>-pPASSWORD</code> 出现在 <code>ps aux</code> 和 <code>docker inspect</code></li>
+<li>改用 stdin / env 传</li>
+</ul>
+<hr>
+<h2>5. 5 个反模式（要避开）</h2>
+<h3>反模式 1：<strong>Local 路径走 <code>docker exec</code></strong> 🚫</h3>
+<p>1Panel 的 Local 客户端用 <code>docker exec mysql -uroot -p... -e "SQL"</code> 进容器跑 MySQL CLI。</p>
+<p><strong>为什么是反模式</strong>：</p>
+<ul>
+<li>你的环境<strong>没有 Docker</strong>（Sirius Cloud 硬约束）</li>
+<li>密码明文出现在进程列表</li>
+<li>依赖 docker 守护进程</li>
+</ul>
+<p><strong>你该怎么做</strong>：直接用 <code>database/sql</code> 连 MySQL daemon（裸装或 systemd 起的）。如果客户用 MySQL 容器，<strong>走 Remote 路径</strong>（让客户开端口出来）。</p>
+<hr>
+<h3>反模式 2：<strong>机器本地 key 加密</strong> 🚫</h3>
+<p>1Panel 的 <code>encrypt.StringEncrypt</code> 用<strong>机器特征</strong>当 key（重启 / 重装系统后<strong>解密失败</strong>）。</p>
+<p><strong>为什么是反模式</strong>：</p>
+<ul>
+<li>SQLite 备份跨机器不可移植</li>
+<li>集群部署时第一台机器死掉，全员完蛋</li>
+</ul>
+<p><strong>你该怎么做</strong>：用 <strong>KMS（Key Management Service）</strong> 或 <strong>HashiCorp Vault</strong>。</p>
+<hr>
+<h3>反模式 3：<strong>MySQL DSN 含明文密码</strong> 🚫</h3>
+<pre data-lang="go"><code class="language-go">connArgs := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=utf8%s", 
+    conn.Username, conn.Password, ...)  // ← password 明文</code></pre>
+<p><strong>为什么是反模式</strong>：</p>
+<ul>
+<li>如果不小心 log 出来，密码泄露</li>
+<li>一些 error message 会带 DSN 内容</li>
+</ul>
+<p><strong>你该怎么做</strong>：密码从<strong>环境变量 / KMS</strong> 读，不进 struct，不进日志。</p>
+<hr>
+<h3>反模式 4：<strong>自己补丁 PostgreSQL 18 路径</strong> 🚫</h3>
+<p>1Panel 在 <code>UpdateConfByFile:97-99</code> 自己打补丁处理 PG 18 的目录变化（<code>data/18/docker/postgresql.conf</code>）。</p>
+<p><strong>为什么是反模式</strong>：</p>
+<ul>
+<li>跟上游版本绑定太深，每次 PG 升级都要跟</li>
+<li>1Panel 自己也在维护"特殊版本路径表"，<strong>长期负担</strong></li>
+</ul>
+<p><strong>你该怎么做</strong>：用 <code>find</code> 找 postgresql.conf，不硬编码路径。</p>
+<hr>
+<h3>反模式 5：<strong>MongoDB <code>directConnection=true</code> 强制单节点</strong> 🚫</h3>
+<p>1Panel 的 <code>buildRemoteMongodbURI</code> 写死 <code>directConnection=true</code> —— <strong>不支持 MongoDB Cluster</strong>。</p>
+<p><strong>为什么是反模式</strong>：</p>
+<ul>
+<li>你的客户可能用 MongoDB Replica Set（不是单节点）</li>
+<li>写死 <code>directConnection</code> 等于屏蔽了 MongoDB 高可用</li>
+</ul>
+<p><strong>你该怎么做</strong>：用 <code>replicaSet=rs0&amp;readPreference=secondaryPreferred</code> 替代。</p>
+<hr>
+<h2>6. 一个对照表：Sirius Cloud 需求 → 1Panel 对位</h2>
+<table><thead><tr><th>你的需求</th><th>1Panel 对位</th><th>借鉴度</th></tr></thead><tbody><tr><td><strong>L2 部署：远端 MySQL 接入</strong></td><td><code>Database.From="remote"</code></td><td>⭐⭐⭐⭐⭐</td></tr><tr><td><strong>L2 部署：改密自动同步</strong></td><td><code>updateMysqlPasswordAppTargets</code></td><td>⭐⭐⭐⭐⭐</td></tr><tr><td><strong>L2 部署：删 user 前查占用</strong></td><td><code>checkMysqlUserAppUsage</code></td><td>⭐⭐⭐⭐⭐</td></tr><tr><td><strong>L2 部署：多步操作 rollback</strong></td><td><code>CreateUser</code> 3 层闭包</td><td>⭐⭐⭐⭐⭐</td></tr><tr><td><strong>L2 部署：sidecar 备份</strong></td><td><code>Remote.Backup</code> 跑临时容器</td><td>⭐⭐⭐⭐⭐</td></tr><tr><td><strong>L3 监控：MySQL 状态</strong></td><td><code>LoadStatus</code>（<code>SHOW GLOBAL STATUS</code>）</td><td>⭐⭐⭐⭐</td></tr><tr><td><strong>L3 备份：完整性校验</strong></td><td>PG <code>PGDMP</code> magic header</td><td>⭐⭐⭐⭐⭐</td></tr><tr><td><strong>L1 鉴权：密码 base64 包装</strong></td><td>全部 API 走 base64</td><td>⭐⭐⭐⭐</td></tr><tr><td><strong>核心抽象：多类型统一接口</strong></td><td><code>IDatabaseService</code> interface</td><td>⭐⭐⭐⭐⭐</td></tr></tbody></table>
+<hr>
+<h2>7. 3 个未解问题（你来定）</h2>
+<p>1Panel 把"DB 接入"做成了一个标准模式，但有 3 个关键决策<strong>它替你做了</strong>，你需要自己定：</p>
+<h3>Q1：Local 路径用什么？</h3>
+<p>1Panel 选了 <code>docker exec</code>。你的选项：</p>
+<ul>
+<li><strong>A. 走 systemd 单元</strong>：要求 MySQL 用 systemd 管理（生产推荐）</li>
+<li><strong>B. 走裸进程 socket</strong>：用 <code>/var/run/mysqld/mysqld.sock</code>（传统）</li>
+<li><strong>C. 完全不要 Local 路径</strong>：1Panel 自身只为远端设计</li>
+</ul>
+<h3>Q2：怎么跟 Remote 区分？</h3>
+<p>1Panel 用 <code>From</code> enum。你的选项：</p>
+<ul>
+<li><strong>A. 跟 1Panel 一样</strong>：<code>From="local"|"remote"</code>（兼容理解，但需要多写一套）</li>
+<li><strong>B. 不要 Local</strong>：所有 DB 一律远端连接，简化架构</li>
+</ul>
+<h3>Q3：镜像 user 凭据到本地 SQLite 吗？</h3>
+<p>1Panel 镜像（<code>database_user</code> 表）。<strong>坏处</strong>：双写不一致风险。</p>
+<ul>
+<li><strong>A. 镜像</strong>（跟 1Panel）：能区分"1Panel 创建的 user"vs"系统原本的 user"</li>
+<li><strong>B. 不镜像</strong>：直接查真实 DB，<strong>单一数据源</strong></li>
+</ul>
+<p><strong>我的建议</strong>（仅供参考）：</p>
+<ul>
+<li>Q1 → A 或 B（systemd 是主流）</li>
+<li>Q2 → B（远端统一，简化）</li>
+<li>Q3 → B（避免双写）</li>
+</ul>
+<hr>
+<h2>8. 接下来怎么读</h2>
+<h3>8.1 30 分钟快速通道</h3>
+<ol>
+<li>看完本文档（你现在读的）</li>
+<li>看 <code>04-database/README.md</code> 的 <strong>§5 跟 Sirius Cloud 的对位</strong>（30 行表格 + 5.2 必抄 10 段）</li>
+<li>选 1 段最相关的，<strong>直接照抄</strong>（比如 <code>isMysqlSystemUser</code> 黑名单 22 行）</li>
+</ol>
+<h3>8.2 2 小时深度通道</h3>
+<ol>
+<li>本文档</li>
+<li><code>04-database/README.md</code> <strong>§4.1-§4.3</strong>（连接管理 + Create 流程 + 客户端工厂）</li>
+<li><code>04-database/README.md</code> <strong>§4.11-§4.13</strong>（同步 + 备份 + 改密）</li>
+<li><code>04-database/README.md</code> <strong>§4.16</strong>（my.cnf 状态机改写）+ <strong>§4.17</strong>（7 步 + 3 层 rollback 完整代码）</li>
+<li><code>04-database/README.md</code> <strong>§4.20</strong>（MongoDB 双实现）+ <strong>§4.21</strong>（Redis 工具容器）</li>
+</ol>
+<h3>8.3 1 天写代码通道</h3>
+<ol>
+<li>上面 30 分钟 + 2 小时</li>
+<li>抄 <code>isMysqlSystemUser</code> 黑名单（22 行，5 分钟）</li>
+<li>抄 <code>userIdentities</code> 拆 host 列表（10 行，5 分钟）</li>
+<li>抄 <code>Remote.Create</code> 9 步流程（70 行，30 分钟）</li>
+<li>抄 <code>checkMysqlUserAppUsage</code> 反查逻辑（30 行，30 分钟）</li>
+<li>抄 <code>updateMysqlPasswordAppTargets</code> 改密同步（15 行，15 分钟）</li>
+<li>写你自己的 <code>SiriusDBAdapter</code> interface + Remote 实现</li>
+</ol>
+<hr>
+<h2>9. 写作说明</h2>
+<ul>
+<li><strong>本文档定位</strong>：30 分钟读完的"故事版"</li>
+<li><strong><code>04-database/README.md</code> 定位</strong>：99 KB 详细代码注解，<strong>当参考书查</strong></li>
+<li><strong><code>firewall-architecture.md</code> 定位</strong>：v2 防火墙深度注解（另一个模块的样板）</li>
+<li><strong><code>00-landscape.md</code> 定位</strong>：13 个模块的全景图（决定读哪些模块）</li>
+</ul>
+<hr>
+<p><strong>下一步</strong>：</p>
+<ul>
+<li>觉得本文档有错 / 漏 → 跟我说改哪里</li>
+<li>想我开始下一个模块（推荐 <code>09-ai-agent</code> 或 <code>03-website</code>） → 选一个</li>
+<li>想做其他事 → 跟我说</li>
+</ul>
+<p>最后<strong>你做的所有决定</strong>都可以跟 1Panel 不一样 —— 1Panel 是参考，不是答案。</p>
+<h2>测试 (1Panel.edu daily-mgmt cron test) 09:11:30</h2>
+      </article>
+    </main>
+  </div>
+  <footer>
+    <p>1Panel.edu KB · <a href="../../index.html">返回目录</a> · <a href="https://github.com/OpenUniversus/1Panel.edu" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+  <script src="../../assets/app.js"></script>
+</body>
+</html>
