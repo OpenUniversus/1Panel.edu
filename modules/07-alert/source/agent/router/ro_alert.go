@@ -12,10 +12,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AlertRouter (struct)
+// ============================================================
+// AlertRouter  告警路由
+// ============================================================
+// 方法:
+//   - InitRouter(Router) — 注册 /alert/* 路由
+// ============================================================
 type AlertRouter struct {
 }
 
+// ============================================================
+// InitRouter  注册 /alert/* 路由
+// ============================================================
+// 分组:
+//   - /alert — 告警任务 CRUD + 启停 + 查/清日志
+//   - /alert/disks/list, /alert/clams/list, /alert/cronjob/list — 关联资源
+//   - /alert/config/* — 通知渠道 CRUD + 测试
+// ============================================================
 func (a *AlertRouter) InitRouter(Router *gin.RouterGroup) {
 	alertRouter := Router.Group("alert")
 	baseApi := v2.ApiGroupApp.BaseApi

@@ -20,10 +20,28 @@ import (
 	"time"
 )
 
-// AlertRepo (struct)
+// ============================================================
+// AlertRepo  告警数据库访问对象（封装 GORM 操作）
+// ============================================================
+// 方法:
+//   - WithXxx(...) — 一组查询条件构造器（链式 DBOption）
+//   - Create / Save / Get / Page / List / Update / Delete — 告警表 CRUD
+//   - GetLog / CreateLog / UpdateLog / PageLog / ListLog / DeleteLog / CleanAlertLogs — 告警日志 CRUD
+//   - CreateAlertTask / DeleteAlertTask / GetAlertTask / LoadTaskCount / GetTaskLog / GetLicensePushCount — 任务统计
+//   - GetConfig / GetConfigById / AlertConfigList / UpdateAlertConfig / CreateAlertConfig / DeleteAlertConfig / PageAlertConfig / SyncAll — 通知渠道配置
+// ============================================================
 type AlertRepo struct{}
 
-// IAlertRepo (interface)
+// ============================================================
+// IAlertRepo  告警数据库访问接口（便于注入/测试）
+// ============================================================
+// 主要方法:
+//   - WithByXxx — 各种 DBOption 条件
+//   - Alert CRUD: Create/Save/Get/Page/List/Update/Delete
+//   - AlertLog CRUD + CleanAlertLogs
+//   - AlertTask + 统计查询
+//   - AlertConfig CRUD + SyncAll（全量同步）
+// ============================================================
 type IAlertRepo interface {
 	WithByType(alertType string) DBOption
 	WithByStatusIn(status []string) DBOption
@@ -73,52 +91,82 @@ type IAlertRepo interface {
 	SyncAll(data []model.AlertConfig) error
 }
 
+// ============================================================
+// NewIAlertRepo  构造 IAlertRepo 默认实现
+// ============================================================
 func NewIAlertRepo() IAlertRepo {
 	return &AlertRepo{}
 }
 
+// ============================================================
+// WithByType  构造"按 type 过滤"的 DBOption
+// ============================================================
 func (a *AlertRepo) WithByType(alertType string) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		return g.Where("`type` = ?", alertType)
 	}
 }
 
+// ============================================================
+// WithByStatusIn  构造"按 status in (...)"过滤的 DBOption
+// ============================================================
 func (a *AlertRepo) WithByStatusIn(status []string) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		return g.Where("status in (?)", status)
 	}
 }
 
+// ============================================================
+// WithByCount  构造"按 count 过滤"的 DBOption
+// ============================================================
 func (a *AlertRepo) WithByCount(count uint) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		return g.Where("count = ?", count)
 	}
 }
 
+// ============================================================
+// WithByProject  构造"按 project 过滤"的 DBOption
+// ============================================================
 func (a *AlertRepo) WithByProject(project string) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		return g.Where("project = ?", project)
 	}
 }
 
+// ============================================================
+// WithByAlertId  构造"按 alert_id 过滤"的 DBOption（日志用）
+// ============================================================
 func (a *AlertRepo) WithByAlertId(alertId uint) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		return g.Where("alert_id = ?", alertId)
 	}
 }
 
+// ============================================================
+// WithByLicenseId  构造"按 license_id 过滤"的 DBOption
+// ============================================================
 func (a *AlertRepo) WithByLicenseId(licenseId string) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		return g.Where("license_id = ?", licenseId)
 	}
 }
 
+// ============================================================
+// WithByRecordId  构造"按 record_id 过滤"的 DBOption
+// ============================================================
 func (a *AlertRepo) WithByRecordId(recordId uint) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		return g.Where("record_id = ?", recordId)
 	}
 }
 
+// ============================================================
+// WithByAlertMethodContainsConfigID  构造"method 字段含该 config id"的过滤
+// ============================================================
+// 作用:
+//   - 因为 method 字段是逗号分隔的 config id 列表，需要 4 种 LIKE 匹配
+// ============================================================
 func (a *AlertRepo) WithByAlertMethodContainsConfigID(id uint) DBOption {
 	method := strconv.Itoa(int(id))
 	return func(g *gorm.DB) *gorm.DB {
@@ -126,6 +174,9 @@ func (a *AlertRepo) WithByAlertMethodContainsConfigID(id uint) DBOption {
 	}
 }
 
+// ============================================================
+// WithByMethodConfigIDs  构造"method IN [id1,id2,...]"的过滤
+// ============================================================
 func (a *AlertRepo) WithByMethodConfigIDs(ids []uint) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		methods := make([]string, 0, len(ids))
@@ -136,20 +187,32 @@ func (a *AlertRepo) WithByMethodConfigIDs(ids []uint) DBOption {
 	}
 }
 
+// ============================================================
+// WithByCreateAt  构造"按创建日期过滤"的 DBOption（同一天）
+// ============================================================
 func (a *AlertRepo) WithByCreateAt(createAt *date.Date) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		return g.Where("DATE(created_at) = DATE(?)", createAt)
 	}
 }
 
+// ============================================================
+// Create  新增一条告警任务
+// ============================================================
 func (a *AlertRepo) Create(alert *model.Alert) error {
 	return global.AlertDB.Model(&model.Alert{}).Create(alert).Error
 }
 
+// ============================================================
+// Save  保存告警（全量 upsert）
+// ============================================================
 func (a *AlertRepo) Save(alert *model.Alert) error {
 	return global.AlertDB.Save(alert).Error
 }
 
+// ============================================================
+// Get  按条件取一条告警
+// ============================================================
 func (a *AlertRepo) Get(opts ...DBOption) (model.Alert, error) {
 	var alert model.Alert
 	db, _ := getAlertDB(opts...)
@@ -157,6 +220,9 @@ func (a *AlertRepo) Get(opts ...DBOption) (model.Alert, error) {
 	return alert, err
 }
 
+// ============================================================
+// Page  分页查告警 + 返回总数
+// ============================================================
 func (a *AlertRepo) Page(page, size int, opts ...DBOption) (int64, []model.Alert, error) {
 	var alerts []model.Alert
 	alertDb, _ := getAlertDB(opts...)
@@ -167,6 +233,9 @@ func (a *AlertRepo) Page(page, size int, opts ...DBOption) (int64, []model.Alert
 	return count, alerts, err
 }
 
+// ============================================================
+// List  查所有符合条件告警（不分页）
+// ============================================================
 func (a *AlertRepo) List(opts ...DBOption) ([]model.Alert, error) {
 	var alert []model.Alert
 	db, _ := getAlertDB(opts...)
@@ -174,16 +243,25 @@ func (a *AlertRepo) List(opts ...DBOption) ([]model.Alert, error) {
 	return alert, err
 }
 
+// ============================================================
+// Update  按条件批量更新告警字段
+// ============================================================
 func (a *AlertRepo) Update(maps map[string]interface{}, opts ...DBOption) error {
 	db, _ := getAlertDB(opts...)
 	return db.Model(&model.Alert{}).Updates(maps).Error
 }
 
+// ============================================================
+// Delete  按条件删除告警
+// ============================================================
 func (a *AlertRepo) Delete(opts ...DBOption) error {
 	db, _ := getAlertDB(opts...)
 	return db.Delete(&model.Alert{}).Error
 }
 
+// ============================================================
+// GetLog  按条件取一条告警日志
+// ============================================================
 func (a *AlertRepo) GetLog(opts ...DBOption) (model.AlertLog, error) {
 	var alertLog model.AlertLog
 	db, _ := getAlertDB(opts...)
@@ -191,14 +269,23 @@ func (a *AlertRepo) GetLog(opts ...DBOption) (model.AlertLog, error) {
 	return alertLog, err
 }
 
+// ============================================================
+// CreateLog  新增一条告警日志
+// ============================================================
 func (a *AlertRepo) CreateLog(log *model.AlertLog) error {
 	return global.AlertDB.Model(&model.AlertLog{}).Create(&log).Error
 }
 
+// ============================================================
+// UpdateLog  按 ID 更新告警日志
+// ============================================================
 func (a *AlertRepo) UpdateLog(id uint, maps map[string]interface{}) error {
 	return global.AlertDB.Model(&model.AlertLog{}).Where("id = ?", id).Updates(maps).Error
 }
 
+// ============================================================
+// BatchUpdateLogBy  按条件批量更新告警日志
+// ============================================================
 func (a *AlertRepo) BatchUpdateLogBy(maps map[string]interface{}, opts ...DBOption) error {
 	db, _ := getAlertDB(opts...)
 	if len(opts) == 0 {
@@ -207,6 +294,9 @@ func (a *AlertRepo) BatchUpdateLogBy(maps map[string]interface{}, opts ...DBOpti
 	return db.Model(&model.AlertLog{}).Updates(&maps).Error
 }
 
+// ============================================================
+// PageLog  分页查告警日志（按 created_at desc）
+// ============================================================
 func (a *AlertRepo) PageLog(page, size int, opts ...DBOption) (int64, []model.AlertLog, error) {
 	var alerts []model.AlertLog
 	db := global.AlertDB.Model(&model.AlertLog{})
@@ -219,6 +309,9 @@ func (a *AlertRepo) PageLog(page, size int, opts ...DBOption) (int64, []model.Al
 	return count, alerts, err
 }
 
+// ============================================================
+// ListLog  查所有符合条件的告警日志
+// ============================================================
 func (a *AlertRepo) ListLog(opts ...DBOption) ([]model.AlertLog, error) {
 	var alertLog []model.AlertLog
 	db, _ := getAlertDB(opts...)
@@ -226,24 +319,39 @@ func (a *AlertRepo) ListLog(opts ...DBOption) ([]model.AlertLog, error) {
 	return alertLog, err
 }
 
+// ============================================================
+// DeleteLog  按条件删除告警日志
+// ============================================================
 func (a *AlertRepo) DeleteLog(opts ...DBOption) error {
 	db, _ := getAlertDB(opts...)
 	return db.Delete(&model.AlertLog{}).Error
 }
 
+// ============================================================
+// CleanAlertLogs  清空所有告警日志
+// ============================================================
 func (a *AlertRepo) CleanAlertLogs() error {
 	return global.AlertDB.Where("1 = 1").Delete(&model.AlertLog{}).Error
 }
 
+// ============================================================
+// CreateAlertTask  新增一条 AlertTask（系统内置的"今日推送"统计记录）
+// ============================================================
 func (a *AlertRepo) CreateAlertTask(alertTaskBase *model.AlertTask) error {
 	return global.AlertDB.Model(&model.AlertTask{}).Create(&alertTaskBase).Error
 }
 
+// ============================================================
+// DeleteAlertTask  按条件删除 AlertTask
+// ============================================================
 func (a *AlertRepo) DeleteAlertTask(opts ...DBOption) error {
 	db, _ := getAlertDB(opts...)
 	return db.Delete(&model.AlertTask{}).Error
 }
 
+// ============================================================
+// GetAlertTask  按条件取一条 AlertTask
+// ============================================================
 func (a *AlertRepo) GetAlertTask(opts ...DBOption) (model.AlertTask, error) {
 	var data model.AlertTask
 	db, _ := getAlertDB(opts...)
@@ -251,6 +359,13 @@ func (a *AlertRepo) GetAlertTask(opts ...DBOption) (model.AlertTask, error) {
 	return data, err
 }
 
+// ============================================================
+// LoadTaskCount  拿 (今日次数, 总次数) — 用于告警频率限制
+// ============================================================
+// 流程:
+//   1. 总次数 = AlertTask 全部 count
+//   2. 今日次数 = 今日 0 点到次日 0 点范围内
+// ============================================================
 func (a *AlertRepo) LoadTaskCount(alertType string, project string, method string) (uint, uint, error) {
 	var (
 		todayCount int64
@@ -265,6 +380,12 @@ func (a *AlertRepo) LoadTaskCount(alertType string, project string, method strin
 	return uint(todayCount), uint(totalCount), err
 }
 
+// ============================================================
+// GetTaskLog  拿某个告警今日最近一次成功推送的时间
+// ============================================================
+// 作用:
+//   - 用于"告警冷却"判断（不到冷却时间不再发）
+// ============================================================
 func (a *AlertRepo) GetTaskLog(alertType string, alertId uint) (time.Time, error) {
 	var newDate time.Time
 	status := []string{constant.AlertSuccess, constant.AlertPushSuccess, constant.AlertSyncError, constant.AlertPushing}
@@ -287,6 +408,9 @@ func (a *AlertRepo) GetTaskLog(alertType string, alertId uint) (time.Time, error
 	return newDate, nil
 }
 
+// ============================================================
+// getAlertDB  工具方法：把 DBOption 链式应用到全局 AlertDB
+// ============================================================
 func getAlertDB(opts ...DBOption) (*gorm.DB, error) {
 	var db *gorm.DB
 	db = global.AlertDB
@@ -296,6 +420,9 @@ func getAlertDB(opts ...DBOption) (*gorm.DB, error) {
 	return db, nil
 }
 
+// ============================================================
+// GetLicensePushCount  今日某个 method 的推送计数
+// ============================================================
 func (a *AlertRepo) GetLicensePushCount(method string) (uint, error) {
 	var (
 		todayCount int64
@@ -307,6 +434,9 @@ func (a *AlertRepo) GetLicensePushCount(method string) (uint, error) {
 	return uint(todayCount), err
 }
 
+// ============================================================
+// AlertConfigList  查所有通知渠道配置
+// ============================================================
 func (a *AlertRepo) AlertConfigList(opts ...DBOption) ([]model.AlertConfig, error) {
 	var config []model.AlertConfig
 	db, _ := getAlertDB(opts...)
@@ -314,20 +444,32 @@ func (a *AlertRepo) AlertConfigList(opts ...DBOption) ([]model.AlertConfig, erro
 	return config, err
 }
 
+// ============================================================
+// UpdateAlertConfig  按条件更新通知渠道
+// ============================================================
 func (a *AlertRepo) UpdateAlertConfig(maps map[string]interface{}, opts ...DBOption) error {
 	db, _ := getAlertDB(opts...)
 	return db.Model(&model.AlertConfig{}).Updates(maps).Error
 }
 
+// ============================================================
+// CreateAlertConfig  新增通知渠道
+// ============================================================
 func (a *AlertRepo) CreateAlertConfig(config *model.AlertConfig) error {
 	return global.AlertDB.Model(&model.AlertConfig{}).Create(config).Error
 }
 
+// ============================================================
+// DeleteAlertConfig  按条件删除通知渠道
+// ============================================================
 func (a *AlertRepo) DeleteAlertConfig(opts ...DBOption) error {
 	db, _ := getAlertDB(opts...)
 	return db.Delete(&model.AlertConfig{}).Error
 }
 
+// ============================================================
+// GetConfig  按条件取一条通知渠道
+// ============================================================
 func (a *AlertRepo) GetConfig(opts ...DBOption) (model.AlertConfig, error) {
 	var alertConfig model.AlertConfig
 	db, _ := getAlertDB(opts...)
@@ -335,18 +477,27 @@ func (a *AlertRepo) GetConfig(opts ...DBOption) (model.AlertConfig, error) {
 	return alertConfig, err
 }
 
+// ============================================================
+// GetConfigById  按主键 ID 取通知渠道
+// ============================================================
 func (a *AlertRepo) GetConfigById(id uint) (model.AlertConfig, error) {
 	var config model.AlertConfig
 	err := global.AlertDB.First(&config, id).Error
 	return config, err
 }
 
+// ============================================================
+// WithByTypeNotIn  构造"type NOT IN (...)"的 DBOption
+// ============================================================
 func (a *AlertRepo) WithByTypeNotIn(types []string) DBOption {
 	return func(g *gorm.DB) *gorm.DB {
 		return g.Where("`type` NOT IN (?)", types)
 	}
 }
 
+// ============================================================
+// PageAlertConfig  分页查通知渠道 + 总数
+// ============================================================
 func (a *AlertRepo) PageAlertConfig(page, size int, opts ...DBOption) (int64, []model.AlertConfig, error) {
 	var configs []model.AlertConfig
 	db := global.AlertDB.Model(&model.AlertConfig{})
@@ -359,10 +510,26 @@ func (a *AlertRepo) PageAlertConfig(page, size int, opts ...DBOption) (int64, []
 	return count, configs, err
 }
 
+// ============================================================
+// singletonTypes  单例类型的渠道（全局唯一，不能新增多个）
+// ============================================================
+// 当前: CommonConfig（通用配置）
+// ============================================================
 var singletonTypes = map[string]bool{
 	constant.CommonConfig: true,
 }
 
+// ============================================================
+// SyncAll  全量同步通知渠道（按"唯一键"匹配，删除多余）
+// ============================================================
+// 参数:
+//   - data — 新配置列表
+// 流程:
+//   1. 拉老配置
+//   2. 单例类按 type 复用；其他按 (type+config) 匹配
+//   3. 匹配到则 Save，否则 Create
+//   4. 没被消耗的老配置 + 没被任何告警引用的 删除
+// ============================================================
 func (a *AlertRepo) SyncAll(data []model.AlertConfig) error {
 	tx := global.AlertDB.Begin()
 	if tx.Error != nil {
@@ -467,6 +634,12 @@ func (a *AlertRepo) SyncAll(data []model.AlertConfig) error {
 	return nil
 }
 
+// ============================================================
+// loadUsedAlertConfigIDs  拿所有"被某条告警任务引用"的 config id 集合
+// ============================================================
+// 作用:
+//   - 同步时只删"未被引用"的老配置
+// ============================================================
 func loadUsedAlertConfigIDs(tx *gorm.DB) (map[uint]struct{}, error) {
 	var alerts []model.Alert
 	if err := tx.Select("method").Find(&alerts).Error; err != nil {
@@ -490,10 +663,21 @@ func loadUsedAlertConfigIDs(tx *gorm.DB) (map[uint]struct{}, error) {
 	return usedIDs, nil
 }
 
+// ============================================================
+// alertConfigSyncKey  算一条渠道的"同步键" (type + 标准化后的 config JSON)
+// ============================================================
 func alertConfigSyncKey(item model.AlertConfig) string {
 	return item.Type + "::" + normalizeAlertConfigJSON(item.Config)
 }
 
+// ============================================================
+// normalizeAlertConfigJSON  把 config 字符串重新序列化以"去空格稳定"
+// ============================================================
+// 流程:
+//   1. 尝试 JSON 解析
+//   2. 成功就 Marshal（标准化格式）
+//   3. 失败就返原 trimmed 串
+// ============================================================
 func normalizeAlertConfigJSON(config string) string {
 	trimmed := strings.TrimSpace(config)
 	if trimmed == "" {
@@ -511,6 +695,9 @@ func normalizeAlertConfigJSON(config string) string {
 	return string(buf)
 }
 
+// ============================================================
+// popAlertConfigByKey  从 key->列表 中弹出一项（同步算法辅助）
+// ============================================================
 func popAlertConfigByKey(configMap map[string][]model.AlertConfig, key string) (model.AlertConfig, bool) {
 	items := configMap[key]
 	if len(items) == 0 {
@@ -526,6 +713,9 @@ func popAlertConfigByKey(configMap map[string][]model.AlertConfig, key string) (
 	return item, true
 }
 
+// ============================================================
+// popUnusedAlertConfigByType  弹出一个"未使用且同 type"的老配置
+// ============================================================
 func popUnusedAlertConfigByType(configMap map[string][]model.AlertConfig, usedConfigIDs map[uint]struct{}, configType string) (model.AlertConfig, bool) {
 	items := configMap[configType]
 	if len(items) == 0 {
@@ -550,6 +740,9 @@ func popUnusedAlertConfigByType(configMap map[string][]model.AlertConfig, usedCo
 	return model.AlertConfig{}, false
 }
 
+// ============================================================
+// deleteAlertConfigByID  从嵌套 map 中删掉一个指定 ID
+// ============================================================
 func deleteAlertConfigByID(configMap map[string][]model.AlertConfig, id uint) {
 	for key, items := range configMap {
 		for idx, item := range items {

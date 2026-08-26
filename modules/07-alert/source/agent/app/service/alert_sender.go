@@ -20,12 +20,25 @@ import (
 	"github.com/1Panel-dev/1Panel/agent/utils/xpack"
 )
 
-// AlertSender (struct)
+// ============================================================
+// AlertSender  告警发送器（按渠道类型分发到 SMS/Email/Bark/Webhook）
+// ============================================================
+// 字段:
+//   - alert (dto.AlertDTO) — 要发的告警
+//   - quotaType (string) — 阈值类型（disk/node-error 等）
+// 方法:
+//   - Send / ResourceSend — 入口
+//   - sendXxxWithConfig / sendXxx — 各渠道实现
+//   - canSendAlert / canResourceSendAlert — 频次控制
+// ============================================================
 type AlertSender struct {
 	alert     dto.AlertDTO
 	quotaType string
 }
 
+// ============================================================
+// NewAlertSender  构造发送器
+// ============================================================
 func NewAlertSender(alert dto.AlertDTO, quotaType string) *AlertSender {
 	return &AlertSender{
 		alert:     alert,
@@ -33,14 +46,23 @@ func NewAlertSender(alert dto.AlertDTO, quotaType string) *AlertSender {
 	}
 }
 
+// ============================================================
+// Send  发送"基础类"告警（SSL/网站过期等，按总次数限制）
+// ============================================================
 func (s *AlertSender) Send(quota string, params []dto.Param) {
 	s.sendByConfigIds(s.alert.Method, quota, params, false)
 }
 
+// ============================================================
+// ResourceSend  发送"资源类"告警（CPU/内存/磁盘等，按今日次数限制）
+// ============================================================
 func (s *AlertSender) ResourceSend(quota string, params []dto.Param) {
 	s.sendByConfigIds(s.alert.Method, quota, params, true)
 }
 
+// ============================================================
+// sendByConfigIds  解析 method 字符串里的 config id 列表，逐个发
+// ============================================================
 func (s *AlertSender) sendByConfigIds(methodStr string, quota string, params []dto.Param, isResource bool) {
 	alertRepo := repo.NewIAlertRepo()
 	configIds := strings.Split(methodStr, ",")
@@ -60,6 +82,9 @@ func (s *AlertSender) sendByConfigIds(methodStr string, quota string, params []d
 	}
 }
 
+// ============================================================
+// sendByConfig  按渠道类型分发到具体 sendXxx
+// ============================================================
 func (s *AlertSender) sendByConfig(config model.AlertConfig, quota string, params []dto.Param, isResource bool) {
 	if !alertUtil.IsAlertConfigEnabled(config) {
 		return
@@ -92,6 +117,9 @@ func (s *AlertSender) sendByConfig(config model.AlertConfig, quota string, param
 	}
 }
 
+// ============================================================
+// sendByLegacyMethod  兼容旧版 method 名（mail/bark/sms）
+// ============================================================
 func (s *AlertSender) sendByLegacyMethod(method string, quota string, params []dto.Param, isResource bool) {
 	alertRepo := repo.NewIAlertRepo()
 	typeMap := map[string]string{"mail": constant.Email, constant.Bark: constant.Bark, constant.SMS: constant.SMS}
@@ -109,6 +137,9 @@ func (s *AlertSender) sendByLegacyMethod(method string, quota string, params []d
 	s.sendByConfig(config, quota, params, isResource)
 }
 
+// ============================================================
+// sendSMSWithConfig  用指定渠道发基础类 SMS
+// ============================================================
 func (s *AlertSender) sendSMSWithConfig(config model.AlertConfig, quota string, params []dto.Param) {
 	if !alertUtil.IsAlertConfigEnabled(config) {
 		return
@@ -139,6 +170,9 @@ func (s *AlertSender) sendSMSWithConfig(config model.AlertConfig, quota string, 
 	alertUtil.CreateNewAlertTask(quota, s.alert.Type, s.quotaType, method)
 }
 
+// ============================================================
+// sendSMS  按"系统默认 SMS 渠道"发基础类
+// ============================================================
 func (s *AlertSender) sendSMS(quota string, params []dto.Param) {
 	alertRepo := repo.NewIAlertRepo()
 	config, err := alertRepo.GetConfig(alertRepo.WithByType(constant.SMS))
@@ -148,6 +182,9 @@ func (s *AlertSender) sendSMS(quota string, params []dto.Param) {
 	s.sendSMSWithConfig(config, quota, params)
 }
 
+// ============================================================
+// sendEmailWithConfig  用指定渠道发基础类邮件
+// ============================================================
 func (s *AlertSender) sendEmailWithConfig(config model.AlertConfig, quota string, params []dto.Param) {
 	if !alertUtil.IsAlertConfigEnabled(config) {
 		return
@@ -177,6 +214,9 @@ func (s *AlertSender) sendEmailWithConfig(config model.AlertConfig, quota string
 	alertUtil.CreateNewAlertTask(quota, s.alert.Type, s.quotaType, strconv.Itoa(int(config.ID)))
 }
 
+// ============================================================
+// sendResourceEmailWithConfig  用指定渠道发资源类邮件
+// ============================================================
 func (s *AlertSender) sendResourceEmailWithConfig(config model.AlertConfig, quota string, params []dto.Param) {
 	if !alertUtil.IsAlertConfigEnabled(config) {
 		return
@@ -205,6 +245,9 @@ func (s *AlertSender) sendResourceEmailWithConfig(config model.AlertConfig, quot
 	alertUtil.CreateNewAlertTask(quota, s.alert.Type, s.quotaType, strconv.Itoa(int(config.ID)))
 }
 
+// ============================================================
+// sendEmail  按"系统默认 Email 渠道"发基础类
+// ============================================================
 func (s *AlertSender) sendEmail(quota string, params []dto.Param) {
 	alertRepo := repo.NewIAlertRepo()
 	config, err := alertRepo.GetConfig(alertRepo.WithByType(constant.EmailConfig))
@@ -214,6 +257,9 @@ func (s *AlertSender) sendEmail(quota string, params []dto.Param) {
 	s.sendEmailWithConfig(config, quota, params)
 }
 
+// ============================================================
+// sendResourceEmail  按系统默认 Email 渠道发资源类
+// ============================================================
 func (s *AlertSender) sendResourceEmail(quota string, params []dto.Param) {
 	alertRepo := repo.NewIAlertRepo()
 	config, err := alertRepo.GetConfig(alertRepo.WithByType(constant.EmailConfig))
@@ -223,6 +269,9 @@ func (s *AlertSender) sendResourceEmail(quota string, params []dto.Param) {
 	s.sendResourceEmailWithConfig(config, quota, params)
 }
 
+// ============================================================
+// sendBarkWithConfig  用指定渠道发基础类 Bark
+// ============================================================
 func (s *AlertSender) sendBarkWithConfig(config model.AlertConfig, quota string, params []dto.Param) {
 	if !alertUtil.IsAlertConfigEnabled(config) {
 		return
@@ -252,6 +301,9 @@ func (s *AlertSender) sendBarkWithConfig(config model.AlertConfig, quota string,
 	alertUtil.CreateNewAlertTask(quota, s.alert.Type, s.quotaType, strconv.Itoa(int(config.ID)))
 }
 
+// ============================================================
+// sendResourceBarkWithConfig  用指定渠道发资源类 Bark
+// ============================================================
 func (s *AlertSender) sendResourceBarkWithConfig(config model.AlertConfig, quota string, params []dto.Param) {
 	if !alertUtil.IsAlertConfigEnabled(config) {
 		return
@@ -280,6 +332,9 @@ func (s *AlertSender) sendResourceBarkWithConfig(config model.AlertConfig, quota
 	alertUtil.CreateNewAlertTask(quota, s.alert.Type, s.quotaType, strconv.Itoa(int(config.ID)))
 }
 
+// ============================================================
+// sendBark  按系统默认 Bark 渠道发基础类
+// ============================================================
 func (s *AlertSender) sendBark(quota string, params []dto.Param) {
 	alertRepo := repo.NewIAlertRepo()
 	config, err := alertRepo.GetConfig(alertRepo.WithByType(constant.Bark))
@@ -289,6 +344,9 @@ func (s *AlertSender) sendBark(quota string, params []dto.Param) {
 	s.sendBarkWithConfig(config, quota, params)
 }
 
+// ============================================================
+// sendResourceBark  按系统默认 Bark 渠道发资源类
+// ============================================================
 func (s *AlertSender) sendResourceBark(quota string, params []dto.Param) {
 	alertRepo := repo.NewIAlertRepo()
 	config, err := alertRepo.GetConfig(alertRepo.WithByType(constant.Bark))
@@ -298,6 +356,9 @@ func (s *AlertSender) sendResourceBark(quota string, params []dto.Param) {
 	s.sendResourceBarkWithConfig(config, quota, params)
 }
 
+// ============================================================
+// sendWebhookWithConfig  用指定渠道发基础类 Webhook（企微/钉钉/飞书）
+// ============================================================
 func (s *AlertSender) sendWebhookWithConfig(config model.AlertConfig, quota string, params []dto.Param) {
 	if !alertUtil.IsAlertConfigEnabled(config) {
 		return
@@ -324,6 +385,9 @@ func (s *AlertSender) sendWebhookWithConfig(config model.AlertConfig, quota stri
 	alertUtil.CreateNewAlertTask(quota, s.alert.Type, s.quotaType, strconv.Itoa(int(config.ID)))
 }
 
+// ============================================================
+// sendResourceWebhookWithConfig  用指定渠道发资源类 Webhook
+// ============================================================
 func (s *AlertSender) sendResourceWebhookWithConfig(config model.AlertConfig, quota string, params []dto.Param) {
 	if !alertUtil.IsAlertConfigEnabled(config) {
 		return
@@ -349,6 +413,9 @@ func (s *AlertSender) sendResourceWebhookWithConfig(config model.AlertConfig, qu
 	alertUtil.CreateNewAlertTask(quota, s.alert.Type, s.quotaType, strconv.Itoa(int(config.ID)))
 }
 
+// ============================================================
+// sendWebhook  按 type 找 Webhook 渠道发基础类
+// ============================================================
 func (s *AlertSender) sendWebhook(quota string, params []dto.Param, method string) {
 	alertRepo := repo.NewIAlertRepo()
 	config, err := alertRepo.GetConfig(alertRepo.WithByType(method))
@@ -358,6 +425,9 @@ func (s *AlertSender) sendWebhook(quota string, params []dto.Param, method strin
 	s.sendWebhookWithConfig(config, quota, params)
 }
 
+// ============================================================
+// sendResourceWebhook  按 type 找 Webhook 渠道发资源类
+// ============================================================
 func (s *AlertSender) sendResourceWebhook(quota string, params []dto.Param, method string) {
 	alertRepo := repo.NewIAlertRepo()
 	config, err := alertRepo.GetConfig(alertRepo.WithByType(method))
@@ -367,6 +437,9 @@ func (s *AlertSender) sendResourceWebhook(quota string, params []dto.Param, meth
 	s.sendResourceWebhookWithConfig(config, quota, params)
 }
 
+// ============================================================
+// sendResourceSMSWithConfig  用指定渠道发资源类 SMS
+// ============================================================
 func (s *AlertSender) sendResourceSMSWithConfig(config model.AlertConfig, quota string, params []dto.Param) {
 	if !alertUtil.IsAlertConfigEnabled(config) {
 		return
@@ -396,6 +469,9 @@ func (s *AlertSender) sendResourceSMSWithConfig(config model.AlertConfig, quota 
 	alertUtil.CreateNewAlertTask(quota, s.alert.Type, s.quotaType, method)
 }
 
+// ============================================================
+// sendResourceSMS  按系统默认 SMS 渠道发资源类
+// ============================================================
 func (s *AlertSender) sendResourceSMS(quota string, params []dto.Param) {
 	alertRepo := repo.NewIAlertRepo()
 	config, err := alertRepo.GetConfig(alertRepo.WithByType(constant.SMSConfig))
@@ -405,6 +481,9 @@ func (s *AlertSender) sendResourceSMS(quota string, params []dto.Param) {
 	s.sendResourceSMSWithConfig(config, quota, params)
 }
 
+// ============================================================
+// canSendAlert  基础类发送判断：今天/总数都未超 sendCount
+// ============================================================
 func (s *AlertSender) canSendAlert(method string) (uint, bool) {
 	todayCount, totalCount, err := alertRepo.LoadTaskCount(s.alert.Type, s.quotaType, method)
 	if err != nil {
@@ -418,6 +497,9 @@ func (s *AlertSender) canSendAlert(method string) (uint, bool) {
 	return totalCount, true
 }
 
+// ============================================================
+// canResourceSendAlert  资源类发送判断：今日次数未超 sendCount
+// ============================================================
 func (s *AlertSender) canResourceSendAlert(method string) (uint, bool) {
 	todayCount, _, err := alertRepo.LoadTaskCount(s.alert.Type, s.quotaType, method)
 	if err != nil {

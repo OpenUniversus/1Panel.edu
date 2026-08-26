@@ -31,7 +31,15 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 )
 
-// AlertService (struct)
+// ============================================================
+// AlertService  告警业务服务（CRUD + 调度 + 通知渠道）
+// ============================================================
+// 方法:
+//   - PageAlert / GetAlerts / CreateAlert / UpdateAlert / DeleteAlert / GetAlert / UpdateStatus
+//   - ExternalUpdateAlert (外部触发)
+//   - GetDisks / PageAlertLogs / CleanAlertLogs / GetClams / GetCronJobs
+//   - GetAlertConfig / PageAlertConfig / UpdateAlertConfig / DeleteAlertConfig / TestAlertConfig
+// ============================================================
 type AlertService struct{}
 
 var eeHiddenAlertTypes = []string{"licenseException", "panelUpdate", "panelPwdEndTime"}
@@ -42,7 +50,14 @@ var communityAlertMethodTypeNames = map[string]string{
 	constant.SMS:      "SMS",
 }
 
-// IAlertService (interface)
+// ============================================================
+// IAlertService  AlertService 的接口
+// ============================================================
+// 主要方法: PageAlert / GetAlerts / CreateAlert / UpdateAlert / DeleteAlert / GetAlert
+//           UpdateStatus / ExternalUpdateAlert
+//           GetDisks / PageAlertLogs / CleanAlertLogs / GetClams / GetCronJobs
+//           GetAlertConfig / PageAlertConfig / UpdateAlertConfig / DeleteAlertConfig / TestAlertConfig
+// ============================================================
 type IAlertService interface {
 	PageAlert(req dto.AlertSearch) (int64, []dto.AlertDTO, error)
 	GetAlerts() ([]dto.AlertDTO, error)
@@ -66,10 +81,23 @@ type IAlertService interface {
 	TestAlertConfig(req dto.AlertConfigTest) (bool, error)
 }
 
+// ============================================================
+// NewIAlertService  构造 IAlertService 默认实现
+// ============================================================
 func NewIAlertService() IAlertService {
 	return &AlertService{}
 }
 
+// ============================================================
+// PageAlert  分页查告警任务
+// ============================================================
+// 流程:
+//   1. 按 Status/Type 拼 DBOption
+//   2. 企业版隐藏 licenseException / panelUpdate 等敏感类型
+//   3. 调 alertRepo.Page
+//   4. 把 model 拷到 DTO
+// 调用: api/v2.PageAlert -> this
+// ============================================================
 func (a AlertService) PageAlert(search dto.AlertSearch) (int64, []dto.AlertDTO, error) {
 	var (
 		opts   []repo.DBOption
@@ -114,6 +142,11 @@ func (a AlertService) PageAlert(search dto.AlertSearch) (int64, []dto.AlertDTO, 
 	return total, result, err
 }
 
+// ============================================================
+// GetAlerts  拿所有"已启用"告警任务
+// ============================================================
+// 用途: 给告警调度器（alert_helper）拉最新的"待监控"列表
+// ============================================================
 func (a AlertService) GetAlerts() ([]dto.AlertDTO, error) {
 	var (
 		opts   []repo.DBOption
@@ -147,6 +180,16 @@ func (a AlertService) GetAlerts() ([]dto.AlertDTO, error) {
 	return result, err
 }
 
+// ============================================================
+// CreateAlert  创建/更新告警任务（已存在同 type/project 就改；否则新增）
+// ============================================================
+// 流程:
+//   1. 校验社区版通知方式
+//   2. 按 (type, project) 查是否已存在
+//   3. 存在则 update，不存在则 create
+//   4. 触发 InitTask 启动后台调度
+// 调用: api/v2.CreateAlert -> this
+// ============================================================
 func (a AlertService) CreateAlert(create dto.AlertCreate, operator string) error {
 	if err := a.validateCommunityAlertMethod(create.Method); err != nil {
 		return err
@@ -188,6 +231,9 @@ func (a AlertService) CreateAlert(create dto.AlertCreate, operator string) error
 	return nil
 }
 
+// ============================================================
+// UpdateAlert  更新告警任务（按 ID）
+// ============================================================
 func (a AlertService) UpdateAlert(req dto.AlertUpdate, operator string) error {
 	if err := a.validateCommunityAlertMethod(req.Method); err != nil {
 		return err
@@ -213,6 +259,14 @@ func (a AlertService) UpdateAlert(req dto.AlertUpdate, operator string) error {
 	return nil
 }
 
+// ============================================================
+// DeleteAlert  按 ID 删除告警任务
+// ============================================================
+// 流程:
+//   1. 校验存在
+//   2. 删除
+//   3. 重新拿所有启用告警; 还有就重启 InitTask，否则 StopTask
+// ============================================================
 func (a AlertService) DeleteAlert(id uint) error {
 	alertInfo, _ := alertRepo.Get(repo.WithByID(id))
 	if alertInfo.ID == 0 {
@@ -234,6 +288,9 @@ func (a AlertService) DeleteAlert(id uint) error {
 	return nil
 }
 
+// ============================================================
+// GetAlert  按 ID 查告警并转 DTO
+// ============================================================
 func (a AlertService) GetAlert(id uint) (dto.AlertDTO, error) {
 	var res dto.AlertDTO
 	alertInfo, err := alertRepo.Get(repo.WithByID(id))
@@ -244,6 +301,9 @@ func (a AlertService) GetAlert(id uint) (dto.AlertDTO, error) {
 	return res, nil
 }
 
+// ============================================================
+// UpdateStatus  改告警状态（启用/停用）并同步后台任务
+// ============================================================
 func (a AlertService) UpdateStatus(id uint, status string) error {
 	alertInfo, _ := alertRepo.Get(repo.WithByID(id))
 	if alertInfo.ID == 0 {
@@ -265,6 +325,16 @@ func (a AlertService) UpdateStatus(id uint, status string) error {
 	return nil
 }
 
+// ============================================================
+// GetDisks  拿所有可用磁盘（用于磁盘空间告警的"选监控对象"）
+// ============================================================
+// 流程:
+//   1. 跑 df -hT 拿挂载点
+//   2. 过滤掉 /boot /tmpfs /docker /snap 等
+//   3. 并发调 gopsutil disk.Usage 读每个挂载点的使用率（5s 超时）
+//   4. 按路径排序
+// 调用: api/v2.GetDisks -> this
+// ============================================================
 func (a AlertService) GetDisks() ([]dto.DiskDTO, error) {
 	var disks []dto.DiskDTO
 	excludes := map[string]struct{}{
@@ -342,6 +412,14 @@ func (a AlertService) GetDisks() ([]dto.DiskDTO, error) {
 	return disks, nil
 }
 
+// ============================================================
+// executeDiskCommand  执行 df 拿磁盘信息（先 hT 再回退 lhT）
+// ============================================================
+// 流程:
+//   1. df -hT -P （标准 POSIX 格式）
+//   2. 失败就回退 df -lhT -P
+//   3. 过滤 tmpfs / snap / udev
+// ============================================================
 func executeDiskCommand() (string, error) {
 	cmdMgr := cmd.NewCommandMgr(cmd.WithTimeout(2 * time.Second))
 	stdout, err := cmdMgr.RunWithStdout("df", "-hT", "-P")
@@ -365,6 +443,11 @@ func executeDiskCommand() (string, error) {
 	return strings.Join(lines, "\n"), nil
 }
 
+// ============================================================
+// shouldExclude  判断某行磁盘是否要排除
+// ============================================================
+// 规则: /snap 前缀、tmpfs、含 K（小于 1MB）、含 docker、深度过深、在 excludes 列表中
+// ============================================================
 func shouldExclude(fields []string, mountPoint string, excludes map[string]struct{}) bool {
 	if strings.HasPrefix(mountPoint, "/snap") || len(strings.Split(mountPoint, "/")) > 10 {
 		return true
@@ -382,6 +465,15 @@ func shouldExclude(fields []string, mountPoint string, excludes map[string]struc
 	return excluded
 }
 
+// ============================================================
+// PageAlertLogs  分页查告警日志 + 解析 JSON 字段
+// ============================================================
+// 流程:
+//   1. 拼 DBOption
+//   2. 调 alertRepo.PageLog
+//   3. 逐条调 parseAlertLog 反序列化 AlertDetail/AlertRule
+// 调用: api/v2.PageAlertLogs -> this
+// ============================================================
 func (a AlertService) PageAlertLogs(search dto.AlertLogSearch) (int64, []dto.AlertLogDTO, error) {
 	var (
 		opts   []repo.DBOption
@@ -414,6 +506,9 @@ func (a AlertService) PageAlertLogs(search dto.AlertLogSearch) (int64, []dto.Ale
 	return total, result, err
 }
 
+// ============================================================
+// parseAlertLog  把 AlertLog 解析成 DTO（展开 JSON 详情/规则字段）
+// ============================================================
 func (a AlertService) parseAlertLog(item model.AlertLog) (dto.AlertLogDTO, error) {
 	var alertDetail dto.AlertDetail
 	var alertRule dto.AlertRule
@@ -439,6 +534,9 @@ func (a AlertService) parseAlertLog(item model.AlertLog) (dto.AlertLogDTO, error
 	}, nil
 }
 
+// ============================================================
+// unmarshalAlertInfo  通用 JSON 反序列化（包装错误信息）
+// ============================================================
 func unmarshalAlertInfo(data string, v interface{}) error {
 	if err := json.Unmarshal([]byte(data), v); err != nil {
 		return fmt.Errorf("unmarshal alert info vars failed, err: %v", err)
@@ -446,10 +544,16 @@ func unmarshalAlertInfo(data string, v interface{}) error {
 	return nil
 }
 
+// ============================================================
+// CleanAlertLogs  清空告警日志
+// ============================================================
 func (a AlertService) CleanAlertLogs() error {
 	return alertRepo.CleanAlertLogs()
 }
 
+// ============================================================
+// GetClams  拿 ClamAV 杀毒任务列表（用于"病毒告警"选来源）
+// ============================================================
 func (a AlertService) GetClams() ([]dto.ClamDTO, error) {
 	var clams []dto.ClamDTO
 	clamList, err := clamRepo.List()
@@ -467,6 +571,9 @@ func (a AlertService) GetClams() ([]dto.ClamDTO, error) {
 	return clams, err
 }
 
+// ============================================================
+// GetCronJobs  拿可关联告警的定时任务列表
+// ============================================================
 func (a AlertService) GetCronJobs(req dto.CronJobReq) ([]dto.CronJobDTO, error) {
 	var cronJobs []dto.CronJobDTO
 	var (
@@ -493,6 +600,11 @@ func (a AlertService) GetCronJobs(req dto.CronJobReq) ([]dto.CronJobDTO, error) 
 	return cronJobs, err
 }
 
+// ============================================================
+// GetAlertConfig  按排除类型查"启用"通知渠道
+// ============================================================
+// 用途: 告警任务新建时选择通知方式
+// ============================================================
 func (a AlertService) GetAlertConfig(req dto.AlertConfigQuery) ([]model.AlertConfig, error) {
 	var (
 		opts    []repo.DBOption
@@ -506,6 +618,9 @@ func (a AlertService) GetAlertConfig(req dto.AlertConfigQuery) ([]model.AlertCon
 	return configs, err
 }
 
+// ============================================================
+// PageAlertConfig  分页查通知渠道（默认排除 common）
+// ============================================================
 func (a AlertService) PageAlertConfig(req dto.AlertConfigPageReq) (int64, []model.AlertConfig, error) {
 	opts := []repo.DBOption{
 		alertRepo.WithByTypeNotIn([]string{"common"}),
@@ -517,6 +632,14 @@ func (a AlertService) PageAlertConfig(req dto.AlertConfigPageReq) (int64, []mode
 	return alertRepo.PageAlertConfig(req.Page, req.PageSize, opts...)
 }
 
+// ============================================================
+// UpdateAlertConfig  更新或新增通知渠道（含唯一性校验）
+// ============================================================
+// 校验:
+//   - validateCommunityAlertConfigType (社区版限制)
+//   - displayName 唯一
+//   - SMS 手机号唯一
+// ============================================================
 func (a AlertService) UpdateAlertConfig(req dto.AlertConfigUpdate, operator string) error {
 	if err := a.validateCommunityAlertConfigType(req.Type); err != nil {
 		return err
@@ -553,6 +676,9 @@ func (a AlertService) UpdateAlertConfig(req dto.AlertConfigUpdate, operator stri
 	return nil
 }
 
+// ============================================================
+// checkAlertConfigSMSPhoneUnique  校验 SMS 手机号不重复
+// ============================================================
 func (a AlertService) checkAlertConfigSMSPhoneUnique(req dto.AlertConfigUpdate) error {
 	if req.Type != constant.SMSConfig {
 		return nil
@@ -576,6 +702,9 @@ func (a AlertService) checkAlertConfigSMSPhoneUnique(req dto.AlertConfigUpdate) 
 	return nil
 }
 
+// ============================================================
+// checkAlertConfigDisplayNameUnique  校验通知渠道"显示名"不重复
+// ============================================================
 func (a AlertService) checkAlertConfigDisplayNameUnique(req dto.AlertConfigUpdate) error {
 	displayName := alertConfigDisplayName(req.Type, req.Config)
 	if displayName == "" {
@@ -599,6 +728,9 @@ func (a AlertService) checkAlertConfigDisplayNameUnique(req dto.AlertConfigUpdat
 	return nil
 }
 
+// ============================================================
+// validateCommunityAlertMethod  社区版通知方式限制（不允许 WeCom/DingTalk/FeiShu/SMS）
+// ============================================================
 func (a AlertService) validateCommunityAlertMethod(method string) error {
 	if global.CONF.Base.IsEnterprise || global.CONF.Base.Edition == "cn" {
 		return nil
@@ -630,6 +762,9 @@ func (a AlertService) validateCommunityAlertMethod(method string) error {
 	return nil
 }
 
+// ============================================================
+// validateCommunityAlertConfigType  社区版通知渠道类型限制
+// ============================================================
 func (a AlertService) validateCommunityAlertConfigType(configType string) error {
 	if global.CONF.Base.IsEnterprise || global.CONF.Base.Edition == "cn" {
 		return nil
@@ -640,6 +775,9 @@ func (a AlertService) validateCommunityAlertConfigType(configType string) error 
 	return nil
 }
 
+// ============================================================
+// alertConfigDisplayName  从渠道 config JSON 里提"显示名"（用于唯一性校验）
+// ============================================================
 func alertConfigDisplayName(configType, configData string) string {
 	switch configType {
 	case constant.Email, constant.WeCom, constant.DingTalk, constant.FeiShu, constant.Bark, constant.SMS:
@@ -655,6 +793,9 @@ func alertConfigDisplayName(configType, configData string) string {
 	}
 }
 
+// ============================================================
+// alertConfigSMSPhone  从 SMS config JSON 里提"手机号"
+// ============================================================
 func alertConfigSMSPhone(configData string) string {
 	var cfg struct {
 		Phone string `json:"phone"`
@@ -665,6 +806,14 @@ func alertConfigSMSPhone(configData string) string {
 	return strings.TrimSpace(cfg.Phone)
 }
 
+// ============================================================
+// DeleteAlertConfig  删除通知渠道（含引用检查）
+// ============================================================
+// 流程:
+//   1. 检查渠道存在
+//   2. 查"是否有告警任务的 method 含此 id"，有就拒绝
+//   3. 删除
+// ============================================================
 func (a AlertService) DeleteAlertConfig(id uint) error {
 	_, err := alertRepo.GetConfigById(id)
 	if err != nil {
@@ -680,6 +829,15 @@ func (a AlertService) DeleteAlertConfig(id uint) error {
 	return alertRepo.DeleteAlertConfig(repo.WithByID(id))
 }
 
+// ============================================================
+// TestAlertConfig  测通知渠道（发一封测试邮件）
+// ============================================================
+// 流程:
+//   1. 组装 SMTP 配置（含 displayName 编码）
+//   2. 拿多节点 transport
+//   3. 调 email.SendMail 发一封 i18n 消息
+//   4. 返是否成功
+// ============================================================
 func (a AlertService) TestAlertConfig(req dto.AlertConfigTest) (bool, error) {
 	username := req.UserName
 	if username == "" {
@@ -709,6 +867,15 @@ func (a AlertService) TestAlertConfig(req dto.AlertConfigTest) (bool, error) {
 	return true, nil
 }
 
+// ============================================================
+// ExternalUpdateAlert  外部触发更新告警（按 sendCount 决定启停）
+// ============================================================
+// 流程:
+//   1. 校验社区版通知方式
+//   2. sendCount==0 时禁用，否则启用
+//   3. 按 (type, project) 查; 存在则差量更新; 不存在则创建
+// 用途: 授权计费/license 系统回调用
+// ============================================================
 func (a AlertService) ExternalUpdateAlert(updateAlert dto.AlertCreate, operator string) error {
 	if err := a.validateCommunityAlertMethod(updateAlert.Method); err != nil {
 		return err
