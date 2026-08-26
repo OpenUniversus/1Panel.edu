@@ -2,22 +2,742 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>1Panel SSL 证书 · 可视化图集 (待 v3 写)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1Panel SSL 证书管理模块 · 可视化图集 v3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#1e293b',
+        primaryTextColor: '#e2e8f0',
+        primaryBorderColor: '#475569',
+        lineColor: '#64748b',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#1e293b',
+        background: '#0f172a',
+        mainBkg: '#1e293b',
+        secondBkg: '#0f172a',
+        tertiaryBkg: '#334155',
+        actorBkg: '#1e293b',
+        actorBorder: '#475569',
+        actorTextColor: '#e2e8f0',
+        actorLineColor: '#64748b',
+        signalColor: '#94a3b8',
+        signalTextColor: '#e2e8f0',
+        labelBoxBkgColor: '#1e293b',
+        labelBoxBorderColor: '#475569',
+        labelTextColor: '#e2e8f0',
+        loopTextColor: '#e2e8f0',
+        noteBkgColor: '#334155',
+        noteBorderColor: '#475569',
+        noteTextColor: '#e2e8f0',
+        activationBorderColor: '#475569',
+        activationBkgColor: '#334155',
+        sequenceNumberColor: '#e2e8f0'
+      },
+      flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+      sequence: { useMaxWidth: true, showSequenceNumbers: true, actorMargin: 60 },
+      securityLevel: 'loose',
+      fontFamily: 'Outfit, sans-serif'
+    });
+  </script>
   <style>
-    body { background: #0f172a; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; padding: 60px 24px; text-align: center; }
-    .stub { max-width: 600px; margin: 0 auto; padding: 40px; border: 1px solid #334155; border-radius: 12px; background: #1e293b; }
-    h1 { color: #38bdf8; margin-bottom: 16px; }
-    p { color: #94a3b8; line-height: 1.7; }
-    code { background: #334155; padding: 2px 8px; border-radius: 4px; color: #fbbf24; }
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-2: #334155;
+      --line: #334155;
+      --line-soft: #475569;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-soft: #64748b;
+      --primary: #38bdf8;
+      --primary-soft: rgba(56, 189, 248, 0.12);
+      --accent: #fbbf24;
+      --accent-soft: rgba(251, 191, 36, 0.12);
+      --good: #34d399;
+      --good-soft: rgba(52, 211, 153, 0.12);
+      --warn: #f87171;
+      --warn-soft: rgba(248, 113, 113, 0.12);
+      --code-bg: #020617;
+      --code-text: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+    body { padding: 40px 24px 80px; }
+    .container { max-width: 1180px; margin: 0 auto; }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+      padding: 40px 24px;
+      background: linear-gradient(135deg, var(--card) 0%, #0c4a6e 100%);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+    }
+    header .eyebrow {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      background: rgba(251, 191, 36, 0.1);
+      padding: 5px 14px;
+      border-radius: 100px;
+      letter-spacing: 0.1em;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+    header h1 {
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+      color: #f1f5f9;
+    }
+    header .sub {
+      color: var(--text-muted);
+      font-size: 16px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    header .meta {
+      margin-top: 22px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    header .meta .pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--line-soft);
+      color: var(--text-muted);
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    header .meta .pill.accent { color: var(--accent); border-color: var(--accent); }
+    header .meta .pill.primary { color: var(--primary); border-color: var(--primary); }
+    header .meta .pill.good { color: var(--good); border-color: var(--good); }
+
+    /* Section cards */
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 32px 28px;
+      margin-bottom: 28px;
+    }
+    section h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    section h2 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    section .lead {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 22px;
+      padding: 14px 18px;
+      background: rgba(56, 189, 248, 0.04);
+      border-left: 3px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+    }
+    section h3 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 24px 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    section h3::before {
+      content: '';
+      width: 4px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+    section p, section li {
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    section ul, section ol { padding-left: 24px; }
+    section code {
+      background: var(--code-bg);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+    }
+    section strong { color: var(--text); }
+    .mermaid {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
+      padding: 28px 18px;
+      margin: 18px 0 8px;
+      overflow-x: auto;
+    }
+    .caption {
+      font-size: 12px;
+      color: var(--text-soft);
+      text-align: center;
+      margin-top: 4px;
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 13.5px;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      background: rgba(56, 189, 248, 0.06);
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 12.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    td code { font-size: 11.5px; }
+
+    /* Info boxes */
+    .box {
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+    .box.good { background: var(--good-soft); border-left: 3px solid var(--good); }
+    .box.warn { background: var(--warn-soft); border-left: 3px solid var(--warn); }
+    .box.info { background: var(--primary-soft); border-left: 3px solid var(--primary); }
+    .box .title { font-weight: 600; margin-bottom: 6px; color: var(--text); }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 32px 0 0;
+      color: var(--text-soft);
+      font-size: 12px;
+      border-top: 1px solid var(--line);
+      margin-top: 48px;
+    }
+    footer code { font-size: 11px; }
+
+    @media (max-width: 768px) {
+      header h1 { font-size: 28px; }
+      section { padding: 22px 18px; }
+      body { padding: 20px 12px 60px; }
+    }
   </style>
 </head>
 <body>
-  <div class="stub">
-    <h1>🔒 1Panel SSL 证书 · 可视化图集</h1>
-    <p>本模块 <strong>v3 文档</strong> 尚未生成.</p>
-    <p>预计内容: Let's Encrypt 自动签发流程 / 自签名 CA / DNS 验证 / 多域名证书 / SNI 配置 / 证书管理.</p>
-    <p>状态: <code>TODO</code> · 优先级 <code>⭐⭐</code></p>
-    <p>预计位置: <code>D:\MiniMax Code\1Panel-edu-research\modules\12-ssl\HUMAN-READABLE.md</code> (待写)</p>
+  <div class="container">
+    <header>
+      <span class="eyebrow">12-ssl · v3 Visual Atlas</span>
+      <h1>SSL 证书管理模块可视化图集</h1>
+      <p class="sub">9 个章节、9 张 Mermaid 图，覆盖 ACME 申请、HTTP-01 / DNS-01 验证、自动续期、多节点推送、证书上传 / 删除 / 导入等全流程。</p>
+      <div class="meta">
+        <span class="pill accent">12-ssl</span>
+        <span class="pill">15 .go / ~85 KB</span>
+        <span class="pill primary">1090 行 service</span>
+        <span class="pill good">9 Mermaid</span>
+      </div>
+    </header>
+
+    <!-- Section 1: ACME 主流程时序图 -->
+    <section>
+      <h2><span class="num">1</span>ACME 申请证书主流程（HTTP-01 完整时序）</h2>
+      <p class="lead">从用户点「创建证书」到证书签发入库、OpenResty 重载、面板证书同步、多节点推送的完整时序，包含 6 个 ACME 协议子步骤。这是 12-ssl 模块的"心脏"。</p>
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as User Browser
+    participant H as Handler<br/>api/v2/website_ssl.go
+    participant S as Service<br/>service/website_ssl.go
+    participant AR as Acme Repo
+    participant SR as SSL Repo
+    participant L as lego AcmeClient<br/>utils/ssl/client.go
+    participant CA as Let's Encrypt CA
+    participant OR as OpenResty
+    participant FS as 本地文件
+
+    U->>H: POST /websites/ssl {provider=http}
+    H->>S: Create(req)
+    S->>AR: GetFirst(acmeAccountID)
+    AR-->>S: WebsiteAcmeAccount
+    S->>SR: Create(ssl{Status:init})
+    Note over S: 启动 goroutine 调 obtainSSL
+    S->>SR: TryMarkApplying(id) [CAS 抢占]
+    SR-->>S: marked=true
+    S->>L: NewRegisterClient(acme)
+    L->>CA: POST /acme/new-acct
+    CA-->>L: {account URL, status:valid}
+    L-->>S: AcmeClient ready
+    S->>L: UseHTTP("/opt/openresty/root")
+    S->>L: ObtainSSL([example.com], privKey)
+    L->>CA: POST /acme/new-order
+    CA-->>L: {order URL, authorizations}
+    L->>CA: GET /acme/authz/<id>
+    CA-->>L: {http-01 challenge token}
+    L->>FS: 写 .well-known/acme-challenge/<token>
+    L->>CA: POST /acme/chall/<id> {keyAuth}
+    CA->>OR: GET /.well-known/acme-challenge/<token>
+    OR-->>CA: 返回 keyAuthorization
+    CA-->>L: status:valid
+    L->>CA: POST /acme/order/<id>/finalize {csr}
+    CA-->>L: {certificate URL}
+    L->>CA: GET /acme/cert/<id>
+    CA-->>L: fullchain.pem
+    L-->>S: certificate.Resource{PrivateKey, Certificate}
+    S->>S: parseCertificatePEM 解析 ExpireDate
+    S->>SR: Save(ssl{Status:ready})
+    S->>OR: 写证书到 conf.d/ssl/example.com/
+    S->>OR: docker exec nginx -s reload
+    S->>U: 200 OK {id}
+    alt 是面板证书
+        S->>S: reloadSystemSSL 替换 server.crt
+    end
+    alt XPack 多节点
+        S->>S: pushSSLToNode
+    end
+      </div>
+      <p class="caption">图 1.1 · ACME HTTP-01 申请完整时序 — 13 步覆盖注册、挑战、签发、写入、重载全流程</p>
+    </section>
+
+    <!-- Section 2: HTTP-01 流程图 -->
+    <section>
+      <h2><span class="num">2</span>HTTP-01 Challenge 验证流程</h2>
+      <p class="lead">HTTP-01 原理：CA 服务器主动 GET <code>http://你的域名/.well-known/acme-challenge/&lt;token&gt;</code>，你的 OpenResty 必须能返回正确的 <code>keyAuthorization</code> 才能证明域名是你的。简单但要求 80 端口对外可达 + 不支持通配符。</p>
+      <div class="mermaid">
+flowchart TD
+    Start([用户申请 HTTP-01 证书]) --> Req[lego 向 CA 发起 new-order<br/>identifiers: example.com]
+    Req --> Auth[CA 返回 authorizations URL]
+    Auth --> Chal[CA 返回 http-01 challenge<br/>token=abc123]
+    Chal --> Write[lego 在 OpenResty root 目录写<br/>.well-known/acme-challenge/abc123<br/>内容 = keyAuthorization]
+    Write --> Notify[lego 通知 CA: 已就绪]
+    Notify --> Probe{CA 主动 HTTP GET}
+    Probe -->|80 端口可达| Ok[OpenResty 返回 keyAuthorization]
+    Probe -->|不可达 / 404| Fail1[CA 标记 invalid]
+    Ok --> Valid[CA 标记 valid]
+    Fail1 --> Retry([重试 5 次, 失败返回错误])
+    Valid --> Final[进入 finalize CSR 签发流程]
+    Retry --> End([结束 - 签发失败])
+    Final --> End2([结束 - 签发成功])
+    style Probe fill:#1e293b,stroke:#f87171
+    style Ok fill:#1e293b,stroke:#34d399
+    style Fail1 fill:#1e293b,stroke:#f87171
+    style Valid fill:#1e293b,stroke:#34d399
+      </div>
+      <p class="caption">图 2.1 · HTTP-01 验证流程 — 关键是"CA 主动探测你的 80 端口"</p>
+
+      <div class="box info">
+        <div class="title">HTTP-01 的限制</div>
+        不支持通配符证书（<code>*.example.com</code>）— 因为通配符无法用单一 HTTP 验证。需要通配符请用 DNS-01。
+      </div>
+    </section>
+
+    <!-- Section 3: DNS-01 流程图 -->
+    <section>
+      <h2><span class="num">3</span>DNS-01 Challenge 验证流程</h2>
+      <p class="lead">DNS-01 原理：你通过 DNS 厂商的 API（阿里云 / 腾讯云 / Cloudflare 等 10+ 家）添加一条 TXT 记录 <code>_acme-challenge.example.com</code>，CA 服务器去公共 DNS 查询这条 TXT 记录是否正确。**支持通配符**。</p>
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant S as Service.obtainSSL
+    participant L as lego AcmeClient
+    participant DP as DNS Provider<br/>(阿里云/腾讯云/华为...)
+    participant CA as Let's Encrypt
+    participant PDNS as 公共 DNS 解析
+
+    U->>S: Create(provider=dnsAccount)
+    S->>L: UseDns(dnsType="Aliyun", auth, ssl)
+    Note over L: 构造 challenge.Provider<br/>+ 设 custom nameservers
+    L->>CA: new-order {*.example.com}
+    CA-->>L: dns-01 challenge token
+    L->>DP: AddTXT _acme-challenge.example.com
+    DP-->>PDNS: 同步 TXT 记录
+    Note over L,PDNS: lego 轮询等待 propagation<br/>(默认 60s 间隔, 最长 5min)
+    L->>PDNS: 查询 TXT 记录
+    PDNS-->>L: 返回 challenge 值
+    L->>CA: POST challenge {keyAuth}
+    CA->>PDNS: 独立查询验证
+    CA-->>L: status:valid
+    L->>CA: finalize(csr)
+    CA-->>L: certificate
+    L->>DP: CleanUp 删除 TXT 记录
+    Note over L: 无论成功失败都清 TXT
+      </div>
+      <p class="caption">图 3.1 · DNS-01 验证时序 — lego 与 DNS Provider 双向通信</p>
+
+      <div class="box good">
+        <div class="title">DNS-01 优势</div>
+        1. 支持通配符 <code>*.example.com</code> · 2. 不需要 80 端口 · 3. 多子域名批量申请方便 · 4. 适合 CDN / 负载均衡场景（CA 不直接连源站）
+      </div>
+
+      <h3>DNS 厂商支持列表</h3>
+      <table>
+        <thead><tr><th>Type</th><th>厂商</th><th>API 凭据</th></tr></thead>
+        <tbody>
+          <tr><td><code>Aliyun</code></td><td>阿里云 DNS</td><td>AccessKey ID + Secret</td></tr>
+          <tr><td><code>Tencent</code></td><td>腾讯云 DNSPod</td><td>SecretId + SecretKey</td></tr>
+          <tr><td><code>Huawei</code></td><td>华为云 DNS</td><td>AK/SK</td></tr>
+          <tr><td><code>Cloudflare</code></td><td>Cloudflare</td><td>API Token</td></tr>
+          <tr><td><code>GoDaddy</code></td><td>GoDaddy</td><td>API Key + Secret</td></tr>
+          <tr><td><code>NameSilo</code></td><td>NameSilo</td><td>API Key</td></tr>
+          <tr><td><code>Hetzner</code></td><td>Hetzner DNS</td><td>API Token</td></tr>
+          <tr><td><code>...</code></td><td>共 10+ 家</td><td>见 <code>utils/ssl/dns_provider.go</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section 4: 自动续期时序 -->
+    <section>
+      <h2><span class="num">4</span>证书自动续期（cron 触发）</h2>
+      <p class="lead">每天 00:00 <code>cron/job/ssl.go:Run()</code> 触发一次：扫所有证书 → 域名证书 < 30 天 / IP 证书 < 72 小时就触发 <code>AutoRenewSSL</code> → 走完整 ACME 流程 + reloadSystemSSL 对账 + 多节点推送。</p>
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant CT as Scheduler<br/>(每天 00:00)
+    participant J as cron/job/ssl.go
+    participant SR as SSL Repo
+    participant SY as service.SyncSystemSSL
+    participant SS as WebsiteSSLService
+    participant FS as Disk + OpenResty
+    participant NODES as Worker 节点<br/>(XPack)
+
+    CT->>J: Run()
+    J->>SR: List() 拿所有证书
+    J->>SY: SyncSystemSSL() 对账
+    SY->>FS: 读 server.crt + server.key
+    SY->>SR: 查 SSLID 对应的 websiteSSL
+    alt DB 证书 ≠ 磁盘证书
+        SY->>FS: 重写 server.crt + server.key
+        SY->>FS: PostLocalCore /core/settings/ssl/reload
+    end
+    loop 每个 SSL
+        J->>J: 过滤 manual / applying / AutoRenew=false
+        alt 域名证书
+            J->>J: expireDate - now < 720h (30d)?
+        else IP 证书
+            J->>J: expireDate - now < 72h?
+        end
+        alt 需要续期
+            alt SelfSigned
+                J->>SS: caService.ObtainSSL({Renew:true})
+            else ACME
+                J->>SS: AutoRenewSSL(id)
+                SS->>SS: obtainSSL(id, autoRenew=true)
+                Note over SS: 日志 O_APPEND 追加<br/>+ banner "==== auto renew ===="
+                SS->>FS: ACME 申请 + 写 OpenResty
+                SS->>FS: nginx -s reload
+            end
+            alt 面板证书
+                SS->>FS: reloadSystemSSL 覆盖 server.crt
+            end
+            alt PushNode=true
+                SS->>NODES: pushSSLToNode(ssl)
+            end
+        end
+    end
+    J->>CT: 完成
+      </div>
+      <p class="caption">图 4.1 · 每天 00:00 续期流程 — 续期阈值（域名 30d / IP 72h）+ SyncSystemSSL 对账机制</p>
+
+      <div class="box info">
+        <div class="title">SyncSystemSSL 防丢证书</div>
+        续期时如果 <code>nginx -s reload</code> 失败，DB 已有新证书但磁盘是旧的。SyncSystemSSL 每天 00:00 比对一次，强制把磁盘同步到最新状态。
+      </div>
+    </section>
+
+    <!-- Section 5: 多域名证书 SAN -->
+    <section>
+      <h2><span class="num">5</span>多域名证书管理（SAN 字段）</h2>
+      <p class="lead">一张证书可以同时保护多个域名（Subject Alternative Name / SAN）。1Panel 的 <code>website_ssls.primary_domain</code> 存主域名，<code>domains</code> 存其他 SAN，逗号分隔。</p>
+      <div class="mermaid">
+flowchart LR
+    subgraph cert[一张 SSL 证书]
+        CN[Primary Domain<br/>example.com]
+        SAN1[example.com]
+        SAN2[www.example.com]
+        SAN3[api.example.com]
+        SAN4[cdn.example.com]
+    end
+    User[用户填表:<br/>主域名 = example.com<br/>其他域名 = www/api/cdn 各一行] --> Parse[Create: 分割 OtherDomains]
+    Parse --> Validate[common.IsValidDomain 校验]
+    Validate --> Save[存 DB:<br/>primary_domain=example.com<br/>domains=www.example.com,api.example.com,cdn.example.com]
+    Save --> Apply[obtainSSL 时合并成列表]
+    Apply --> ACME[lego ObtainSSL: domains 参数]
+    ACME --> CSR[生成 CSR 时全部塞进 SAN]
+    CSR --> CA[CA 签发包含 4 个域名的证书]
+    style User fill:#1e293b,stroke:#38bdf8
+    style cert fill:#0c4a6e,stroke:#38bdf8
+      </div>
+      <p class="caption">图 5.1 · 一张证书保护 4 个域名 — SAN 字段合并流程</p>
+
+      <div class="box warn">
+        <div class="title">通配符证书的差别</div>
+        <code>*.example.com</code> 这种通配符证书只能保护一级子域名（<code>www.example.com</code> ✅, <code>a.b.example.com</code> ❌），且必须用 DNS-01 验证（HTTP-01 不支持）。1Panel 通过 <code>Provider=http</code> 限制不能有通配符（service/website_ssl.go:232）。
+      </div>
+    </section>
+
+    <!-- Section 6: 证书上传/创建流程 -->
+    <section>
+      <h2><span class="num">6</span>证书上传 / 创建流程</h2>
+      <p class="lead">两条入口：(1) <strong>Create</strong> 调 ACME 申请；(2) <strong>Upload</strong> 上传已有 PEM 证书。Upload 又分 <code>paste</code>（文本粘贴）和 <code>local</code>（读服务器文件）两种模式。</p>
+      <div class="mermaid">
+flowchart TD
+    Start([用户进入证书管理页]) --> Choice{选择方式}
+    Choice -->|申请新证书| Create[POST /websites/ssl<br/>Create handler]
+    Choice -->|上传已有证书| Up[POST /websites/ssl/upload<br/>或 /upload/file]
+    Create --> CreateSvc[Service.Create]
+    CreateSvc --> Init[SSLInit + 写库]
+    Init --> Goroutine[goroutine 调 obtainSSL]
+    Goroutine --> ACME[ACME 申请 2-60s]
+    ACME --> Ready1[SSLReady + 写 OpenResty]
+    Ready1 --> Reload1[nginx -s reload]
+    Up --> Type{Type?}
+    Type -->|paste| Paste[拿 body.privateKey + certificate]
+    Type -->|local| Local[files.GetContent 读<br/>PrivateKeyPath + CertificatePath]
+    Paste --> Parse[parseCertificatePEM<br/>提取主域名/SAN/ExpireDate]
+    Local --> Parse
+    Parse --> Valid{pem 格式 OK?}
+    Valid -->|否| Err1[ErrSSLKeyFormat / ErrSSLCertificateFormat]
+    Valid -->|是| New{SSLID > 0?}
+    New -->|是 - 更新| Upd[UpdateSSLConfig 写 vhost + reload]
+    New -->|否 - 新建| Ins[Create 写库]
+    Upd --> Push
+    Ins --> Push[pushSSLToNodeWithNewLogger]
+    Reload1 --> End([完成])
+    Push --> End
+    Err1 --> End2([失败])
+    style Create fill:#1e293b,stroke:#34d399
+    style Up fill:#1e293b,stroke:#38bdf8
+    style Err1 fill:#1e293b,stroke:#f87171
+      </div>
+      <p class="caption">图 6.1 · 证书创建 / 上传双入口流程图</p>
+    </section>
+
+    <!-- Section 7: 删除 / 吊销 -->
+    <section>
+      <h2><span class="num">7</span>证书删除 / 吊销</h2>
+      <p class="lead">删除证书不只是从 DB 删记录——如果是 ACME 签发的，还会在后台 goroutine 调 lego 的 <code>RevokeSSL</code> 告诉 CA 吊销证书（让浏览器立刻不信任）。但有 3 种情况会被拦截：①有网站正在用 ②是面板证书 ③正在申请中。</p>
+      <div class="mermaid">
+flowchart TD
+    Start([DELETE /websites/ssl/del<br/>ids: 1,2,3]) --> Loop[遍历每个 id]
+    Loop --> WebCheck{查 websites<br/>表 website_ssl_id = id?}
+    WebCheck -->|有网站在用| MarkUsed[加进 websiteSSLS 列表]
+    WebCheck -->|无网站| SysCheck{是面板证书?<br/>SSL=enable && SSLID==id}
+    SysCheck -->|是| Block[ErrDeleteWithPanelSSL<br/>拦截]
+    SysCheck -->|否| Load[websiteSSLRepo.GetFirst]
+    Load --> StatusCheck{Status == SSLApply?}
+    StatusCheck -->|是| MarkApplying[加进 applySSLS 列表]
+    StatusCheck -->|否| ProviderCheck{Provider 是<br/>ACME 类型?}
+    ProviderCheck -->|是 ACME| Revoke[goroutine: lego RevokeSSL<br/>通知 CA 吊销]
+    ProviderCheck -->|是 Manual / SelfSigned| Skip[跳过吊销]
+    Revoke --> Del
+    Skip --> Del[websiteSSLRepo.DeleteBy]
+    Del --> Continue[继续下一个 id]
+    MarkUsed --> Continue
+    MarkApplying --> Continue
+    Block --> Return[返回错误]
+    Continue --> Loop
+    Loop -->|遍历完| FinalCheck{websiteSSLS<br/>或 applySSLS<br/>非空?}
+    FinalCheck -->|是| ErrReturn[返回国际化错误<br/>ErrSSLCannotDelete /<br/>ErrApplySSLCanNotDelete]
+    FinalCheck -->|否| Ok[返回 nil - 删除成功]
+    style Block fill:#1e293b,stroke:#f87171
+    style MarkUsed fill:#1e293b,stroke:#fbbf24
+    style MarkApplying fill:#1e293b,stroke:#fbbf24
+    style Revoke fill:#1e293b,stroke:#f87171
+    style Ok fill:#1e293b,stroke:#34d399
+    style ErrReturn fill:#1e293b,stroke:#f87171
+      </div>
+      <p class="caption">图 7.1 · 删除证书的拦截 + 吊销逻辑</p>
+    </section>
+
+    <!-- Section 8: 架构图 -->
+    <section>
+      <h2><span class="num">8</span>12-ssl 模块整体架构</h2>
+      <p class="lead">从 Router 到 Model 的 6 层架构，加上 4 个 repo 依赖、3 个外部 CA 集成、2 个外部系统调用（OpenResty / 1Panel core）、1 个 cron 触发器。</p>
+      <div class="mermaid">
+flowchart TB
+    subgraph entry[入口层]
+        BROWSER[Browser / Frontend]
+        CRONJOB[cron/job/ssl.go<br/>每天 00:00]
+    end
+
+    subgraph router[Router 层]
+        R1[ro_website_ssl.go<br/>13 routes]
+        R2[ro_website_acme_account.go<br/>4 routes]
+    end
+
+    subgraph middleware[Middleware 层]
+        M1[certificate.go<br/>XPack 节点证书校验]
+    end
+
+    subgraph handler[Handler 层 api/v2]
+        H1[website_ssl.go<br/>14 handlers]
+        H2[website_acme_account.go<br/>4 handlers]
+    end
+
+    subgraph service[Service 层]
+        S1[WebsiteSSLService<br/>1090 行<br/>14 methods]
+        S2[WebsiteAcmeAccountService<br/>100 行]
+        SH[共享函数:<br/>obtainSSL / SyncSystemSSL /<br/>pushSSLToNode / handleError]
+    end
+
+    subgraph repo[Repository 层]
+        RP1[WebsiteSSLRepo]
+        RP2[WebsiteAcmeAccountRepo]
+        RP3[WebsiteDnsRepo]
+        RP4[WebsiteRepo]
+    end
+
+    subgraph model[Model 层 GORM]
+        DB1[(website_ssls<br/>网站证书主表)]
+        DB2[(website_acme_accounts<br/>ACME 账户表)]
+        DB3[(website_dns_accounts<br/>DNS 厂商凭据)]
+    end
+
+    subgraph utility[Utility 层 utils/ssl]
+        U1[acme.go<br/>ACME 客户端工厂]
+        U2[client.go<br/>AcmeClient UseDns/UseHTTP/ObtainSSL]
+        U3[dns_provider.go<br/>10+ DNS 厂商]
+        U4[manual_client.go<br/>手动 DNS 申请]
+    end
+
+    subgraph ext[外部依赖]
+        CA[Let's Encrypt<br/>ZeroSSL<br/>Google Trust<br/>Buypass]
+        OR[OpenResty<br/>HTTP-01 challenge<br/>conf.d/ssl/]
+        CORE[1Panel Core<br/>/core/settings/ssl/reload]
+        NPM[10+ DNS 厂商 API<br/>阿里云/腾讯云/...]
+    end
+
+    BROWSER --> R1 & R2
+    CRONJOB --> S1
+    R1 & R2 --> M1
+    M1 --> H1 & H2
+    H1 --> S1
+    H2 --> S2
+    S1 --> SH
+    S1 --> RP1 & RP2 & RP3 & RP4
+    S2 --> RP2
+    RP1 --> DB1
+    RP2 --> DB2
+    RP3 --> DB3
+    RP4 --> DB1
+    S1 --> U1
+    U1 --> U2
+    U2 --> U3
+    U2 --> U4
+    U2 --> CA
+    U3 --> NPM
+    SH --> OR
+    SH --> CORE
+    style BROWSER fill:#1e293b,stroke:#38bdf8
+    style CRONJOB fill:#1e293b,stroke:#fbbf24
+    style CA fill:#1e293b,stroke:#f87171
+    style OR fill:#1e293b,stroke:#34d399
+    style CORE fill:#1e293b,stroke:#fbbf24
+      </div>
+      <p class="caption">图 8.1 · 12-ssl 完整 6 层架构 + 外部依赖</p>
+    </section>
+
+    <!-- Section 9: ACME 账户管理 -->
+    <section>
+      <h2><span class="num">9</span>ACME 账户管理</h2>
+      <p class="lead">每个 CA（Let's Encrypt / ZeroSSL / Google 等）对应一个 ACME 账户，记录邮箱 + 私钥 + CA 返回的注册 URL + EAB 凭据。申请证书前必须先有账户。</p>
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant H as Handler
+    participant S as Service.Create
+    participant L as ssl.NewRegisterClient
+    participant CA as CA (Let's Encrypt/ZeroSSL)
+
+    U->>H: POST /websites/acme<br/>{email, type: letsencrypt, keyType: EC256}
+    H->>S: Create(req)
+    S->>S: 检查邮箱+类型是否已存在
+    S->>L: NewRegisterClient(acme, proxy)
+    L->>L: newAcmeClient<br/>生成账户私钥
+    L->>L: NewConfigWithProxy<br/>+ getCaDirURL
+    L->>CA: POST /acme/new-acct<br/>{termsOfServiceAgreed:true}
+    CA-->>L: {account URL, status:valid}
+    L-->>S: AcmeClient.User.Registration = reg
+    S->>S: acmeAccount.URL = reg.Location
+    S->>S: acmeAccount.PrivateKey = PEM
+    S->>S: websiteAcmeRepo.Create()
+    S->>U: 200 OK {id, email, type}
+    Note over U,CA: 此后所有 ACME 请求用 URL 标识身份<br/>用 PrivateKey 签名
+      </div>
+      <p class="caption">图 9.1 · ACME 账户注册流程（CA 类型 + EAB 处理）</p>
+
+      <h3>CA 类型对比</h3>
+      <table>
+        <thead><tr><th>Type</th><th>CA Directory</th><th>EAB 必填</th><th>证书周期</th><th>国内可用</th></tr></thead>
+        <tbody>
+          <tr><td><code>letsencrypt</code></td><td>acme-v02.api.letsencrypt.org</td><td>否</td><td>90 天</td><td>否（DNS 污染）</td></tr>
+          <tr><td><code>zerossl</code></td><td>acme.zerossl.com/v2/DV90</td><td>是（自动）</td><td>90 天</td><td>否</td></tr>
+          <tr><td><code>buypass</code></td><td>api.buypass.com</td><td>否</td><td>180 天</td><td>否</td></tr>
+          <tr><td><code>google</code></td><td>dv.acme-v02.api.pki.goog</td><td>是（手填）</td><td>90 天</td><td>否</td></tr>
+          <tr><td><code>freessl</code></td><td>acmepro.freessl.cn</td><td>是</td><td>90 天</td><td>✅ 推荐</td></tr>
+          <tr><td><code>custom</code></td><td>用户自填</td><td>可选</td><td>取决于 CA</td><td>取决于 CA</td></tr>
+        </tbody>
+      </table>
+
+      <div class="box info">
+        <div class="title">EAB 是什么？</div>
+        External Account Binding = 让 CA 知道"这个 ACME 账户代表哪个用户"。ZeroSSL/Google/FreeSSL 强制要求 EAB，因为它们是"商业 CA"（不像 Let's Encrypt 是公益的）。
+      </div>
+    </section>
+
+    <footer>
+      <p>1Panel 12-ssl 模块可视化图集 · v3 · 2026-08-26</p>
+      <p>9 章节 / 9 Mermaid 图 · 源码 15 .go / ~85 KB / ~2400 行</p>
+      <p style="margin-top:8px">配套: <code>HUMAN-READABLE.md</code> (74 KB) · <code>modules/12-ssl/</code></p>
+    </footer>
   </div>
 </body>
 </html>
