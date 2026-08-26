@@ -49,3 +49,8 @@ KB-INDEX.md  # duplicate of repo's own KB-INDEX
 # 1Panel/1Panel.edu/ is local-only research KB, not pushed there.
 # 1Panel upstream is excluded via D:\MiniMax Code\1Panel\.git\info\exclude
 #   1Panel.edu/
+
+# Mermaid test / npm artifacts
+node_modules/
+package-lock.json
+.test.*
